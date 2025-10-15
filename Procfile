@@ -1,1 +1,1 @@
-web: sh -c "gunicorn app:app --worker-class eventlet -b 0.0.0.0:$PORT"
+web: gunicorn --worker-class eventlet -w 1 -b 0.0.0.0:${PORT} app:app
