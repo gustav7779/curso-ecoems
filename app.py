@@ -1922,6 +1922,8 @@ with app.app_context():
         db.session.commit()
 
 
+import os
+
 if __name__ == "__main__":
-    # La aplicación se ejecuta con socketio.run para habilitar el chat
+    # Solo se ejecuta localmente, no en Railway
     socketio.run(app, debug=True)
