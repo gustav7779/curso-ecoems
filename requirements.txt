@@ -2,6 +2,5 @@ Flask
 Flask-SQLAlchemy
 Flask-Login
 Flask-SocketIO
-python-dotenv
-Werkzeug
-gunicorn # Necesario para servir la aplicación Flask en producción
+eventlet
+gunicorn

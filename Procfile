@@ -1,1 +1,1 @@
-web: gunicorn --config gunicorn.conf.py app:app
+web: python -m eventlet --wsgi-file app.py --socketio --port $PORT --workers 1
