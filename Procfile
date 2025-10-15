@@ -1,1 +1,1 @@
-web: python -m eventlet --wsgi-file app.py --socketio --port $PORT --workers 1
+web: gunicorn app:app
