@@ -1922,8 +1922,8 @@ with app.app_context():
         db.session.commit()
 
 
-import os
-
 if __name__ == "__main__":
-    # Solo se ejecuta localmente, no en Railway
-    socketio.run(app, debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)
+
