@@ -2,7 +2,7 @@ Flask
 Flask-SQLAlchemy
 Flask-Login
 Flask-SocketIO
-Flask-Babel 
+Flask-Babel
 python-dotenv
 Werkzeug
 gunicorn
@@ -10,3 +10,4 @@ eventlet
 pytz
 pyotp
 qrcode
+psycopg2-binary
