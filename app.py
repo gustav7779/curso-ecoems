@@ -228,9 +228,9 @@ def handle_admin_message(data):
         # Emitir el mensaje de vuelta al propio admin para que lo vea en su historial de chat
         # emit('admin_message_sent', 
         #           {
-        #              'message': message_content, 
-        #              'timestamp': datetime.now().strftime("%H:%M:%S"),
-        #              'sender': 'Tú'
+        #               'message': message_content, 
+        #               'timestamp': datetime.now().strftime("%H:%M:%S"),
+        #               'sender': 'Tú'
         #           }, 
         #           room=str(current_user.id),
         #           namespace='/'
@@ -1504,7 +1504,7 @@ def new_report():
 
     if request.method == "POST":
         title = request.form["title"]
-        description = request.form["description"]
+        description = request.form["content"]
         image_filename = None
 
         if len(title.strip()) == 0 or len(title) > 255:
@@ -1912,18 +1912,23 @@ def student_exam_detail(exam_id):
 # ======================================================================
 
 # --- Creación de DB inicial ---
-with app.app_context():
-    db.create_all()
-
-    # Creación de usuario 'admin' por defecto si no existe
-    if not User.query.filter_by(username="admin").first():
-        admin = User(username="admin", password=generate_password_hash("1234", method="pbkdf2:sha256"), role="admin", is_active=True)
-        db.session.add(admin)
-        db.session.commit()
-
-
+# ATENCIÓN: Este bloque solo se ejecuta cuando se corre `python app.py` directamente.
+# Es necesario para crear la DB localmente (sqlite), pero debe deshabilitarse en
+# producción (Render/Railway) donde se usa PostgreSQL. Usamos 'if __name__ == "__main__":'
+# como proxy para "entorno de desarrollo local".
 if __name__ == "__main__":
+    with app.app_context():
+        # Si la URL de DB no es un archivo (es decir, estamos usando Postgress externo)
+        # NO intentamos crear la DB o el usuario admin aquí.
+        if 'sqlite:///' in app.config['SQLALCHEMY_DATABASE_URI']:
+            db.create_all()
+
+            # Creación de usuario 'admin' por defecto si no existe
+            if not User.query.filter_by(username="admin").first():
+                admin = User(username="admin", password=generate_password_hash("1234", method="pbkdf2:sha256"), role="admin", is_active=True)
+                db.session.add(admin)
+                db.session.commit()
+
     import os
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port)
-

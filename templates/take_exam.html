@@ -4,7 +4,6 @@
 
 {% block content %}
     
-    <!-- 🔑 GRUPO DE CONTROLES SUPERIORES (AJUSTE UX) 🔑 -->
     <div class="header-controls-group">
         <a href="{{ url_for('new_report') }}" 
            id="report-error-button" 
@@ -20,24 +19,18 @@
         </div>
     </div>
     
-    <!-- 🔑 PANEL FLOTANTE DE CHAT DEL ALUMNO 🔑 -->
     <div id="student-chat-panel" class="student-chat-panel">
         <div class="chat-panel-header">
             <strong>💬 Soporte en Vivo</strong>
             <span class="close-chat" id="close-chat-button">×</span>
         </div>
         <div id="chat-messages" class="chat-messages">
-            <!-- Los mensajes del Admin y del Alumno irán aquí -->
-        </div>
+            </div>
         <form id="student-chat-form" class="student-chat-form">
             <input type="text" id="student-message-input" placeholder="Escribe tu consulta rápida..." required>
             <button type="submit" class="chat-send-btn">Enviar</button>
         </form>
     </div>
-    <!-- ----------------------------------------------- -->
-
-
-    <!-- 🔑 PANTALLA DE SUPERPOSICIÓN (OVERLAY) 🔑 -->
     <div id="welcome-overlay" class="overlay">
         <div class="overlay-content">
             <h1 class="welcome-title">✨ ¡Momento de Brillar, {{ current_user.username }}! ✨</h1>
@@ -52,7 +45,6 @@
         </div>
     </div>
     
-    <!-- --- CONTENIDO PRINCIPAL DEL EXAMEN --- -->
     <div class="exam-header-info">
         <h2 class="exam-title-main">📝 Examen: {{ exam.title }}</h2>
         <p class="exam-description">{{ exam.description }}</p>
@@ -60,7 +52,6 @@
 
     <div class="container exam-container">
         
-        <!-- El formulario solo se usa para el envío FINAL. El guardado es por AJAX. -->
         <form method="POST" class="exam-form" id="exam-form">
             {% for question in exam.questions %}
                 <div class="question-card">
@@ -86,14 +77,12 @@
                             ('D', question.option_d)
                         ] %}
                         
-                        <!-- CLAVE DE PRECARGA: Obtenemos la respuesta guardada del diccionario -->
                         {% set q_name = 'q' + question.id | string %}
                         {% set saved_response = saved_answers.get(question.id, '') %}
 
                         {% for letter, option_text in options %}
                             {% if option_text %}
                                 <label class="option-label">
-                                    <!-- CLAVE DE AUTO-SAVE: Añadimos onchange y precarga 'checked' -->
                                     <input type="radio" 
                                            name="{{ q_name }}" 
                                            value="{{ letter }}" 
@@ -116,7 +105,6 @@
 
     </div>
     
-    <!-- 🔑 SCRIPTS DE SOCKETIO Y LÓGICA DE CHAT 🔑 -->
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
         // 🔑 VARIABLES DE TIEMPO (desde Flask) 🔑
@@ -132,8 +120,10 @@
         // ====================================================================
         // 1. CHAT EN VIVO Y NOTIFICACIONES INSTANTÁNEAS
         // ====================================================================
-        const currentUserId = parseInt("{{ current_user.id }}"); // <-- CORRECCIÓN: Asegura el parseo a entero
-        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        const currentUserId = parseInt("{{ current_user.id }}");
+        
+        // CORRECCIÓN 1: Conexión universal, sin especificar puerto ni protocolo (HTTPS lo maneja)
+        const socket = io.connect(); 
         
         const chatPanel = document.getElementById('student-chat-panel');
         const chatMessagesWindow = document.getElementById('chat-messages');
@@ -159,7 +149,7 @@
             }
         });
         
-        // 🔑 Evento 1.3: Cierre Remoto del Chat por el Admin (CORRECCIÓN FINAL) 🔑
+        // 🔑 Evento 1.3: Cierre Remoto del Chat por el Admin
         socket.on('close_chat_signal', function(data) {
             
             // 1. Añadimos el mensaje de sistema para CONFIRMAR que el evento llegó
@@ -167,9 +157,10 @@
             console.log("CHAT: Señal de cierre remota recibida. Forzando ocultamiento."); 
             
             // 2. Cierre el panel de forma inmediata y forzada
-            chatPanel.style.display = 'none'; 
+            chatPanel.style.opacity = '0';
+            setTimeout(() => { chatPanel.style.display = 'none'; chatPanel.style.opacity = '1'; }, 500); 
 
-            // 3. Desactiva la entrada y vacía el historial (Para que no reaparezca con mensajes antiguos)
+            // 3. Desactiva la entrada y vacía el historial
             studentMessageInput.disabled = true;
             document.querySelector('.chat-send-btn').disabled = true;
             chatMessagesWindow.innerHTML = '';
@@ -182,9 +173,9 @@
             const message = studentMessageInput.value.trim();
 
             if (message && !studentMessageInput.disabled) {
-                // Envía el mensaje al servidor, usando su propio ID como target del Admin
+                // CORRECCIÓN 2: El mensaje debe ir al ID del Administrador (usamos ID 1 como estándar)
                 socket.emit('send_message_to_admin', { 
-                    target_admin_id: currentUserId, 
+                    target_admin_id: 1, // Enviamos el mensaje al ID 1 (Admin)
                     message: message
                 });
 
