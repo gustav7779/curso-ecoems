@@ -2,7 +2,7 @@ Flask
 Flask-SQLAlchemy
 Flask-Login
 Flask-SocketIO
-Flask-Babel  <-- ¡NUEVO!
+Flask-Babel 
 python-dotenv
 Werkzeug
 gunicorn
