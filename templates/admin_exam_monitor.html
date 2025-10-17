@@ -22,14 +22,14 @@
                         <th>Alumno</th>
                         <th>Estado Actual</th>
                         {% if current_user.role == 'admin' %}
-                        <th>Acción de Soporte</th>
+                        <th class="support-action-column">Acción Soporte</th>
+                        <th class="logs-column">Logs de Seguridad</th>
                         <th class="time-column">Añadir Tiempo (min)</th>
                         {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for data in monitoring_data %}
-                    {# Asumimos que `data` incluye ahora `time_added_sec` desde la consulta Python si es necesario #}
                     {% set is_active = data.status == 'Haciendo Examen' %}
                     <tr id="row-{{ data.user_id }}">
                         <td data-label="Alumno"><strong>{{ data.username | capitalize }}</strong></td>
@@ -40,17 +40,25 @@
                         </td>
                         
                         {% if current_user.role == 'admin' %}
-                        <td data-label="Acción" class="action-cell">
+                        <td data-label="Acción Soporte" class="action-cell">
+                            {# 🔑 COLUMNA DE CHAT 🔑 #}
                             {% if is_active %}
                                 <a href="{{ url_for('admin_chat', user_id=data.user_id) }}" target="_blank" class="button action-btn chat-btn">
-                                    💬 Abrir Chat en Vivo
+                                    💬 Abrir Chat
                                 </a>
                             {% else %}
-                                <span class="no-action">No Disponible</span>
+                                <span class="no-action">No Activo</span>
                             {% endif %}
                         </td>
 
-                        {# INICIO: COLUMNA DE AÑADIR TIEMPO #}
+                        <td data-label="Logs de Seguridad" class="logs-cell">
+                            {# 🔑 COLUMNA NUEVA: VER LOGS 🔑 #}
+                            <a href="{{ url_for('view_violation_logs', exam_id=exam.id, user_id=data.user_id) }}" target="_blank" class="button action-btn logs-btn">
+                                🔍 Ver Logs
+                            </a>
+                        </td>
+
+                        {# COLUMNA DE AÑADIR TIEMPO #}
                         <td data-label="Añadir Tiempo" class="time-cell">
                             {% if is_active %}
                                 <div class="time-controls">
@@ -70,10 +78,9 @@
                                             onclick="confirmCustomTime({{ data.user_id }})">Confirmar</button>
                                 </div>
                             {% else %}
-                                <span class="no-action">Solo sesión activa</span>
+                                <span class="no-action">N/A</span>
                             {% endif %}
                         </td>
-                        {# FIN: COLUMNA DE AÑADIR TIEMPO #}
                         {% endif %}
                     </tr>
                     {% endfor %}
@@ -151,24 +158,22 @@
         const feedbackElement = document.getElementById(`feedback-${studentId}`);
         feedbackElement.textContent = message;
         
-        // Estilos para el feedback
         feedbackElement.style.color = type === 'success' ? '#2ecc71' : (type === 'error' ? '#e74c3c' : '#3498db');
         feedbackElement.style.fontWeight = 'bold';
         
-        // Ocultar el mensaje después de unos segundos
         if (type !== 'processing') {
              setTimeout(() => {
                 feedbackElement.textContent = '';
             }, 5000);
         }
     }
-
-    // 3. Inicialización de SocketIO (Opcional, pero bueno para notificaciones futuras)
-    // const socket = io.connect(); 
-    // socket.on('connect', function() {
-    //     console.log('Admin Socket Connected.');
-    // });
     
+    // 3. SocketIO para notificaciones del Admin (Si se implementa el historial de violaciones)
+    // const socket = io.connect();
+    // socket.on('admin_violation_alert', function(data) {
+    //     console.warn(`ALERTA DE VIOLACIÓN: ${data.user} - Tipo: ${data.type}`);
+    //     // Lógica para mostrar una alerta visual o sonora al administrador aquí.
+    // });
 </script>
 
 <style>
@@ -176,7 +181,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
     .monitor-container {
-        max-width: 1200px; /* Aumentamos el ancho para la nueva columna */
+        max-width: 1400px; /* Aumentamos el ancho para la nueva columna */
         margin: 30px auto;
         padding: 20px;
     }
@@ -240,6 +245,11 @@
     }
     .monitor-table tr:nth-child(even) { background-color: #f9f9f9; }
 
+    /* 🔑 ANCHOS ESPECÍFICOS PARA CONTROLAR LA COLUMNA 🔑 */
+    .monitor-table th.support-action-column { width: 10%; } /* Reducido */
+    .monitor-table th.logs-column { width: 10%; } /* Reducido */
+    .monitor-table th.time-column { width: 250px; } /* Ancho fijo para los botones */
+
     /* Etiquetas de Estado */
     .status-tag {
         padding: 6px 12px;
@@ -253,8 +263,8 @@
     .status-examen-terminado { background: #d4edda; color: #1a7d3f; } /* Verde suave */
     .status-haciendo-examen { background: #fff3cd; color: #956504; } /* Amarillo/Naranja de advertencia */
 
-    /* Botón de Chat */
-    .chat-btn {
+    /* Botones de Soporte */
+    .chat-btn, .logs-btn {
         background: #3498db;
         padding: 8px 12px;
         font-size: 0.9em;
@@ -263,16 +273,21 @@
         color: white;
         border-radius: 6px;
         transition: background 0.2s;
+        display: inline-block;
     }
-    .chat-btn:hover { 
+    .chat-btn:hover, .logs-btn:hover { 
         background: #2980b9; 
     }
+    .logs-btn {
+        background: #9b59b6; /* Morado para Logs/Seguridad */
+    }
+    .logs-btn:hover {
+        background: #8e44ad;
+    }
+
     .no-action { color: #7f8c8d; font-style: italic; font-size: 0.9em; }
 
-
     /* 🔑 ESTILOS AÑADIDOS PARA LA FUNCIONALIDAD DE TIEMPO 🔑 */
-    .monitor-table th.time-column { width: 250px; }
-    
     .time-controls, .custom-time-group {
         display: flex;
         justify-content: center;
@@ -308,24 +323,45 @@
         position: absolute;
         margin-top: 5px;
         font-size: 0.8em;
+        width: 100%;
+        text-align: center;
     }
+    .time-cell { position: relative; }
 
     /* Responsive Table - Aseguramos que la columna de tiempo funcione en móvil */
     @media (max-width: 600px) {
+        .monitor-container { padding: 10px; }
+        .monitor-table thead { display: none; }
+        .monitor-table, .monitor-table tbody, .monitor-table tr, .monitor-table td {
+            display: block;
+            width: 100%;
+        }
+        .monitor-table tr { 
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .monitor-table td {
+            text-align: right;
+            padding-left: 50%;
+            position: relative;
+        }
         .monitor-table td:before {
-            width: 40%;
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            width: 45%;
+            font-weight: bold;
+            text-align: left;
+            color: #555;
         }
+        .action-cell, .logs-cell, .time-cell { 
+            text-align: center !important; 
+            padding-left: 10px !important;
+        }
+        .chat-btn, .logs-btn { width: 90%; margin: 5px auto; display: block; }
         .time-controls, .custom-time-group {
-            justify-content: flex-end; /* Alineamos a la derecha para móvil */
-        }
-        .time-cell { 
-            text-align: right !important; 
-            padding-left: 50% !important;
-        }
-        /* Ajustamos el tamaño de los botones en móvil */
-        .time-btn {
-            font-size: 0.7em;
-            padding: 5px 8px;
+            justify-content: center; 
         }
     }
 

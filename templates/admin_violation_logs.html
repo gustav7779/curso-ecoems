@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{# 🔑 Diccionario de Traducción de Violaciones (Versión Completa) 🔑 #}
+{% set VIOLATION_TRANSLATIONS = {
+    'WINDOW_BLUR': 'Cambio de Pestaña/Ventana',
+    'TAB_SWITCH': 'Cambio de Pestaña/Ventana',
+    'FULLSCREEN_EXIT': 'Salida de Pantalla Completa',
+    'PASTE': 'Intento de Pegar Texto',
+    'COPY_PASTE': 'Intento de Copiar/Pegar',
+    'DEVTOOLS_OPEN': 'Apertura de Consola DevTools',
+    'UNKNOWN_VIOLATION': 'VIOLACIÓN DESCONOCIDA'
+} %}
+
+{% block title %}Logs de Violación: {{ student.username }}{% endblock %}
+
+{% block content %}
+<div class="container log-container">
+    <header class="log-header">
+        <h1 class="log-title">
+            <span class="emoji-icon">📜</span> Logs de Seguridad
+        </h1>
+        <h2 class="log-info-header">
+            Alumno: <strong>{{ student.username | capitalize }}</strong> | Examen: <strong>{{ exam.title }}</strong>
+        </h2>
+    </header>
+
+    <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn back-nav-btn">
+        ← Volver al Monitoreo del Examen
+    </a>
+
+    <div class="card log-list-card">
+        <h3>Historial de Eventos de Seguridad ({{ logs | length }} Eventos)</h3>
+        
+        <p class="description-text">
+            Historial de eventos de seguridad (cambio de pestaña/ventana, salida de pantalla completa, etc.) detectados durante el examen. La hora se muestra en la zona horaria de **{{ config['BABEL_DEFAULT_TIMEZONE'] }}**.
+        </p>
+
+        <div class="table-responsive">
+            <table class="log-table" border="1" cellpadding="10" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>TIPO DE VIOLACIÓN</th>
+                        {# Usamos la configuración de Babel definida en app.py #}
+                        <th>FECHA Y HORA ({{ config['BABEL_DEFAULT_TIMEZONE'] }})</th> 
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td data-label="ID">{{ log.id }}</td>
+                        <td data-label="Tipo de Violación">
+                            {# Forzamos a mayúsculas para buscar en el diccionario #}
+                            {% set violation_code = log.violation_type | upper %}
+                            <span class="status-tag tag-{{ violation_code | lower | replace('_', '-') }}">
+                                {{ VIOLATION_TRANSLATIONS.get(violation_code, violation_code | replace('_', ' ')) }}
+                            </span>
+                        </td>
+                        <td data-label="Timestamp">
+                            {# 🔑 CORRECCIÓN CLAVE: format_datetime convertirá automáticamente el objeto aware (UTC) a la TZ de México 🔑 #}
+                            {{ format_datetime(log.timestamp, 'full') }} 
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center no-logs-msg">
+                            ✅ No se encontraron logs de violación para este alumno en este examen.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Estilos generales */
+    .log-container {
+        max-width: 1000px;
+        margin: 30px auto;
+        padding: 20px;
+    }
+    .log-header {
+        text-align: center;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .log-title { 
+        color: #c0392b; 
+        font-size: 2.5em;
+        margin-bottom: 5px;
+    }
+    .log-info-header { 
+        color: #2c3e50; 
+        font-size: 1.2em;
+        font-weight: 400;
+    }
+    .log-list-card {
+        padding: 0;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .card h3 {
+        padding: 20px;
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #eee;
+        margin: 0;
+        font-size: 1.2em;
+        color: #34495e;
+    }
+    .description-text {
+        padding: 0 20px 20px;
+        color: #7f8c8d;
+        font-size: 0.9em;
+    }
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+    .log-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .log-table th {
+        background-color: #34495e;
+        color: white;
+        text-align: left;
+        padding: 12px 15px;
+        text-transform: uppercase;
+        font-size: 0.9em;
+    }
+    .log-table td {
+        padding: 10px 15px;
+        border: 1px solid #eee;
+        text-align: left;
+        vertical-align: middle;
+        font-size: 1em;
+    }
+    .log-table tr:nth-child(even) { background-color: #f9f9f9; }
+    .log-table tr:hover { background-color: #f0f0f0; }
+
+    /* Etiquetas de Violación */
+    .status-tag {
+        padding: 4px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 0.85em;
+        display: inline-block;
+        color: white;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+    }
+    /* Estilos basados en el código de violación en minúsculas y guiones */
+    .tag-window-blur, .tag-tab-switch { background: #f39c12; color: #fff; } /* Naranja/Advertencia */
+    .tag-fullscreen-exit { background: #e74c3c; color: #fff; } /* Rojo/Peligro */
+    .tag-paste, .tag-copy-paste { background: #3498db; color: #fff; } /* Azul/Acción */
+    .tag-devtools-open { background: #8e44ad; color: #fff; } /* Morado/Inusual */
+    .tag-unknown-violation { background: #7f8c8d; color: #fff; } /* Gris/Desconocido */
+
+    .no-logs-msg {
+        text-align: center !important;
+        font-style: italic;
+        color: #7f8c8d;
+        padding: 20px;
+    }
+    .back-nav-btn {
+        background: #7f8c8d;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        margin-bottom: 20px;
+        display: inline-block;
+        transition: background 0.2s;
+    }
+    .back-nav-btn:hover { background: #5c6a74; }
+
+    /* Responsive Table */
+    @media (max-width: 600px) {
+        .log-table thead { display: none; }
+        .log-table, .log-table tbody, .log-table tr, .log-table td {
+            display: block;
+            width: 100%;
+        }
+        .log-table tr { 
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .log-table td {
+            text-align: right;
+            padding-left: 50%;
+            position: relative;
+        }
+        .log-table td:before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            width: 45%;
+            font-weight: bold;
+            text-align: left;
+            color: #555;
+        }
+    }
+</style>
+{% endblock %}

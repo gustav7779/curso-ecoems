@@ -6,10 +6,10 @@
     
     <div class="header-controls-group">
         <a href="{{ url_for('new_report') }}" 
-           id="report-error-button" 
-           class="btn report-error-btn" 
-           target="_blank" 
-           title="Reportar un problema sin perder el examen">
+            id="report-error-button" 
+            class="btn report-error-btn" 
+            target="_blank" 
+            title="Reportar un problema sin perder el examen">
             🚨 Reportar Error
         </a>
 
@@ -61,7 +61,7 @@
                         | <strong>Pregunta {{ loop.index }}</strong>
                     </p>
                     
-                    <p class="question-text">{{ question.text }}</p>
+                    <p class="question-text question-centered">{{ question.text }}</p>
 
                     {% if question.image_filename %}
                         <img src="{{ url_for('static', filename='images/' + question.image_filename) }}" 
@@ -82,14 +82,16 @@
 
                         {% for letter, option_text in options %}
                             {% if option_text %}
-                                <label class="option-label">
+                                <label class="option-label option-centered-text">
                                     <input type="radio" 
-                                           name="{{ q_name }}" 
-                                           value="{{ letter }}" 
-                                           required
-                                           {% if saved_response == letter %}checked{% endif %}
-                                           onchange="autoSave('{{ question.id }}', this.value)"> 
-                                    <strong>{{ letter }})</strong> {{ option_text }}
+                                                    name="{{ q_name }}" 
+                                                    value="{{ letter }}" 
+                                                    required
+                                                    {% if saved_response == letter %}checked{% endif %}
+                                                    onchange="autoSave('{{ question.id }}', this.value)"> 
+                                    <div class="option-text-wrapper">
+                                        <strong>{{ letter }})</strong> {{ option_text }}
+                                    </div>
                                 </label>
                             {% endif %}
                         {% endfor %}
@@ -108,13 +110,8 @@
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
         // 🔑 VARIABLES DE TIEMPO (desde Flask) 🔑
-        // Usamos una variable global para manejar la lógica de la hora.
         let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}"); 
-        
-        // 🌟 NUEVA VARIABLE: Tiempo extra concedido por el admin (necesita pasarse en la ruta take_exam de Flask)
         let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}");
-        
-        // 🌟 CORRECCIÓN DURATION_SEC: Suma la duración base más el tiempo extra guardado 🌟
         let DURATION_SEC = (3 * 60 * 60) + TIME_ADDED_SEC; 
         
         const examForm = document.getElementById('exam-form');
@@ -123,12 +120,16 @@
         const startButton = document.getElementById('start-exam-button');
         let timerInterval = null; 
         
+        // 🌟 BANDERA DE SEGURIDAD GLOBAL 🌟
+        let isExamActive = START_TIME_UTC_SEC > 0;
+        let violationReported = false; // Bandera para reportar solo una vez por cambio de foco/visibilidad.
+
         // ====================================================================
-        // 1. CHAT EN VIVO Y NOTIFICACIONES INSTANTÁNEAS
+        // 1. CHAT EN VIVO Y NOTIFICACIONES INSTANTÁNEAS (Código 1)
         // ====================================================================
         const currentUserId = parseInt("{{ current_user.id }}");
-        
-        // CORRECCIÓN 1: Conexión universal, sin especificar puerto ni protocolo (HTTPS lo maneja)
+        const examId = parseInt("{{ exam.id }}");
+        const username = "{{ current_user.username }}";
         const socket = io.connect(); 
         
         const chatPanel = document.getElementById('student-chat-panel');
@@ -140,8 +141,7 @@
 
         // Evento 1.1: Conexión Exitosa - Unir a la sala privada
         socket.on('connect', function() {
-            // Unir al usuario (alumno) a su propia sala (room) usando su ID.
-            socket.emit('join_room', { user_id: currentUserId, username: "{{ current_user.username }}" });
+            socket.emit('join_room', { user_id: currentUserId, username: username });
             console.log(`SocketIO: Conectado. Unido al room: ${currentUserId}`);
         });
 
@@ -149,52 +149,36 @@
         socket.on('chat_notification', function(data) {
             if (data.sender === 'Admin') {
                 addChatMessage(data.message, 'admin');
-                
-                // Muestra el panel de chat al recibir el primer mensaje
                 chatPanel.style.display = 'flex';
             }
         });
         
         // 🌟 NUEVO EVENTO 1.3: Recibir Actualización de Tiempo del Admin (Añadir Tiempo) 🌟
         socket.on('time_update', function(data) {
-            // El servidor envía el TIEMPO EXTRA TOTAL que debe tener la sesión (data.extra_time_sec)
-            
             const newTotalExtraSec = data.extra_time_sec;
             const addedTimeDiff = newTotalExtraSec - TIME_ADDED_SEC;
             
-            // 1. Actualizar la variable de tiempo extra
             TIME_ADDED_SEC = newTotalExtraSec;
-            
-            // 2. Recalcular la duración total del examen
             DURATION_SEC = (3 * 60 * 60) + TIME_ADDED_SEC;
 
-            // 3. Notificar al alumno
             const addedMinutes = Math.round(addedTimeDiff / 60);
             showFloatingNotification(`🔔 Gus : Se te añadieron ${addedMinutes} minutos extra por un problema técnico.`, 'info');
             
-            // 4. Forzar la actualización del cronómetro
-            if (timerInterval) {
-                 // Si el cronómetro ya está corriendo, lo actualizamos inmediatamente
-                 updateCountdown();
-            } else if (START_TIME_UTC_SEC > 0) {
-                 // Si el examen ya se inició, pero el intervalo se detuvo (por algún motivo), lo reiniciamos
-                 timerInterval = setInterval(updateCountdown, 1000);
-                 updateCountdown();
+            if (timerInterval || START_TIME_UTC_SEC > 0) {
+                updateCountdown();
+                if (!timerInterval) {
+                    timerInterval = setInterval(updateCountdown, 1000);
+                }
             }
         });
         
-        // 🔑 Evento 1.4: Cierre Remoto del Chat por el Admin
+        // 🔑 Evento 1.4: Cierre Remoto del Chat por el Admin (Aviso de chat)
         socket.on('close_chat_signal', function(data) {
-            
-            // 1. Añadimos el mensaje de sistema para CONFIRMAR que el evento llegó
             addChatMessage(`**Soporte Finalizado:** ${data.msg}`, 'system');
-            console.log("CHAT: Señal de cierre remota recibida. Forzando ocultamiento."); 
             
-            // 2. Cierre el panel de forma inmediata y forzada
             chatPanel.style.opacity = '0';
             setTimeout(() => { chatPanel.style.display = 'none'; chatPanel.style.opacity = '1'; }, 500); 
 
-            // 3. Desactiva la entrada y vacía el historial
             studentMessageInput.disabled = true;
             document.querySelector('.chat-send-btn').disabled = true;
             chatMessagesWindow.innerHTML = '';
@@ -207,13 +191,11 @@
             const message = studentMessageInput.value.trim();
 
             if (message && !studentMessageInput.disabled) {
-                // CORRECCIÓN 2: El mensaje debe ir al ID del Administrador (usamos ID 1 como estándar)
                 socket.emit('send_message_to_admin', { 
                     target_admin_id: 1, // Enviamos el mensaje al ID 1 (Admin)
                     message: message
                 });
 
-                // Muestra el mensaje localmente
                 addChatMessage(message, 'student');
                 studentMessageInput.value = '';
                 studentMessageInput.focus();
@@ -233,7 +215,6 @@
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('chat-message', type + '-chat-message');
             
-            // Usamos innerHTML para permitir el formato en el mensaje
             if (type === 'system') {
                 msgDiv.innerHTML = msg; 
             } else {
@@ -241,7 +222,6 @@
             }
             
             chatMessagesWindow.appendChild(msgDiv);
-            
             chatMessagesWindow.scrollTop = chatMessagesWindow.scrollHeight;
         }
 
@@ -257,7 +237,6 @@
             
             container.appendChild(notification);
 
-            // Desvanecer después de 10 segundos
             setTimeout(function() {
                 notification.style.opacity = '0';
                 setTimeout(function() {
@@ -265,13 +244,63 @@
                 }, 500); 
             }, 10000); 
         }
-
+        
         // ====================================================================
-        // 2. LÓGICA DE AUTO-SAVE (EXISTENTE)
+        // 2. LÓGICA DE SEGURIDAD ANTI-TRAMPAS (Código ACTUALIZADO)
+        // ====================================================================
+        
+        /**
+         * Envía un evento de violación al servidor a través de SocketIO si el examen está activo.
+         * Utiliza la bandera 'violationReported' para evitar spam de logs.
+         * @param {string} violationType - El tipo de violación ('TAB_CHANGE' o 'WINDOW_BLUR').
+         */
+        function reportViolation(violationType) {
+            if (isExamActive && !violationReported && socket.connected) {
+                
+                socket.emit('exam_violation', {
+                    user_id: currentUserId,
+                    username: username,
+                    exam_id: examId,
+                    type: violationType // Enviamos el código en inglés (WINDOW_BLUR/TAB_CHANGE)
+                });
+                
+                violationReported = true; 
+                console.warn(`[SEGURIDAD] Violación detectada: ${violationType}. Notificando a Admin.`);
+                
+                // Opcional: Mostrar advertencia al alumno
+                // Usamos un alert temporalmente, pero se recomienda un modal personalizado
+                alert(`ADVERTENCIA: Se ha detectado un cambio de foco. Esto será notificado al administrador.`);
+            }
+        }
+
+        // 2.1: Detección de Foco Perdido (WINDOW_BLUR)
+        window.addEventListener('blur', () => {
+             // Solo reportamos si la ventana se desenfoca
+             reportViolation('WINDOW_BLUR');
+        });
+
+        // 2.2: Detección de Tab Hidden (TAB_CHANGE)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // El usuario ha cambiado de pestaña o minimizado el navegador
+                reportViolation('TAB_CHANGE');
+            } else {
+                // El usuario ha vuelto a la pestaña (restablecer el reporte)
+                violationReported = false; 
+            }
+        });
+        
+        // 2.3: Restablecer la bandera al volver al foco de la ventana
+        window.addEventListener('focus', function() {
+             violationReported = false; // Restablecer bandera al volver
+        });
+        
+        // ====================================================================
+        // 3. LÓGICA DE AUTO-SAVE (Código 1)
         // ====================================================================
         function autoSave(questionId, responseValue) {
-            if (START_TIME_UTC_SEC === 0) {
-                console.warn("No se puede guardar: El examen aún no ha comenzado.");
+            if (!isExamActive) {
+                console.warn("No se puede guardar: El examen aún no ha comenzado o ya terminó.");
                 return;
             }
 
@@ -297,7 +326,7 @@
         }
         
         // ====================================================================
-        // 3. LÓGICA DE CRONÓMETRO Y CONTROL (EXISTENTE)
+        // 4. LÓGICA DE CRONÓMETRO Y CONTROL (Código 1)
         // ====================================================================
         function formatTime(totalSeconds) {
             if (totalSeconds < 0) totalSeconds = 0;
@@ -312,17 +341,13 @@
         function updateCountdown() {
             const currentTimeSec = Math.floor(Date.now() / 1000);
             
-            if (START_TIME_UTC_SEC === 0) {
-                // 🔑 CORRECCIÓN CRONÓMETRO: Muestra la duración base + extra si no ha iniciado 🔑
+            if (!isExamActive) {
                 clearInterval(timerInterval);
-                // DURATION_SEC YA INCLUYE TIME_ADDED_SEC
                 countdownDisplay.textContent = formatTime(DURATION_SEC); 
                 return;
             }
 
             const elapsedTimeSec = currentTimeSec - START_TIME_UTC_SEC;
-            
-            // 🌟 CLAVE: Usamos DURATION_SEC que ya incluye TIME_ADDED_SEC 🌟
             let remainingTimeSec = DURATION_SEC - elapsedTimeSec;
 
             if (remainingTimeSec <= 0) {
@@ -337,6 +362,7 @@
                 }, 100);
 
                 clearInterval(timerInterval);
+                isExamActive = false; // Detener la seguridad
                 return; 
             }
 
@@ -356,20 +382,25 @@
         }
         
         function startExam() {
-            fetch(window.location.href, { 
+            fetch('{{ url_for("take_exam", exam_id=exam.id) }}', { 
                 method: 'POST',
                 body: new URLSearchParams({ action: 'start_timer_now' }), 
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            }).then(() => {
-                // Al recibir la confirmación del servidor, iniciamos el contador
-                START_TIME_UTC_SEC = Math.floor(Date.now() / 1000); 
-                
-                overlay.style.opacity = 0;
-                setTimeout(() => {
-                    overlay.style.display = 'none';
-                    updateCountdown();
-                    timerInterval = setInterval(updateCountdown, 1000);
-                }, 500);
+            }).then(response => {
+                if (response.ok) {
+                    // Al recibir la confirmación del servidor, iniciamos el contador
+                    START_TIME_UTC_SEC = Math.floor(Date.now() / 1000); 
+                    isExamActive = true; // Activar la seguridad al iniciar el examen
+
+                    overlay.style.opacity = 0;
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        updateCountdown();
+                        timerInterval = setInterval(updateCountdown, 1000);
+                    }, 500);
+                } else {
+                    throw new Error('Server response not OK');
+                }
             })
             .catch(error => {
                 console.error("Error al iniciar el temporizador en el servidor:", error);
@@ -378,21 +409,24 @@
         }
         
         // LÓGICA DE INICIO Y VERIFICACIÓN AL CARGAR
+        // Verificamos si hay tiempo de inicio guardado
         if (START_TIME_UTC_SEC === 0) {
-            // Si el tiempo es 0, mostramos el overlay y el tiempo completo en el cronómetro
+            // Caso 1: Primer intento o sesión reiniciada. Muestra el overlay y el tiempo completo.
             overlay.style.display = 'flex';
             updateCountdown(); 
             if (startButton) {
                 startButton.addEventListener('click', startExam);
             }
         } else {
-            // Si hay un tiempo guardado, ocultamos el overlay e iniciamos el cronómetro
+            // Caso 2: Recarga o Sesión activa. Oculta el overlay e inicia el cronómetro.
             const currentTimeSec = Math.floor(Date.now() / 1000);
             const remainingTime = DURATION_SEC - (currentTimeSec - START_TIME_UTC_SEC);
             
+            // Ocultamos el overlay si estamos en una sesión ya iniciada
             overlay.style.display = 'none';
+            
             if (remainingTime <= 0) {
-                updateCountdown(); 
+                updateCountdown(); // Muestra 00:00:00 y bloquea
             } else {
                 updateCountdown(); 
                 timerInterval = setInterval(updateCountdown, 1000);
@@ -532,7 +566,7 @@
         /* --- Título de la Página (Fuera de la Tarjeta) --- */
         .exam-header-info {
             max-width: 800px;
-            margin: 20px auto;
+            margin: 20px auto 60px auto; 
             text-align: center;
             padding: 0 10px;
         }
@@ -568,6 +602,11 @@
             color: #555;
         }
         
+        /* CLAVE 1: Centrar el texto de la pregunta */
+        .question-text.question-centered {
+            text-align: center;
+        }
+
         .question-text {
             font-size: 1.1em; 
             font-weight: bold;
@@ -580,7 +619,8 @@
         .question-image {
             max-width: 100%; 
             height: auto; 
-            margin: 15px 0; 
+            margin: 15px auto; /* Centrar la imagen si es más pequeña que el contenedor */
+            display: block; /* Necesario para que margin: auto funcione */
             border-radius: 8px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
@@ -603,8 +643,8 @@
         }
         
         .option-label {
-            display: flex;
-            align-items: center;
+            display: flex; /* Habilitar Flexbox */
+            align-items: center; /* Alinear verticalmente el radio button con el texto */
             margin: 8px 0;
             padding: 12px;
             border: 1px solid #ddd;
@@ -622,6 +662,13 @@
         .option-label input[type="radio"] {
             margin-right: 15px;
             transform: scale(1.2); 
+        }
+        
+        /* CLAVE 2: Envolver el texto para centrarlo y usar flexbox */
+        .option-text-wrapper {
+            flex-grow: 1; /* Ocupa todo el ancho restante */
+            text-align: center !important; /* ¡FORZADO: Centra el texto! */
+            padding-right: 25px; /* Compensar el radio button a la izquierda para un centrado visual */
         }
         
         /* Resaltar la opción seleccionada */
@@ -664,24 +711,7 @@
             background: #5c6a74;
         }
 
-        /* 🔑 ESTILOS DEL PANEL DE CHAT DEL ALUMNO (CORRECCIÓN VISIBILIDAD) 🔑 */
-        .student-chat-panel {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 300px;
-            height: 350px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 9000;
-            display: none; /* 🔑 CLAVE: Oculto por defecto para evitar persistencia 🔑 */
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid #ddd;
-            transition: opacity 0.5s ease-out; /* Transición para el cierre suave */
-        }
-
+        /* 🔑 ESTILOS DEL PANEL DE CHAT FLOTANTE 🔑 */
         .chat-panel-header {
             background: #3498db;
             color: white;
@@ -790,6 +820,24 @@
                 right: 2.5%;
                 bottom: 10px;
             }
+        }
+        
+        /* 🔑 CSS para el panel de chat flotante 🔑 */
+        .student-chat-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 350px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 9000;
+            display: none; /* 🔑 CLAVE: Oculto por defecto para evitar persistencia 🔑 */
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            transition: opacity 0.5s ease-out;
         }
     </style>
 {% endblock %}

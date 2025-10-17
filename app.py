@@ -4,9 +4,10 @@ from flask_login import LoginManager, login_user, logout_user, login_required, U
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from flask_migrate import Migrate
+from flask_babel import Babel, format_datetime
 import datetime as dt
 import os
-import pytz
+import pytz # CLAVE: Para manejo de zonas horarias
 import pyotp
 import qrcode
 import base64
@@ -15,7 +16,6 @@ import time
 import re
 import logging
 from werkzeug.utils import secure_filename
-from flask_babel import Babel, format_datetime
 from sqlalchemy import func as db_func 
 from sqlalchemy import case 
 from sqlalchemy.exc import IntegrityError 
@@ -34,11 +34,10 @@ logging.basicConfig(
 )
 
 # --- CONFIGURACIÓN DE PRODUCCIÓN (CLAVE SECRETA Y DB) ---
-# Usa variables de entorno (os.environ) para producción o un fallback seguro.
 SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecretkey')
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///curso_ecoms.db') 
 
-# --- Configuración básica ---
+# --- Configuración básica de la aplicación ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -49,25 +48,64 @@ app.config['PERMANENT_SESSION_LIFETIME'] = dt.timedelta(minutes=30) # Timeout de
 LOGIN_ATTEMPTS = 5
 LOCKOUT_TIME = 300 # 5 minutos en segundos
 
-# Inicialización de extensiones
+# Inicialización de extensiones (en este orden recomendado)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
 login_manager = LoginManager()
-login_manager.init_app(app) # Inicialización separada
+login_manager.init_app(app) 
 login_manager.login_view = "login"
 
 # 🔑 INICIALIZACIÓN DE SOCKETIO 🔑
-# Usamos async_mode='eventlet' ya que es recomendado para SocketIO y Flask-Login
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*") 
 
-# 🔑 CONFIGURACIÓN DE BABEL 🔑
+# ======================================================================
+# 🚨 INTEGRACIÓN DE BABEL Y ZONA HORARIA (CONFIGURACIÓN FINAL Y ESTABLE) 🚨
+# ======================================================================
+
+# 1. Definimos la instancia de Babel para inicializarla inmediatamente
 babel = Babel(app)
+
+# 2. Funciones de selector de Babel (DEFINIMOS SIN DECORADOR, solo si son necesarias)
+# Nota: Estas funciones ya no se registran automáticamente por el conflicto.
+def get_locale_selector(): 
+    """Intenta obtener el mejor locale del navegador, o usa 'es' por defecto."""
+    if request and hasattr(request, 'accept_languages'):
+        return request.accept_languages.best_match(['es', 'en'])
+    return 'es'
+
+def get_timezone_selector():
+    """Retorna la zona horaria configurada en la aplicación."""
+    return 'America/Mexico_City'
+
+
+# 3. CONFIGURACIÓN DE BABEL
 app.config['BABEL_DEFAULT_LOCALE'] = 'es'
 app.config['BABEL_DEFAULT_TIMEZONE'] = 'America/Mexico_City'
+
+# 4. EXPORTAR la función de formato a Jinja (Esto es seguro)
 app.jinja_env.globals.update(format_datetime=format_datetime)
 
+# 5. REGISTRO DE SELECTORES
+# Se remueve completamente el intento de registrar los selectores con .localeselector()
+# y .timezoneselector() para evitar el error 'AttributeError' que persiste
+# en esta versión de la librería.
+
+# 6. USAMOS LAS FUNCIONES DE SELECTOR DIRECTAMENTE EN BABEL (Método Alternativo)
+# Esto es necesario si no puedes usar los decoradores ni los métodos de registro directo.
+# Si el objeto Babel existe, registramos las funciones manualmente.
+try:
+    babel.locale_selector_func = get_locale_selector
+    babel.timezone_selector_func = get_timezone_selector
+except Exception as e:
+    logging.warning(f"WARN: Fallo la asignacion manual de selectores de Babel: {e}. Usando valores por defecto.")
+    
+
+# ======================================================================
 # --- Modelos (Mantenidos del Código 2) ---
+# ======================================================================
 class User(db.Model, UserMixin):
+# ... resto del código ...
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -75,6 +113,7 @@ class User(db.Model, UserMixin):
     two_factor_secret = db.Column(db.String(32), nullable=True) 
     is_active = db.Column(db.Boolean, default=True) 
     results = db.relationship("ExamResult", backref="user", lazy=True) 
+    violation_logs = db.relationship("ViolationLog", backref="user", lazy=True) 
 
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -82,8 +121,12 @@ class Exam(db.Model):
     description = db.Column(db.Text, nullable=True)
     start_datetime = db.Column(db.DateTime, nullable=True)
     end_datetime = db.Column(db.DateTime, nullable=True)
+    # Ya tenía cascada para Questions y Sessions
     questions = db.relationship("Question", backref="exam", cascade="all, delete-orphan")
-    active_sessions = db.relationship("ActiveExamSession", backref="exam", cascade="all, delete-orphan") # Nueva relación
+    active_sessions = db.relationship("ActiveExamSession", backref="exam", cascade="all, delete-orphan") 
+    
+    # 🔑 CORRECCIÓN CLAVE: Añadimos cascade para ViolationLog 🔑
+    violation_logs = db.relationship("ViolationLog", backref="exam", lazy=True, cascade="all, delete-orphan") 
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -150,37 +193,38 @@ class ActiveExamSession(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), primary_key=True)
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # 🌟 NUEVA COLUMNA para el tiempo adicional concedido por el admin 🌟
     time_added_sec = db.Column(db.Integer, default=0) 
-    
     user = db.relationship('User', backref=db.backref('active_session', uselist=False))
+
+# 🔑 CAMBIO/ADICIÓN SOLICITADA: Definición de la clase ViolationLog 🔑
+class ViolationLog(db.Model):
+    __tablename__ = 'violation_log'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
+    violation_type = db.Column(db.String(100), nullable=False) # Ej: 'Tab Switch', 'Minimize'
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text, nullable=True) # Detalles adicionales si es necesario
 # -------------------------------------------------------------------
 
 # ======================================================================
-# --- MANEJADORES DE SOCKETIO (CHAT EN VIVO) ---
+# --- MANEJADORES DE SOCKETIO (CHAT EN VIVO Y SEGURIDAD) ---
 # ======================================================================
 
 @socketio.on('connect')
 def handle_connect():
     """
     Maneja la conexión inicial del cliente SocketIO.
-    CORRECCIÓN: Eliminamos la verificación de current_user aquí para evitar el error de conexión.
-    La verificación real de autenticación se hace después en 'join_room'.
     """
     logging.info("Socket CONNECTED. Attempting to get user context.")
-    # Si el usuario está autenticado (aunque SocketIO a veces lo pierda aquí),
-    # intentamos unirlo a su room. Si no lo está, la emisión 'join_room' fallará.
     if current_user.is_authenticated:
         join_room(str(current_user.id))
         logging.info(f"Socket conectado y unido al room de usuario: User {current_user.username} (ID: {current_user.id})")
-    # No elevamos ConnectionRefusedError para permitir la reconexión.
 
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Maneja la desconexión del cliente SocketIO."""
-    # Usamos current_user.is_authenticated para asegurar que el logout no se hace en sesiones anónimas.
     if current_user.is_authenticated:
         leave_room(str(current_user.id))
         logging.info(f"Socket desconectado: User {current_user.username} (ID: {current_user.id})")
@@ -189,18 +233,13 @@ def handle_disconnect():
 @socketio.on('join_room')
 def on_join(data):
     """Permite al admin unirse a la sala del alumno (target_user_id)."""
-    # 🔑 Control de Rol: Verificación de autenticación y rol aquí 🔑
     if not current_user.is_authenticated or current_user.role != 'admin':
         logging.warning("SECURITY: Unauthorized user tried to join admin chat.")
         return
 
     target_user_id = str(data.get('user_id'))
-    
-    # El admin se une a la sala del alumno para poder enviarle mensajes
     join_room(target_user_id)
     logging.info(f"ADMIN CHAT: Admin {current_user.username} joined room {target_user_id}.")
-    
-    # Opcional: Emitir un mensaje de confirmación solo al admin.
     emit('status_update', 
           {'msg': f'Conectado a la sala del alumno ID {target_user_id}.'}, 
           room=str(current_user.id)
@@ -210,7 +249,6 @@ def on_join(data):
 def handle_admin_message(data):
     """
     Maneja el mensaje enviado por el Admin. 
-    Envía una notificación al room (ID) del alumno.
     """
     if not current_user.is_authenticated or current_user.role != 'admin':
         logging.warning(f"SECURITY: Non-admin user {current_user.username} attempted to send chat message.")
@@ -220,43 +258,29 @@ def handle_admin_message(data):
     message_content = data.get('message')
 
     if target_room and message_content:
-        # Emitir el mensaje de notificación al room del alumno (take_exam.html)
         emit('chat_notification', 
               {
                   'sender': 'Admin', 
                   'message': message_content,
-                  'timestamp': datetime.now().strftime("%H:%M:%S") # Agregar timestamp para el chat del alumno
+                  'timestamp': datetime.now().strftime("%H:%M:%S")
               }, 
               room=target_room,
               namespace='/'
         )
-        # Emitir el mensaje de vuelta al propio admin para que lo vea en su historial de chat
-        # emit('admin_message_sent', 
-        #           {
-        #               'message': message_content, 
-        #               'timestamp': datetime.now().strftime("%H:%M:%S"),
-        #               'sender': 'Tú'
-        #           }, 
-        #           room=str(current_user.id),
-        #           namespace='/'
-        # )
-        
         logging.info(f"CHAT: Admin {current_user.username} sent message to User ID {target_room}: {message_content[:30]}...")
         
 @socketio.on('send_message_to_admin')
 def handle_student_response(data):
     """
     Maneja el mensaje enviado por el Alumno (si está en take_exam). 
-    Envía el mensaje de vuelta al room del Admin (admin_chat.html)
     """
     if not current_user.is_authenticated or current_user.role != 'student':
         return
 
-    admin_room = str(data.get('target_admin_id')) # Usamos el ID del admin que está viendo el chat
+    admin_room = str(data.get('target_admin_id'))
     message_content = data.get('message')
     
     if admin_room and message_content:
-        # Emitir el mensaje al room del Admin
         emit('admin_message_received', 
               {
                   'message': message_content,
@@ -277,18 +301,67 @@ def handle_close_chat(data):
     if not current_user.is_authenticated or current_user.role != 'admin':
         return 
         
-    # El ID del room es el ID del usuario ALUMNO
     target_room = str(data.get('target_user_id')) 
     admin_username = data.get('admin_username', 'Admin')
 
     if target_room:
-        # Esto emite la señal al cliente (take_exam.html) para que oculte la burbuja
         emit('close_chat_signal', 
-             {'msg': f'El soporte ha finalizado por {admin_username}.'}, 
-             room=target_room, # Usa el ID del alumno como room
-             namespace='/'
+              {'msg': f'El soporte ha finalizado por {admin_username}.'}, 
+              room=target_room,
+              namespace='/'
         )
         logging.info(f"CHAT: Admin {current_user.username} closed chat session for User ID {target_room}.")
+        
+# 🔑 CAMBIO/ADICIÓN SOLICITADA: Handler de SocketIO para guardar la violación 🔑
+@socketio.on('exam_violation')
+def handle_exam_violation(data):
+    """
+    Recibe la señal del cliente cuando el alumno realiza una acción prohibida,
+    registra el log en la base de datos y notifica al panel de monitoreo del Admin.
+    """
+    if not current_user.is_authenticated or current_user.role != 'student':
+        return
+    
+    violation_type = data.get('type', 'Unknown Violation')
+    exam_id = data.get('exam_id')
+    user_id = current_user.id
+    
+    if not exam_id or not user_id:
+        logging.error(f"Error al registrar violación: Missing exam_id or user_id in data: {data}")
+        return
+
+    try:
+        # 🚨 CORRECCIÓN CLAVE DE ZONA HORARIA: Guardar la hora local de México 🚨
+        mexico_city_tz = pytz.timezone('America/Mexico_City')
+        current_time_mexico = datetime.now(mexico_city_tz)
+        
+        # 1. Registrar la violación en la base de datos
+        new_log = ViolationLog(
+            user_id=user_id,
+            exam_id=exam_id,
+            violation_type=violation_type,
+            # Usamos el objeto aware (consciente de la zona horaria)
+            timestamp=current_time_mexico, 
+            details=f"Violación de tipo: {violation_type}."
+        )
+        db.session.add(new_log)
+        db.session.commit()
+        
+        logging.warning(f"🚨 SECURITY LOGGED: User: {current_user.username}, Exam ID: {exam_id}, Type: {violation_type}.")
+        
+        # 2. Notificar al panel de monitoreo de Admin
+        socketio.emit('admin_violation_alert', 
+                      {'user_id': user_id, 
+                       'username': current_user.username, 
+                       'exam_id': exam_id, 
+                       'type': violation_type, 
+                       'timestamp': datetime.now().strftime("%H:%M:%S")},
+                      room='1', # Asume que el admin principal (ID 1) recibe todas las alertas
+                      namespace='/')
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error DB al registrar violación (User: {user_id}, Type: {violation_type}): {e}")
 
 
 # ======================================================================
@@ -380,7 +453,7 @@ def admin_panel():
     return render_template("admin.html", 
                            exams=exams, 
                            announcements_list=announcements_list,
-                           active_exams_summary=active_exams_summary # Necesario para la lógica de conteo en vivo en el template
+                           active_exams_summary=active_exams_summary 
                            )
 
 
@@ -402,8 +475,8 @@ def dashboard():
     
     # 2. WIDGET: Última Simulación/Resultado
     last_result = ExamResult.query.filter_by(user_id=current_user.id)\
-                  .order_by(ExamResult.date_taken.desc()).first()
-                  
+                     .order_by(ExamResult.date_taken.desc()).first()
+                     
     last_exam_questions_count = 0
     if last_result:
         exam = Exam.query.get(last_result.exam_id)
@@ -420,11 +493,11 @@ def dashboard():
         db_func.sum(correct_count_expr).label('correct_count'), 
         db_func.count(Answer.id).label('total_answered') 
     ).join(Question, Answer.question_id == Question.id)\
-     .filter(Answer.user_id == current_user.id, Question.subject != None, Answer.grade != None)\
-     .group_by(Question.subject)\
-     .order_by(db_func.avg(Answer.grade).asc())\
-     .limit(3)\
-     .all()
+      .filter(Answer.user_id == current_user.id, Question.subject != None, Answer.grade != None)\
+      .group_by(Question.subject)\
+      .order_by(db_func.avg(Answer.grade).asc())\
+      .limit(3)\
+      .all()
     
     weak_subjects = []
     for subject, avg_score, correct_count, total_answered in materias_a_reforzar:
@@ -438,8 +511,8 @@ def dashboard():
     
     # 4. WIDGET: Historial de Reportes (Últimos 3) 🔑
     latest_reports = Report.query.filter_by(user_id=current_user.id)\
-                              .order_by(Report.date_submitted.desc())\
-                              .limit(3).all()
+                                 .order_by(Report.date_submitted.desc())\
+                                 .limit(3).all()
     
     # 5. Notificación de Respuesta del Admin
     for report in latest_reports:
@@ -680,9 +753,9 @@ def disable_2fa():
 def admin_chat(user_id):
     # 🔑 CONTROL DE ACCESO: SOLO ADMIN 🔑 (Solo el admin puede iniciar el chat de soporte)
     if current_user.role != "admin":
-        flash("Acceso denegado. Solo los administradores pueden iniciar el chat de soporte.", "danger")
+        flash("Acceso denegado. Solo los administradores principales pueden iniciar el chat de soporte.", "danger")
         return redirect(url_for("dashboard"))
-    
+        
     target_user = User.query.get_or_404(user_id)
     
     # Renderizamos la interfaz de chat, pasándole el objeto del alumno
@@ -747,30 +820,64 @@ def admin_add_time_to_exam():
         time_to_add_sec = int(data.get('time_sec')) 
         
         # 1. Buscar la sesión del alumno
-        # Asumo que tu ActiveExamSession no tiene una columna 'completed', así que buscamos la sesión activa
-        session = ActiveExamSession.query.filter_by(user_id=student_id).first() 
+        session_db = ActiveExamSession.query.filter_by(user_id=student_id).first() 
 
-        if not session:
+        if not session_db:
             return jsonify({'success': False, 'message': 'Sesión de examen activa no encontrada.'}), 404
 
         # 2. Sumar el tiempo y guardar en DB
-        session.time_added_sec += time_to_add_sec
+        session_db.time_added_sec += time_to_add_sec
         db.session.commit()
 
         # 3. Notificar al cliente (alumno) a través de SocketIO
         # Emitimos el tiempo adicional total y el ID del alumno
         socketio.emit('time_update', 
-                      {'extra_time_sec': session.time_added_sec}, 
+                      {'extra_time_sec': session_db.time_added_sec}, 
                       room=str(student_id)) # Enviamos a la sala privada del alumno (su ID)
 
         return jsonify({'success': True, 
                         'message': f'Se añadieron {time_to_add_sec/60} minutos al alumno {student_id}.',
-                        'new_total_extra_sec': session.time_added_sec})
+                        'new_total_extra_sec': session_db.time_added_sec})
 
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error al añadir tiempo: {e}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+# 🔑 CAMBIO/ADICIÓN SOLICITADA: RUTA NUEVA: Ver Logs de Violación del Alumno 🔑
+@app.route("/admin/monitor/logs/<int:exam_id>/<int:user_id>")
+@login_required
+def view_violation_logs(exam_id, user_id):
+    if current_user.role != "admin":
+        flash("Acceso denegado.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    student = User.query.get_or_404(user_id)
+    exam = Exam.query.get_or_404(exam_id)
+    
+    # Obtener logs de violación para el alumno y el examen
+    # Esto traerá objetos datetime sin zona horaria (naive datetime)
+    logs = ViolationLog.query.filter_by(user_id=user_id, exam_id=exam_id).order_by(ViolationLog.timestamp.desc()).all()
+    
+    # --- 🚨 CORRECCIÓN DE ZONA HORARIA 🚨 ---
+    # 1. Definir la zona horaria UTC (asumimos que la DB guardó en UTC)
+    # NOTA: Asegúrate de que import pytz esté al inicio de app.py
+    utc_tz = pytz.utc
+    
+    # 2. Iterar sobre los logs y "pegar" la información de UTC al objeto de tiempo
+    # Esto convierte el objeto naive (sin zona horaria) en aware (consciente de la zona horaria)
+    for log in logs:
+        # Solo modificamos si es naive (no tiene tzinfo)
+        if log.timestamp and not log.timestamp.tzinfo:
+            log.timestamp = utc_tz.localize(log.timestamp)
+
+    # ----------------------------------------
+    
+    return render_template("admin_violation_logs.html", 
+                           student=student, 
+                           exam=exam, 
+                           logs=logs)
+# 🔑 FIN DE CAMBIO/ADICIÓN SOLICITADA 🔑
 
 
 # --- Admin: Crear Anuncio ---
@@ -1254,7 +1361,7 @@ def reset_exam_attempt(exam_id, user_id):
         
     session_key = f'exam_start_time_{exam_id}'
     session.pop(session_key, None) 
-        
+    
     db.session.commit()
     
     logging.info(f"AUDIT LOG: Admin user {current_user.username} reset exam '{exam.title}' attempt for user ID {user_id}.")
@@ -1379,7 +1486,6 @@ def delete_user(user_id):
         
     try:
         # 3. Eliminar datos relacionados (CLAVE para evitar errores de Foreign Key)
-        # Se borran todos los datos que dependen del user_id antes de borrar el usuario.
         
         # Eliminar resultados de exámenes
         ExamResult.query.filter_by(user_id=user_id).delete()
@@ -1395,6 +1501,9 @@ def delete_user(user_id):
         
         # Eliminar sesiones activas de examen
         ActiveExamSession.query.filter_by(user_id=user_id).delete()
+        
+        # Eliminar logs de violación 
+        ViolationLog.query.filter_by(user_id=user_id).delete()
         
         # 4. Eliminar el usuario y confirmar
         db.session.delete(user)
@@ -1913,8 +2022,8 @@ def take_exam(exam_id):
             "take_exam.html", 
             exam=exam,
             start_time_utc=start_time,
-            saved_answers=saved_answers_dict, # Pasamos las respuestas guardadas
-            time_added_sec=time_added_sec  # Pasamos el tiempo extra al template
+            saved_answers=saved_answers_dict, 
+            time_added_sec=time_added_sec 
         )
 
 
@@ -1962,15 +2071,10 @@ def student_exam_detail(exam_id):
 # --- INICIALIZACIÓN DE LA APLICACIÓN ---
 # ======================================================================
 
-# --- Creación de DB inicial ---
-# ATENCIÓN: Este bloque solo se ejecuta cuando se corre `python app.py` directamente.
-# Es necesario para crear la DB localmente (sqlite), pero debe deshabilitarse en
-# producción (Render/Railway) donde se usa PostgreSQL. Usamos 'if __name__ == "__main__":'
-# como proxy para "entorno de desarrollo local".
+
 if __name__ == "__main__":
     with app.app_context():
-        # Si la URL de DB no es un archivo (es decir, estamos usando Postgress externo)
-        # NO intentamos crear la DB o el usuario admin aquí.
+        
         if 'sqlite:///' in app.config['SQLALCHEMY_DATABASE_URI']:
             db.create_all()
 
@@ -1982,4 +2086,5 @@ if __name__ == "__main__":
 
     import os
     port = int(os.environ.get("PORT", 5000))
+    # Usamos socketio.run para iniciar el servidor con soporte para WebSockets
     socketio.run(app, host="0.0.0.0", port=port)
