@@ -5,201 +5,342 @@
 {% block content %}
 
 <div class="container monitor-container">
-<header class="monitor-header">
-<h1 class="header-title">👀 Monitoreo de Alumnos en Examen</h1>
-<h2 class="exam-info-header">Examen: {{ exam.title }}</h2>
-</header>
+    <header class="monitor-header">
+        <h1 class="header-title">👀 Monitoreo de Alumnos en Examen</h1>
+        <h2 class="exam-info-header">Examen: {{ exam.title }}</h2>
+    </header>
 
-<a href="{{ url_for('admin_panel') }}" class="btn back-nav-btn">⬅ Volver al Panel Admin</a>
+    <a href="{{ url_for('admin_panel') }}" class="btn back-nav-btn">⬅ Volver al Panel Admin</a>
 
-<div class="card student-list-card">
-    <h3>Estado de Presentación ({{ monitoring_data | length }} Alumnos)</h3>
-    
-    <div class="table-responsive">
-        <table class="monitor-table" border="1" cellpadding="10" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Alumno</th>
-                    <th>Estado Actual</th>
-                    {% if current_user.role == 'admin' %}
-                    <th>Acción de Soporte</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for data in monitoring_data %}
-                {% set is_active = data.status == 'Haciendo Examen' %}
-                <tr>
-                    <td data-label="Alumno"><strong>{{ data.username | capitalize }}</strong></td>
-                    <td data-label="Estado">
-                        <span class="status-tag status-{{ data.status | lower | replace(' ', '-') }}">
-                            {{ data.status }}
-                        </span>
-                    </td>
-                    {# 🔑 INICIO: LÓGICA DEL BOTÓN "ABRIR CHAT" (Paso 2.3) 🔑 #}
-                    {% if current_user.role == 'admin' %}
-                    <td data-label="Acción" class="action-cell">
-                        {% if is_active %}
-                            <a href="{{ url_for('admin_chat', user_id=data.user_id) }}" target="_blank" class="button action-btn chat-btn">
-                                💬 Abrir Chat en Vivo
-                            </a>
-                        {% else %}
-                            <span class="no-action">No Disponible</span>
+    <div class="card student-list-card">
+        <h3>Estado de Presentación ({{ monitoring_data | length }} Alumnos)</h3>
+        
+        <div class="table-responsive">
+            <table class="monitor-table" border="1" cellpadding="10" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Alumno</th>
+                        <th>Estado Actual</th>
+                        {% if current_user.role == 'admin' %}
+                        <th>Acción de Soporte</th>
+                        <th class="time-column">Añadir Tiempo (min)</th>
                         {% endif %}
-                    </td>
-                    {% endif %}
-                    {# 🔑 FIN: LÓGICA DEL BOTÓN "ABRIR CHAT" (Paso 2.3) 🔑 #}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in monitoring_data %}
+                    {# Asumimos que `data` incluye ahora `time_added_sec` desde la consulta Python si es necesario #}
+                    {% set is_active = data.status == 'Haciendo Examen' %}
+                    <tr id="row-{{ data.user_id }}">
+                        <td data-label="Alumno"><strong>{{ data.username | capitalize }}</strong></td>
+                        <td data-label="Estado">
+                            <span class="status-tag status-{{ data.status | lower | replace(' ', '-') }}">
+                                {{ data.status }}
+                            </span>
+                        </td>
+                        
+                        {% if current_user.role == 'admin' %}
+                        <td data-label="Acción" class="action-cell">
+                            {% if is_active %}
+                                <a href="{{ url_for('admin_chat', user_id=data.user_id) }}" target="_blank" class="button action-btn chat-btn">
+                                    💬 Abrir Chat en Vivo
+                                </a>
+                            {% else %}
+                                <span class="no-action">No Disponible</span>
+                            {% endif %}
+                        </td>
+
+                        {# INICIO: COLUMNA DE AÑADIR TIEMPO #}
+                        <td data-label="Añadir Tiempo" class="time-cell">
+                            {% if is_active %}
+                                <div class="time-controls">
+                                    <button class="time-btn quick-add-btn" 
+                                            onclick="addTime({{ data.user_id }}, 300, 5)">+5m</button>
+                                    <button class="time-btn quick-add-btn" 
+                                            onclick="addTime({{ data.user_id }}, 600, 10)">+10m</button>
+                                    <button class="time-btn custom-btn" 
+                                            onclick="showCustomTimeInput({{ data.user_id }})">Custom</button>
+                                    
+                                    <span id="feedback-{{ data.user_id }}" class="time-feedback"></span>
+                                </div>
+
+                                <div id="custom-input-{{ data.user_id }}" class="custom-time-group" style="display: none;">
+                                    <input type="number" id="input-{{ data.user_id }}" min="1" placeholder="minutos" class="custom-time-input">
+                                    <button class="time-btn confirm-btn" 
+                                            onclick="confirmCustomTime({{ data.user_id }})">Confirmar</button>
+                                </div>
+                            {% else %}
+                                <span class="no-action">Solo sesión activa</span>
+                            {% endif %}
+                        </td>
+                        {# FIN: COLUMNA DE AÑADIR TIEMPO #}
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-</div>
+{# 🔑 LÓGICA JAVASCRIPT PARA AÑADIR TIEMPO Y SOCKETIO 🔑 #}
+<script>
+    // URL del endpoint de Flask que creamos
+    const ADD_TIME_URL = '{{ url_for("admin_add_time_to_exam") }}';
+
+    // 1. Manejadores de Eventos
+    async function addTime(studentId, seconds, minutes) {
+        // Muestra un mensaje temporal mientras procesa
+        updateFeedback(studentId, `Añadiendo ${minutes} minutos...`, 'processing');
+        
+        try {
+            const response = await fetch(ADD_TIME_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    time_sec: seconds
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // El servidor respondió OK y ya emitió la señal SocketIO
+                updateFeedback(studentId, `✅ +${minutes} min añadidos.`, 'success');
+            } else {
+                updateFeedback(studentId, `❌ Error: ${result.message}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error de red al añadir tiempo:', error);
+            updateFeedback(studentId, `❌ Error de conexión.`, 'error');
+        }
+    }
+
+    function showCustomTimeInput(studentId) {
+        // Oculta los botones rápidos y muestra el input personalizado
+        document.querySelector(`#row-${studentId} .time-controls`).style.display = 'none';
+        document.getElementById(`custom-input-${studentId}`).style.display = 'flex';
+        document.getElementById(`input-${studentId}`).focus();
+    }
+
+    function confirmCustomTime(studentId) {
+        const inputElement = document.getElementById(`input-${studentId}`);
+        const minutes = parseInt(inputElement.value);
+
+        if (isNaN(minutes) || minutes <= 0) {
+            alert('Por favor, introduce un número válido de minutos.');
+            return;
+        }
+
+        const seconds = minutes * 60;
+        
+        // Ejecuta la función principal para añadir tiempo
+        addTime(studentId, seconds, minutes);
+
+        // Oculta el input y restablece los botones
+        document.getElementById(`custom-input-${studentId}`).style.display = 'none';
+        document.querySelector(`#row-${studentId} .time-controls`).style.display = 'flex';
+        inputElement.value = ''; // Limpia el valor
+    }
+
+    // 2. Función de Retroalimentación
+    function updateFeedback(studentId, message, type) {
+        const feedbackElement = document.getElementById(`feedback-${studentId}`);
+        feedbackElement.textContent = message;
+        
+        // Estilos para el feedback
+        feedbackElement.style.color = type === 'success' ? '#2ecc71' : (type === 'error' ? '#e74c3c' : '#3498db');
+        feedbackElement.style.fontWeight = 'bold';
+        
+        // Ocultar el mensaje después de unos segundos
+        if (type !== 'processing') {
+             setTimeout(() => {
+                feedbackElement.textContent = '';
+            }, 5000);
+        }
+    }
+
+    // 3. Inicialización de SocketIO (Opcional, pero bueno para notificaciones futuras)
+    // const socket = io.connect(); 
+    // socket.on('connect', function() {
+    //     console.log('Admin Socket Connected.');
+    // });
+    
+</script>
 
 <style>
-/* Aseguramos que se cargue la librería de íconos para la interfaz */
-@import url('https://www.google.com/search?q=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+    /* Aseguramos que se cargue la librería de íconos para la interfaz */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
-.monitor-container {
-    max-width: 1000px;
-    margin: 30px auto;
-    padding: 20px;
-}
-.monitor-header {
-    text-align: center;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-}
-.header-title { 
-    color: #e74c3c; 
-    font-size: 2.5em;
-    margin-bottom: 5px;
-}
-.exam-info-header { 
-    color: #3498db; 
-    font-size: 1.4em;
-    font-weight: 400;
-}
+    .monitor-container {
+        max-width: 1200px; /* Aumentamos el ancho para la nueva columna */
+        margin: 30px auto;
+        padding: 20px;
+    }
+    .monitor-header {
+        text-align: center;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .header-title { 
+        color: #e74c3c; 
+        font-size: 2.5em;
+        margin-bottom: 5px;
+    }
+    .exam-info-header { 
+        color: #3498db; 
+        font-size: 1.4em;
+        font-weight: 400;
+    }
 
-.student-list-card {
-    padding: 0;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    overflow: hidden;
-}
+    .student-list-card {
+        padding: 0;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
 
-.card h3 {
-    padding: 20px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #eee;
-    margin: 0;
-    font-size: 1.2em;
-    color: #34495e;
-}
+    .card h3 {
+        padding: 20px;
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #eee;
+        margin: 0;
+        font-size: 1.2em;
+        color: #34495e;
+    }
 
-.table-responsive {
-    overflow-x: auto;
-    width: 100%;
-}
-
-.monitor-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-.monitor-table th {
-    background-color: #34495e;
-    color: white;
-    text-align: center;
-    padding: 12px;
-    text-transform: uppercase;
-    font-size: 0.9em;
-}
-.monitor-table td {
-    padding: 10px;
-    border: 1px solid #eee;
-    text-align: center;
-    vertical-align: middle;
-    font-size: 1em;
-}
-.monitor-table tr:nth-child(even) { background-color: #f9f9f9; }
-
-/* Etiquetas de Estado */
-.status-tag {
-    padding: 6px 12px;
-    border-radius: 20px; /* Pill shape */
-    font-weight: bold;
-    font-size: 0.85em;
-    display: inline-block;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-.status-no-ha-iniciado { background: #e0e0e0; color: #555; }
-.status-examen-terminado { background: #d4edda; color: #1a7d3f; } /* Verde suave */
-.status-haciendo-examen { background: #fff3cd; color: #956504; } /* Amarillo/Naranja de advertencia */
-
-/* Botón de Chat */
-.chat-btn {
-    background: #3498db;
-    padding: 8px 12px;
-    font-size: 0.9em;
-    white-space: nowrap;
-    text-decoration: none;
-    color: white;
-    border-radius: 6px;
-    transition: background 0.2s;
-}
-.chat-btn:hover { 
-    background: #2980b9; 
-}
-.no-action { color: #7f8c8d; font-style: italic; font-size: 0.9em; }
-
-/* Responsive Table */
-@media (max-width: 600px) {
-    .monitor-container { padding: 10px; }
-    .monitor-table thead { display: none; }
-    .monitor-table, .monitor-table tbody, .monitor-table tr, .monitor-table td {
-        display: block;
+    .table-responsive {
+        overflow-x: auto;
         width: 100%;
     }
-    .monitor-table tr { 
-        margin-bottom: 15px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
+
+    .monitor-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .monitor-table th {
+        background-color: #34495e;
+        color: white;
+        text-align: center;
+        padding: 12px;
+        text-transform: uppercase;
+        font-size: 0.9em;
     }
     .monitor-table td {
-        text-align: right;
-        padding-left: 50%;
-        position: relative;
+        padding: 10px;
+        border: 1px solid #eee;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 1em;
     }
-    .monitor-table td:before {
-        content: attr(data-label);
-        position: absolute;
-        left: 10px;
-        width: 45%;
-        font-weight: bold;
-        text-align: left;
-        color: #555;
-    }
-    .action-cell { text-align: center !important; }
-    .chat-btn { width: 90%; margin: 10px auto; }
-}
+    .monitor-table tr:nth-child(even) { background-color: #f9f9f9; }
 
-.back-nav-btn {
-    background: #7f8c8d;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    margin-bottom: 20px;
-    display: inline-block;
-    transition: background 0.2s;
-}
-.back-nav-btn:hover { background: #5c6a74; }
+    /* Etiquetas de Estado */
+    .status-tag {
+        padding: 6px 12px;
+        border-radius: 20px; /* Pill shape */
+        font-weight: bold;
+        font-size: 0.85em;
+        display: inline-block;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .status-no-ha-iniciado { background: #e0e0e0; color: #555; }
+    .status-examen-terminado { background: #d4edda; color: #1a7d3f; } /* Verde suave */
+    .status-haciendo-examen { background: #fff3cd; color: #956504; } /* Amarillo/Naranja de advertencia */
+
+    /* Botón de Chat */
+    .chat-btn {
+        background: #3498db;
+        padding: 8px 12px;
+        font-size: 0.9em;
+        white-space: nowrap;
+        text-decoration: none;
+        color: white;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+    .chat-btn:hover { 
+        background: #2980b9; 
+    }
+    .no-action { color: #7f8c8d; font-style: italic; font-size: 0.9em; }
+
+
+    /* 🔑 ESTILOS AÑADIDOS PARA LA FUNCIONALIDAD DE TIEMPO 🔑 */
+    .monitor-table th.time-column { width: 250px; }
+    
+    .time-controls, .custom-time-group {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+    }
+    .time-btn {
+        background: #2ecc71;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: background 0.2s;
+        font-weight: bold;
+    }
+    .quick-add-btn:hover { background: #27ae60; }
+    .custom-btn { background: #f39c12; }
+    .custom-btn:hover { background: #e67e22; }
+    .confirm-btn { background: #3498db; }
+    .confirm-btn:hover { background: #2980b9; }
+
+    .custom-time-input {
+        width: 60px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .time-feedback {
+        position: absolute;
+        margin-top: 5px;
+        font-size: 0.8em;
+    }
+
+    /* Responsive Table - Aseguramos que la columna de tiempo funcione en móvil */
+    @media (max-width: 600px) {
+        .monitor-table td:before {
+            width: 40%;
+        }
+        .time-controls, .custom-time-group {
+            justify-content: flex-end; /* Alineamos a la derecha para móvil */
+        }
+        .time-cell { 
+            text-align: right !important; 
+            padding-left: 50% !important;
+        }
+        /* Ajustamos el tamaño de los botones en móvil */
+        .time-btn {
+            font-size: 0.7em;
+            padding: 5px 8px;
+        }
+    }
+
+    .back-nav-btn {
+        background: #7f8c8d;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        margin-bottom: 20px;
+        display: inline-block;
+        transition: background 0.2s;
+    }
+    .back-nav-btn:hover { background: #5c6a74; }
 
 </style>
-
 {% endblock %}

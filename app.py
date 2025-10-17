@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from flask_migrate import Migrate
 import datetime as dt
 import os
 import pytz
@@ -50,6 +51,7 @@ LOCKOUT_TIME = 300 # 5 minutos en segundos
 
 # Inicialización de extensiones
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app) # Inicialización separada
 login_manager.login_view = "login"
@@ -148,6 +150,9 @@ class ActiveExamSession(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), primary_key=True)
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # 🌟 NUEVA COLUMNA para el tiempo adicional concedido por el admin 🌟
+    time_added_sec = db.Column(db.Integer, default=0) 
     
     user = db.relationship('User', backref=db.backref('active_session', uselist=False))
 # -------------------------------------------------------------------
@@ -725,6 +730,47 @@ def admin_exam_monitor_detail(exam_id):
         })
         
     return render_template("admin_exam_monitor.html", exam=exam, monitoring_data=monitoring_data)
+
+
+# 🔑 RUTA NUEVA: Administrador añade tiempo extra a un examen en curso 🔑
+@app.route('/admin/add_time_to_exam', methods=['POST'])
+@login_required
+def admin_add_time_to_exam():
+    # Solo administradores pueden usar esta función
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado.'}), 403
+
+    try:
+        data = request.get_json()
+        student_id = int(data.get('student_id'))
+        # Nota: El tiempo siempre debe venir en segundos (ej. 600 para 10 minutos)
+        time_to_add_sec = int(data.get('time_sec')) 
+        
+        # 1. Buscar la sesión del alumno
+        # Asumo que tu ActiveExamSession no tiene una columna 'completed', así que buscamos la sesión activa
+        session = ActiveExamSession.query.filter_by(user_id=student_id).first() 
+
+        if not session:
+            return jsonify({'success': False, 'message': 'Sesión de examen activa no encontrada.'}), 404
+
+        # 2. Sumar el tiempo y guardar en DB
+        session.time_added_sec += time_to_add_sec
+        db.session.commit()
+
+        # 3. Notificar al cliente (alumno) a través de SocketIO
+        # Emitimos el tiempo adicional total y el ID del alumno
+        socketio.emit('time_update', 
+                      {'extra_time_sec': session.time_added_sec}, 
+                      room=str(student_id)) # Enviamos a la sala privada del alumno (su ID)
+
+        return jsonify({'success': True, 
+                        'message': f'Se añadieron {time_to_add_sec/60} minutos al alumno {student_id}.',
+                        'new_total_extra_sec': session.time_added_sec})
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error al añadir tiempo: {e}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 
 # --- Admin: Crear Anuncio ---
@@ -1859,11 +1905,16 @@ def take_exam(exam_id):
         
         saved_answers_dict = {a.question_id: a.response for a in saved_answers}
         
+        # Obtenemos el tiempo extra del modelo
+        active_session = ActiveExamSession.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+        time_added_sec = active_session.time_added_sec if active_session else 0
+
         return render_template(
             "take_exam.html", 
             exam=exam,
             start_time_utc=start_time,
-            saved_answers=saved_answers_dict # Pasamos las respuestas guardadas
+            saved_answers=saved_answers_dict, # Pasamos las respuestas guardadas
+            time_added_sec=time_added_sec  # Pasamos el tiempo extra al template
         )
 
 
