@@ -110,7 +110,13 @@
         // 🔑 VARIABLES DE TIEMPO (desde Flask) 🔑
         // Usamos una variable global para manejar la lógica de la hora.
         let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}"); 
-        const DURATION_SEC = 3 * 60 * 60; // 3 horas en segundos
+        
+        // 🌟 NUEVA VARIABLE: Tiempo extra concedido por el admin (necesita pasarse en la ruta take_exam de Flask)
+        let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}");
+        
+        // 🌟 CORRECCIÓN DURATION_SEC: Suma la duración base más el tiempo extra guardado 🌟
+        let DURATION_SEC = (3 * 60 * 60) + TIME_ADDED_SEC; 
+        
         const examForm = document.getElementById('exam-form');
         const countdownDisplay = document.getElementById('countdown');
         const overlay = document.getElementById('welcome-overlay');
@@ -149,7 +155,35 @@
             }
         });
         
-        // 🔑 Evento 1.3: Cierre Remoto del Chat por el Admin
+        // 🌟 NUEVO EVENTO 1.3: Recibir Actualización de Tiempo del Admin (Añadir Tiempo) 🌟
+        socket.on('time_update', function(data) {
+            // El servidor envía el TIEMPO EXTRA TOTAL que debe tener la sesión (data.extra_time_sec)
+            
+            const newTotalExtraSec = data.extra_time_sec;
+            const addedTimeDiff = newTotalExtraSec - TIME_ADDED_SEC;
+            
+            // 1. Actualizar la variable de tiempo extra
+            TIME_ADDED_SEC = newTotalExtraSec;
+            
+            // 2. Recalcular la duración total del examen
+            DURATION_SEC = (3 * 60 * 60) + TIME_ADDED_SEC;
+
+            // 3. Notificar al alumno
+            const addedMinutes = Math.round(addedTimeDiff / 60);
+            showFloatingNotification(`🔔 Soporte: Se añadieron ${addedMinutes} minutos extra por un problema técnico.`, 'info');
+            
+            // 4. Forzar la actualización del cronómetro
+            if (timerInterval) {
+                 // Si el cronómetro ya está corriendo, lo actualizamos inmediatamente
+                 updateCountdown();
+            } else if (START_TIME_UTC_SEC > 0) {
+                 // Si el examen ya se inició, pero el intervalo se detuvo (por algún motivo), lo reiniciamos
+                 timerInterval = setInterval(updateCountdown, 1000);
+                 updateCountdown();
+            }
+        });
+        
+        // 🔑 Evento 1.4: Cierre Remoto del Chat por el Admin
         socket.on('close_chat_signal', function(data) {
             
             // 1. Añadimos el mensaje de sistema para CONFIRMAR que el evento llegó
@@ -167,7 +201,7 @@
         });
 
 
-        // 🔑 Evento 1.4: Envío de Mensajes del Alumno 🔑
+        // 🔑 Evento 1.5: Envío de Mensajes del Alumno 🔑
         studentChatForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const message = studentMessageInput.value.trim();
@@ -186,12 +220,12 @@
             }
         });
 
-        // 1.5: Cerrar el panel de chat manualmente por el alumno
+        // 1.6: Cerrar el panel de chat manualmente por el alumno
         closeChatButton.addEventListener('click', function() {
             chatPanel.style.display = 'none';
         });
 
-        // 1.6: Función para añadir mensajes a la ventana del chat
+        // 1.7: Función para añadir mensajes a la ventana del chat
         function addChatMessage(msg, type) {
             const timestamp = (new Date()).toLocaleTimeString();
             const sender = type === 'admin' ? 'Admin' : 'Yo';
@@ -211,7 +245,7 @@
             chatMessagesWindow.scrollTop = chatMessagesWindow.scrollHeight;
         }
 
-        // 1.7: Función de Notificación Flotante (se mantiene solo para el dashboard/reportes)
+        // 1.8: Función de Notificación Flotante (se mantiene solo para el dashboard/reportes)
         function showFloatingNotification(message) {
             const container = document.getElementById('flash-container');
             if (!container) return; 
@@ -279,13 +313,16 @@
             const currentTimeSec = Math.floor(Date.now() / 1000);
             
             if (START_TIME_UTC_SEC === 0) {
-                // 🔑 CORRECCIÓN CRONÓMETRO: Muestra 3 horas si no ha iniciado 🔑
+                // 🔑 CORRECCIÓN CRONÓMETRO: Muestra la duración base + extra si no ha iniciado 🔑
                 clearInterval(timerInterval);
-                countdownDisplay.textContent = formatTime(DURATION_SEC); // Muestra la duración completa
+                // DURATION_SEC YA INCLUYE TIME_ADDED_SEC
+                countdownDisplay.textContent = formatTime(DURATION_SEC); 
                 return;
             }
 
             const elapsedTimeSec = currentTimeSec - START_TIME_UTC_SEC;
+            
+            // 🌟 CLAVE: Usamos DURATION_SEC que ya incluye TIME_ADDED_SEC 🌟
             let remainingTimeSec = DURATION_SEC - elapsedTimeSec;
 
             if (remainingTimeSec <= 0) {
