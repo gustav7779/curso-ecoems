@@ -12,4 +12,4 @@ pytz
 pyotp
 qrcode
 psycopg2-binary
-twili
+twilio
