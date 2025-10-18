@@ -569,8 +569,8 @@ def dashboard():
     
     # 4. WIDGET: Historial de Reportes (Últimos 3) 🔑
     latest_reports = Report.query.filter_by(user_id=current_user.id)\
-                                 .order_by(Report.date_submitted.desc())\
-                                 .limit(3).all()
+                             .order_by(Report.date_submitted.desc())\
+                             .limit(3).all()
     
     # 5. Notificación de Respuesta del Admin
     for report in latest_reports:
@@ -1231,6 +1231,7 @@ def add_question(exam_id):
             option_d=option_d,
             correct_option=correct_option,
             image_filename=image_filename,
+            subject=subject,
             exam_id=exam_id
         )
         db.session.add(question)
@@ -1737,15 +1738,22 @@ def admin_announcement_read_status():
 @login_required
 def update_phone_number():
     if current_user.role != "student":
+        # Usamos 403 Forbidden para acceso no autorizado
         return jsonify({'success': False, 'message': 'Acceso denegado.'}), 403
     
-    data = request.get_json()
-    phone_number = data.get('phone_number')
+    # 1. Obtenemos los datos JSON
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+    except Exception:
+        return jsonify({'success': False, 'message': 'Datos JSON inválidos.'}), 400
 
-    # Validación de formato básica para Twilio: debe empezar con + y tener al menos 8 dígitos
-    if phone_number and not re.match(r'^\+[1-9]\d{7,14}$', phone_number):
+    # 2. Validación de formato básica para Twilio: debe empezar con + y tener 8 a 15 dígitos.
+    # El HTML ya hace una pre-validación, pero el servidor es la última defensa.
+    if not phone_number or not re.match(r'^\+[1-9]\d{7,14}$', phone_number):
         return jsonify({'success': False, 'message': 'Formato de número inválido. Debe incluir código de país (ej: +52XXXXXXXXXX).'}), 400
 
+    # 3. Guardar el número en la base de datos
     try:
         current_user.phone_number = phone_number
         db.session.commit()
@@ -1754,7 +1762,9 @@ def update_phone_number():
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error al guardar número de teléfono para user {current_user.username}: {e}")
+        # Usamos 500 Internal Server Error para problemas de DB
         return jsonify({'success': False, 'message': 'Error interno al guardar los datos.'}), 500
+# ----------------------------------------------------------------------
 
 # --- Alumno: Crear Nuevo Reporte ---
 @app.route("/reports/new", methods=["GET", "POST"])

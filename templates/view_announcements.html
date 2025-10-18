@@ -3,366 +3,355 @@
 {% block title %}Avisos y Anuncios{% endblock %}
 
 {% block content %}
-    <div class="header-announcement-title">
-        <h1>📢 Avisos y Anuncios del Curso</h1>
-    </div>
+    <div class="header-announcement-title">
+        <h1>📢 Avisos y Anuncios del Curso</h1>
+    </div>
+    
+    {# 🔑 CAMBIO CLAVE: Mostrar overlay si el usuario NO tiene número de teléfono registrado 🔑 #}
+    {% if not current_user.phone_number %}
+    <div id="subscription-overlay" class="sub-overlay">
+        <div class="overlay-content">
+            {# 🔑 TÍTULO Y TEXTO ACTUALIZADOS PARA WHATSAPP/SMS 🔑 #}
+            <h1 class="sub-title"><i class="fab fa-whatsapp"></i> ¡No te pierdas ningun aviso!</h1>
+            <p class="sub-text">Introduce un **número de teléfono (WhatsApp/SMS)** al cual se le enviará un mensaje cada vez que el administrador publique un anuncio importante.</p>
+            
+            <p class="sub-warning">
+                **IMPORTANTE:** Debe incluir el código de país. Ej: **+52**5512345678 (México) o **+1**5551234567 (EE. UU.).
+            </p>
+
+            <form id="subscription-form" class="subscription-form"> 
+                {# 🔑 CAMBIO: Input de Email a Teléfono 🔑 #}
+                <input type="tel" id="phone_number" name="phone_number" placeholder="+CódigoPaísNúmero (ej: +52...)" required>
+                <button type="submit" class="button confirm-btn">
+                    Confirmar Número de Teléfono
+                </button>
+            </form>
+            <p class="sub-skip" id="skip-button">Omitir por ahora y ver anuncios.</p>
+        </div>
+        </div>
+    {% endif %}
+
+    <div class="container announcement-list-container">
+        
+        <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn">⬅ Volver al Panel</a>
+        
+        {# Mensaje de confirmación/éxito si ya tienen el número guardado #}
+        {% if current_user.phone_number %}
+            <div class="alert alert-success success-phone-alert">
+                <i class="fas fa-check-circle"></i> Tus notificaciones están activadas y se enviarán al número **{{ current_user.phone_number }}**.
+            </div>
+        {% endif %}
+
+        {% for ann_status in announcements %}
+            {% set announcement = ann_status.announcement %}
+            
+            <div class="announcement-card {% if ann_status.is_new %}announcement-new{% endif %}">
+                <div class="announcement-header">
+                    
+                    <h2 class="announcement-title-text">{{ announcement.title }}</h2>
+                    
+                    {% if ann_status.is_new %}
+                        <span class="new-tag" data-announcement-id="{{ announcement.id }}">¡NUEVO!</span>
+                    {% endif %}
+                    
+            </div>
+                
+                <p class="announcement-content">{{ announcement.content | safe }}</p>
+                <hr class="separator">
+                
+                <p class="announcement-meta">
+                    Publicado por: <strong>{{ announcement.publisher.username }}</strong>
+                    el {{ announcement.date_published | datetimeformat('dd/MM/yyyy HH:mm') }}
+                </p>
+            </div>
+        {% else %}
+            <p class="no-items-message">Aún no hay anuncios ni avisos publicados por la administración.</p>
+        {% endfor %}
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 🔑 CORRECCIÓN CLAVE: Asegurar que Jinja resuelve las URLs como strings
+            // Usa un marcador de posición '0' que será reemplazado en JS.
+            const markReadUrlTemplate = "{{ url_for('mark_announcement_read', announcement_id=0) }}";
+            const updatePhoneUrl = "{{ url_for('update_phone_number') }}"; // URL para guardar el número
+            
+            let newTags = document.querySelectorAll('.new-tag');
+            let idsToMark = [];
+
+            // 1. Identificar y marcar los anuncios como leídos via AJAX
+            newTags.forEach(function(tag) {
+                const annId = tag.getAttribute('data-announcement-id');
+                idsToMark.push(annId);
+                
+                // Ocultar la etiqueta "¡NUEVO!" y quitar el color rojo de la tarjeta
+                const card = tag.closest('.announcement-card');
+                if (card) {
+                    card.classList.remove('announcement-new');
+                    card.style.borderLeftColor = '#3498db'; 
+                }
+                tag.style.display = 'none'; 
+            });
+            
+            if (idsToMark.length > 0) {
+                idsToMark.forEach(function(announcementId) {
+                    // Reemplaza '0' en la plantilla con el ID real del anuncio
+                    const finalUrl = markReadUrlTemplate.replace('0', announcementId); 
+                    
+                    // Enviamos la petición asíncrona
+                    fetch(finalUrl, { method: 'GET' })
+                        .catch(error => console.error('Error marcando como leído:', error));
+                });
+            }
+
+            // --- LÓGICA DE OVERLAY DE NOTIFICACIÓN DE TELÉFONO ---
+            const subOverlay = document.getElementById('subscription-overlay');
+            const skipButton = document.getElementById('skip-button'); 
+            const subForm = document.getElementById('subscription-form');
+            const phoneInput = document.getElementById('phone_number');
+
+            if (subForm) {
+                // 🔑 Manejador del botón "Omitir por ahora" 🔑
+                if (skipButton && subOverlay) {
+                    skipButton.addEventListener('click', function() {
+                        // Ocultamos el overlay al presionar Omitir
+                        subOverlay.style.opacity = 0;
+                        setTimeout(() => {
+                            subOverlay.style.display = 'none';
+                        }, 300);
+                    });
+                }
+                
+                subForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const phoneNumber = phoneInput.value.trim();
+
+                    // 🔑 VALIDACIÓN CLAVE (Formato Twilio): Debe empezar con + y tener 8 a 15 dígitos. 🔑
+                    const phoneRegex = /^\+[1-9]\d{7,14}$/;
+                    if (!phoneRegex.test(phoneNumber)) {
+                        // Reemplazamos alert() por una función de retroalimentación en pantalla
+                        alert("ERROR: El formato del número es inválido. Debe empezar con el código de país (ej: +525512345678).");
+                        phoneInput.focus();
+                        return;
+                    }
+
+                    // Petición AJAX para guardar el número en la base de datos
+                    fetch(updatePhoneUrl, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone_number: phoneNumber })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Reemplazamos alert() por una función de retroalimentación en pantalla
+                            alert("✅ ¡Número confirmado! Recibirás las notificaciones por WhatsApp/SMS.");
+                            subOverlay.style.opacity = 0;
+                            setTimeout(() => {
+                                // Ocultamos y luego recargamos para reflejar el nuevo estado (panel de éxito)
+                                subOverlay.style.display = 'none';
+                                window.location.reload(); 
+                            }, 300);
+                        } else {
+                            // Muestra el mensaje de error que viene de Flask
+                            alert('❌ Error al guardar el número: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error de conexión:', error);
+                        alert('Error de conexión con el servidor.');
+                    });
+                });
+            }
+        });
+    </script>
+   <style>
+    /* --- ESTILOS DEL OVERLAY DE SUSCRIPCIÓN --- */
+    .sub-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 1;
+        transition: opacity 0.3s ease-out;
+    }
+    .overlay-content {
+        background: #ffffff;
+        color: #333;
+        padding: 40px;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        max-width: 450px;
+        border-top: 8px solid #3498db;
+    }
+    .sub-title {
+        color: #2ecc71;
+        font-size: 1.8em;
+        margin-bottom: 10px;
+    }
+    .sub-text {
+        font-size: 1.1em;
+        margin-bottom: 20px;
+        color: #555;
+    }
+    .sub-warning {
+        color: #e67e22;
+        font-size: 0.95em;
+        margin-bottom: 25px;
+    }
+    .subscription-form input[type="tel"] {
+        width: 95%;
+        padding: 12px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        font-size: 1em;
+        text-align: center;
+    }
+    .confirm-btn {
+        background: #2ecc71 !important;
+        width: 100%;
+        padding: 12px 0;
+        font-size: 1.1em;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+    .confirm-btn:hover {
+        background: #27ae60 !important;
+    }
+    .sub-skip {
+        cursor: pointer;
+        color: #7f8c8d;
+        margin-top: 15px;
+        text-decoration: underline;
+        font-size: 0.9em;
+    }
+    .sub-skip:hover {
+        color: #333;
+    }
+    .success-phone-alert {
+        background-color: #d4edda;
+        color: #155724;
+        border-color: #c3e6cb;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
     
-    {# 🔑 CAMBIO CLAVE: Mostrar overlay si el usuario NO tiene número de teléfono registrado 🔑 #}
-    {% if not current_user.phone_number %}
-    <div id="subscription-overlay" class="sub-overlay">
-        <div class="overlay-content">
-            {# 🔑 TÍTULO Y TEXTO ACTUALIZADOS PARA WHATSAPP/SMS 🔑 #}
-            <h1 class="sub-title"><i class="fab fa-whatsapp"></i> ¡No te pierdas ningun aviso!</h1>
-            <p class="sub-text">Introduce un **número de teléfono (WhatsApp/SMS)** al cual se le enviará un mensaje cada vez que el administrador publique un anuncio importante.</p>
-            
-            <p class="sub-warning">
-                **IMPORTANTE:** Debe incluir el código de país. Ej: **+52**5512345678 (México) o **+1**5551234567 (EE. UU.).
-            </p>
-
-            <form id="subscription-form" class="subscription-form"> 
-                {# 🔑 CAMBIO: Input de Email a Teléfono 🔑 #}
-                <input type="tel" id="phone_number" name="phone_number" placeholder="+CódigoPaísNúmero (ej: +52...)" required>
-                <button type="submit" class="button confirm-btn">
-                    Confirmar Número de Teléfono
-                </button>
-            </form>
-            <p class="sub-skip" id="skip-button">Omitir por ahora y ver anuncios.</p>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="container announcement-list-container">
-        
-        <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn">⬅ Volver al Panel</a>
-        
-        {# Mensaje de confirmación/éxito si ya tienen el número guardado #}
-        {% if current_user.phone_number %}
-            <div class="alert alert-success success-phone-alert">
-                <i class="fas fa-check-circle"></i> Tus notificaciones están activadas y se enviarán al número **{{ current_user.phone_number }}**.
-            </div>
-        {% endif %}
-
-        {% for ann_status in announcements %}
-            {% set announcement = ann_status.announcement %}
-            
-            <div class="announcement-card {% if ann_status.is_new %}announcement-new{% endif %}">
-                <div class="announcement-header">
-                    
-                    <h2 class="announcement-title-text">{{ announcement.title }}</h2>
-                    
-                    {% if ann_status.is_new %}
-                        <span class="new-tag" data-announcement-id="{{ announcement.id }}">¡NUEVO!</span>
-                    {% endif %}
-                    
-                </div>
-                
-                <p class="announcement-content">{{ announcement.content | safe }}</p>
-                <hr class="separator">
-                
-                <p class="announcement-meta">
-                    Publicado por: <strong>{{ announcement.publisher.username }}</strong>
-                    el {{ announcement.date_published | datetimeformat('dd/MM/yyyy HH:mm') }}
-                </p>
-            </div>
-        {% else %}
-            <p class="no-items-message">Aún no hay anuncios ni avisos publicados por la administración.</p>
-        {% endfor %}
-
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 🔑 CORRECCIÓN CLAVE: Asegurar que Jinja resuelve las URLs como strings
-            // Usa un marcador de posición '0' que será reemplazado en JS.
-            const markReadUrlTemplate = "{{ url_for('mark_announcement_read', announcement_id=0) }}";
-            const updatePhoneUrl = "{{ url_for('update_phone_number') }}"; // URL para guardar el número
-            
-            let newTags = document.querySelectorAll('.new-tag');
-            let idsToMark = [];
-
-            // 1. Identificar y marcar los anuncios como leídos via AJAX
-            newTags.forEach(function(tag) {
-                const annId = tag.getAttribute('data-announcement-id');
-                idsToMark.push(annId);
-                
-                // Ocultar la etiqueta "¡NUEVO!" y quitar el color rojo de la tarjeta
-                const card = tag.closest('.announcement-card');
-                if (card) {
-                    card.classList.remove('announcement-new');
-                    card.style.borderLeftColor = '#3498db'; 
-                }
-                tag.style.display = 'none'; 
-            });
-            
-            if (idsToMark.length > 0) {
-                idsToMark.forEach(function(announcementId) {
-                    // Reemplaza '0' en la plantilla con el ID real del anuncio
-                    const finalUrl = markReadUrlTemplate.replace('0', announcementId); 
-                    
-                    // Enviamos la petición asíncrona
-                    fetch(finalUrl, { method: 'GET' })
-                        .catch(error => console.error('Error marcando como leído:', error));
-                });
-            }
-
-            // --- LÓGICA DE OVERLAY DE NOTIFICACIÓN DE TELÉFONO ---
-            const subOverlay = document.getElementById('subscription-overlay');
-            const skipButton = document.getElementById('skip-button'); 
-            const subForm = document.getElementById('subscription-form');
-            const phoneInput = document.getElementById('phone_number');
-
-            if (subForm) {
-                // 🔑 Manejador del botón "Omitir por ahora" 🔑
-                if (skipButton && subOverlay) {
-                    skipButton.addEventListener('click', function() {
-                        // Ocultamos el overlay al presionar Omitir
-                        subOverlay.style.opacity = 0;
-                        setTimeout(() => {
-                            subOverlay.style.display = 'none';
-                        }, 300);
-                    });
-                }
-                
-                subForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const phoneNumber = phoneInput.value.trim();
-
-                    // 🔑 VALIDACIÓN CLAVE (Formato Twilio): Debe empezar con + y tener 8 a 15 dígitos. 🔑
-                    const phoneRegex = /^\+[1-9]\d{7,14}$/;
-                    if (!phoneRegex.test(phoneNumber)) {
-                        alert("ERROR: El formato del número es inválido. Debe empezar con el código de país (ej: +525512345678).");
-                        phoneInput.focus();
-                        return;
-                    }
-
-                    // Petición AJAX para guardar el número en la base de datos
-                    fetch(updatePhoneUrl, { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone_number: phoneNumber })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert("✅ ¡Número confirmado! Recibirás las notificaciones por WhatsApp/SMS.");
-                            subOverlay.style.opacity = 0;
-                            setTimeout(() => {
-                                // Ocultamos y luego recargamos para reflejar el nuevo estado (panel de éxito)
-                                subOverlay.style.display = 'none';
-                                window.location.reload(); 
-                            }, 300);
-                        } else {
-                            // Muestra el mensaje de error que viene de Flask
-                            alert('❌ Error al guardar el número: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error de conexión:', error);
-                        alert('Error de conexión con el servidor.');
-                    });
-                });
-            }
-        });
-    </script>
-    <style>
-        /* --- ESTILOS DEL OVERLAY DE SUSCRIPCIÓN (MODIFICADOS) --- */
-        .sub-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7); /* Fondo oscuro suave */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            opacity: 1;
-            transition: opacity 0.3s ease-out;
-        }
-        .overlay-content {
-            background: #ffffff;
-            color: #333;
-            padding: 40px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-            max-width: 450px;
-            border-top: 8px solid #3498db;
-        }
-        .sub-title {
-            color: #2ecc71; /* Verde para WhatsApp */
-            font-size: 1.8em;
-            margin-bottom: 10px;
-        }
-        .sub-text {
-            font-size: 1.1em;
-            margin-bottom: 20px;
-            color: #555;
-        }
-        .sub-warning {
-            color: #e67e22; /* Naranja para la advertencia de formato */
-            font-size: 0.95em;
-            margin-bottom: 25px;
-        }
-        .subscription-form input[type="tel"] {
-            width: 95%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-            font-size: 1em;
-            text-align: center;
-        }
-        .confirm-btn {
-            background: #2ecc71 !important; /* Mantenemos el verde */
-            width: 100%;
-            padding: 12px 0;
-            font-size: 1.1em;
-            font-weight: bold;
-            border-radius: 8px;
-        }
-        .confirm-btn:hover {
-            background: #27ae60 !important;
-        }
-        .sub-skip {
-            cursor: pointer;
-            color: #7f8c8d;
-            margin-top: 15px;
-            text-decoration: underline;
-            font-size: 0.9em;
-        }
-        .sub-skip:hover {
-            color: #333;
-        }
-        
-        .success-phone-alert {
-            background-color: #d4edda;
-            color: #155724;
-            border-color: #c3e6cb;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-        
-        /* --- ESTILOS ANTERIORES (CONSERVADOS) --- */
-        .header-announcement-title {
-            background: #2c3e50; 
-            color: white; 
-            padding: 25px;
-            text-align: center; 
-            border-radius: 0 0 10px 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        .header-announcement-title h1 {
-            margin: 0;
-        }
-
+    /* --- ESTILOS ANTERIORES (CONSERVADOS) --- */
+    .header-announcement-title {
+        background: #2c3e50;
+        color: white;
+        padding: 25px;
+        text-align: center;
+        border-radius: 0 0 10px 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .header-announcement-title h1 {
+        margin: 0;
+    }
+    .announcement-list-container {
+        max-width: 900px;
+    }
+    .back-nav-btn {
+        background: #7f8c8d;
+        padding: 10px 15px;
+        margin-bottom: 20px;
+        transition: background 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+    .back-nav-btn:hover {
+        background: #5c6a74;
+        transform: translateX(-3px);
+    }
+    
+    /* --- Tarjeta de Anuncio --- */
+    .announcement-card {
+        background: white;
+        padding: 20px;
+        margin-bottom: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-left: 5px solid #3498db;
+        transition: border-left-color 0.5s;
+    }
+    .announcement-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+    }
+    .announcement-title-text {
+        color: #2c3e50;
+        margin: 0;
+        font-size: 1.4em;
+    }
+    .new-tag {
+        background: #e74c3c;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    .announcement-new {
+        background: #fffafa;
+        border-left-color: #e74c3c !important;
+    }
+    .announcement-content {
+        margin-top: 15px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+    .separator {
+        border: 0;
+        border-top: 1px solid #eee;
+        margin: 15px 0 10px 0;
+    }
+    .announcement-meta {
+        font-size: 0.9em;
+        color: #7f8c8d;
+        margin-bottom: 0;
+    }
+    .no-items-message {
+        padding: 15px;
+        background: #fdf3c7;
+        border-left: 5px solid #f1c40f;
+        border-radius: 5px;
+        margin-top: 15px;
+        font-weight: bold;
+    }
+    /* --- MEDIA QUERY (Ajustes para Móvil) --- */
+    @media (max-width: 600px) {
         .announcement-list-container {
-            max-width: 900px;
+            width: 100%;
+            padding: 0 10px;
         }
-        
-        .back-nav-btn {
-            background: #7f8c8d;
-            padding: 10px 15px;
-            margin-bottom: 20px;
-            transition: background 0.3s, transform 0.2s;
-            display: inline-block;
-        }
-        .back-nav-btn:hover {
-            background: #5c6a74;
-            transform: translateX(-3px);
-        }
-        
-        /* --- Tarjeta de Anuncio --- */
         .announcement-card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-left: 5px solid #3498db; 
-            transition: border-left-color 0.5s;
-        }
-        
-        .announcement-header {
-            display: flex;
-            justify-content: space-between; 
-            align-items: center;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-        
-        .announcement-title-text {
-            color: #2c3e50; 
-            margin: 0;
-            font-size: 1.4em;
-        }
-        
-        .new-tag {
-            background: #e74c3c; 
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: bold;
-        }
-        
-        .announcement-new { 
-            background: #fffafa; 
-            border-left-color: #e74c3c !important; 
-        }
-        
-        .announcement-content {
-            margin-top: 15px;
-            line-height: 1.6;
-            white-space: pre-wrap; 
-        }
-        
-        .separator {
-            border: 0;
-            border-top: 1px solid #eee;
-            margin: 15px 0 10px 0;
-        }
-        
-        .announcement-meta {
-            font-size: 0.9em; 
-            color: #7f8c8d; 
-            margin-bottom: 0;
-        }
-
-        .no-items-message {
             padding: 15px;
-            background: #fdf3c7;
-            border-left: 5px solid #f1c40f;
-            border-radius: 5px;
-            margin-top: 15px;
-            font-weight: bold;
         }
-
-        /* --- MEDIA QUERY (Ajustes para Móvil) --- */
-        @media (max-width: 600px) {
-            .announcement-list-container {
-                width: 100%;
-                padding: 0 10px;
-            }
-            .announcement-card {
-                padding: 15px;
-            }
-            .announcement-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .announcement-title-text {
-                margin-bottom: 5px;
-            }
-            .back-nav-btn {
-                 width: 100%;
-            }
+        .announcement-header {
+            flex-direction: column;
+            align-items: flex-start;
         }
-    </style>
-{% endblock %}
+        .announcement-title-text {
+            margin-bottom: 5px;
+        }
+        .back-nav-btn {
+            width: 100%;
+        }
+    }
+</style>
