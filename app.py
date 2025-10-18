@@ -1231,7 +1231,7 @@ def add_question(exam_id):
             option_d=option_d,
             correct_option=correct_option,
             image_filename=image_filename,
-            subject=subject,
+            # Se ha eliminado la línea "subject=subject," que estaba duplicada.
             exam_id=exam_id
         )
         db.session.add(question)
