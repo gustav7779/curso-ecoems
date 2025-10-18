@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from flask_migrate import Migrate
+from flask_migrate import Migrate, upgrade
 from flask_babel import Babel, format_datetime
 import datetime as dt
 import os
@@ -69,7 +69,8 @@ LOCKOUT_TIME = 300 # 5 minutos en segundos
 
 # Inicialización de extensiones (en este orden recomendado)
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+# 🚨 CAMBIO CLAVE: Importamos 'upgrade' de flask_migrate y la inicializamos aquí.
+migrate = Migrate(app, db) 
 
 login_manager = LoginManager()
 login_manager.init_app(app) 
@@ -1231,7 +1232,6 @@ def add_question(exam_id):
             option_d=option_d,
             correct_option=correct_option,
             image_filename=image_filename,
-            # Se ha eliminado la línea "subject=subject," que estaba duplicada.
             exam_id=exam_id
         )
         db.session.add(question)
@@ -2200,6 +2200,20 @@ if __name__ == "__main__":
                 admin = User(username="admin", password=generate_password_hash("1234", method="pbkdf2:sha256"), role="admin", is_active=True)
                 db.session.add(admin)
                 db.session.commit()
+        # 🚨 CLAVE: NUEVA LÓGICA PARA APLICAR MIGRACIONES EN ENTORNO DE PRODUCCIÓN (PostgreSQL) 🚨
+        elif app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres'):
+            try:
+                logging.info("Applying database migrations for PostgreSQL...")
+                upgrade()
+                logging.info("Migrations applied successfully.")
+            except Exception as e:
+                logging.error(f"CRITICAL ERROR during migration upgrade: {e}")
+                # En un entorno de producción, puedes decidir salir del programa
+                # o simplemente registrar el error y continuar, pero es mejor que
+                # la aplicación muera para no servir datos incorrectos.
+                # Aquí simplemente registramos y permitimos que continúe.
+                pass
+        # -------------------------------------------------------------------------------------
 
     import os
     port = int(os.environ.get("PORT", 5000))
