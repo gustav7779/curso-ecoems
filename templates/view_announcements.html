@@ -7,19 +7,26 @@
         <h1>📢 Avisos y Anuncios del Curso</h1>
     </div>
     
-    {% if not has_subscribed %}
+    {# 🔑 CAMBIO CLAVE: Mostrar overlay si el usuario NO tiene número de teléfono registrado 🔑 #}
+    {% if not current_user.phone_number %}
     <div id="subscription-overlay" class="sub-overlay">
         <div class="overlay-content">
-            <h1 class="sub-title">🔔 ¡No te pierdas ningún aviso!</h1>
-            <p class="sub-text">Introduce tu correo electrónico para recibir **notificaciones inmediatas** cada vez que se publique un anuncio importante.</p>
+            {# 🔑 TÍTULO Y TEXTO ACTUALIZADOS PARA WHATSAPP/SMS 🔑 #}
+            <h1 class="sub-title"><i class="fab fa-whatsapp"></i> ¡No te pierdas ningun aviso!</h1>
+            <p class="sub-text">Introduce un **número de teléfono (WhatsApp/SMS)** al cual se le enviará un mensaje cada vez que el administrador publique un anuncio importante.</p>
             
-            <form id="subscription-form" class="subscription-form" action="#"> 
-                <input type="email" id="email" name="email" placeholder="ejemplo@correo.com" required>
+            <p class="sub-warning">
+                **IMPORTANTE:** Debe incluir el código de país. Ej: **+52**5512345678 (México) o **+1**5551234567 (EE. UU.).
+            </p>
+
+            <form id="subscription-form" class="subscription-form"> 
+                {# 🔑 CAMBIO: Input de Email a Teléfono 🔑 #}
+                <input type="tel" id="phone_number" name="phone_number" placeholder="+CódigoPaísNúmero (ej: +52...)" required>
                 <button type="submit" class="button confirm-btn">
-                    Confirmar Correo Electrónico
+                    Confirmar Número de Teléfono
                 </button>
             </form>
-            <p class="sub-skip" id="skip-button">Omitir por ahora y ver anuncios</p>
+            <p class="sub-skip" id="skip-button">Omitir por ahora y ver anuncios.</p>
         </div>
     </div>
     {% endif %}
@@ -28,6 +35,13 @@
         
         <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn">⬅ Volver al Panel</a>
         
+        {# Mensaje de confirmación/éxito si ya tienen el número guardado #}
+        {% if current_user.phone_number %}
+            <div class="alert alert-success success-phone-alert">
+                <i class="fas fa-check-circle"></i> Tus notificaciones están activadas y se enviarán al número **{{ current_user.phone_number }}**.
+            </div>
+        {% endif %}
+
         {% for ann_status in announcements %}
             {% set announcement = ann_status.announcement %}
             
@@ -58,8 +72,10 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 🔑 URL TEMPLATE: Usamos un marcador de posición '0' para que Jinja genere la URL base
-            const urlTemplate = "{{ url_for('mark_announcement_read', announcement_id=0) }}";
+            // 🔑 CORRECCIÓN CLAVE: Asegurar que Jinja resuelve las URLs como strings
+            // Usa un marcador de posición '0' que será reemplazado en JS.
+            const markReadUrlTemplate = "{{ url_for('mark_announcement_read', announcement_id=0) }}";
+            const updatePhoneUrl = "{{ url_for('update_phone_number') }}"; // URL para guardar el número
             
             let newTags = document.querySelectorAll('.new-tag');
             let idsToMark = [];
@@ -80,7 +96,8 @@
             
             if (idsToMark.length > 0) {
                 idsToMark.forEach(function(announcementId) {
-                    const finalUrl = urlTemplate.replace('0', announcementId);
+                    // Reemplaza '0' en la plantilla con el ID real del anuncio
+                    const finalUrl = markReadUrlTemplate.replace('0', announcementId); 
                     
                     // Enviamos la petición asíncrona
                     fetch(finalUrl, { method: 'GET' })
@@ -88,43 +105,67 @@
                 });
             }
 
-            // --- LÓGICA DE OVERLAY DE SUSCRIPCIÓN ---
+            // --- LÓGICA DE OVERLAY DE NOTIFICACIÓN DE TELÉFONO ---
             const subOverlay = document.getElementById('subscription-overlay');
             const skipButton = document.getElementById('skip-button'); 
             const subForm = document.getElementById('subscription-form');
+            const phoneInput = document.getElementById('phone_number');
 
-            // 🔑 CORRECCIÓN: Lógica de formulario deshabilitada para evitar errores de backend 🔑
             if (subForm) {
-                subForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    // Simulación de envío
-                    alert('La función de suscripción no está activa en esta versión. Ocultando el aviso.');
-                    
-                    if (subOverlay) {
+                // 🔑 Manejador del botón "Omitir por ahora" 🔑
+                if (skipButton && subOverlay) {
+                    skipButton.addEventListener('click', function() {
+                        // Ocultamos el overlay al presionar Omitir
                         subOverlay.style.opacity = 0;
                         setTimeout(() => {
                             subOverlay.style.display = 'none';
                         }, 300);
+                    });
+                }
+                
+                subForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const phoneNumber = phoneInput.value.trim();
+
+                    // 🔑 VALIDACIÓN CLAVE (Formato Twilio): Debe empezar con + y tener 8 a 15 dígitos. 🔑
+                    const phoneRegex = /^\+[1-9]\d{7,14}$/;
+                    if (!phoneRegex.test(phoneNumber)) {
+                        alert("ERROR: El formato del número es inválido. Debe empezar con el código de país (ej: +525512345678).");
+                        phoneInput.focus();
+                        return;
                     }
-                });
-            }
 
-
-            // 🔑 CORRECCIÓN: Manejador del botón "Omitir por ahora" 🔑
-            if (skipButton && subOverlay) {
-                skipButton.addEventListener('click', function() {
-                    // Ocultamos el overlay al presionar Omitir
-                    subOverlay.style.opacity = 0;
-                    setTimeout(() => {
-                        subOverlay.style.display = 'none';
-                    }, 300);
+                    // Petición AJAX para guardar el número en la base de datos
+                    fetch(updatePhoneUrl, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone_number: phoneNumber })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert("✅ ¡Número confirmado! Recibirás las notificaciones por WhatsApp/SMS.");
+                            subOverlay.style.opacity = 0;
+                            setTimeout(() => {
+                                // Ocultamos y luego recargamos para reflejar el nuevo estado (panel de éxito)
+                                subOverlay.style.display = 'none';
+                                window.location.reload(); 
+                            }, 300);
+                        } else {
+                            // Muestra el mensaje de error que viene de Flask
+                            alert('❌ Error al guardar el número: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error de conexión:', error);
+                        alert('Error de conexión con el servidor.');
+                    });
                 });
             }
         });
     </script>
     <style>
-        /* --- ESTILOS DEL OVERLAY DE SUSCRIPCIÓN (NUEVOS) --- */
+        /* --- ESTILOS DEL OVERLAY DE SUSCRIPCIÓN (MODIFICADOS) --- */
         .sub-overlay {
             position: fixed;
             top: 0;
@@ -150,16 +191,21 @@
             border-top: 8px solid #3498db;
         }
         .sub-title {
-            color: #3498db; 
+            color: #2ecc71; /* Verde para WhatsApp */
             font-size: 1.8em;
             margin-bottom: 10px;
         }
         .sub-text {
             font-size: 1.1em;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             color: #555;
         }
-        .subscription-form input[type="email"] {
+        .sub-warning {
+            color: #e67e22; /* Naranja para la advertencia de formato */
+            font-size: 0.95em;
+            margin-bottom: 25px;
+        }
+        .subscription-form input[type="tel"] {
             width: 95%;
             padding: 12px;
             margin-bottom: 15px;
@@ -167,9 +213,10 @@
             border: 1px solid #ccc;
             box-sizing: border-box;
             font-size: 1em;
+            text-align: center;
         }
         .confirm-btn {
-            background: #2ecc71 !important;
+            background: #2ecc71 !important; /* Mantenemos el verde */
             width: 100%;
             padding: 12px 0;
             font-size: 1.1em;
@@ -188,6 +235,16 @@
         }
         .sub-skip:hover {
             color: #333;
+        }
+        
+        .success-phone-alert {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
         }
         
         /* --- ESTILOS ANTERIORES (CONSERVADOS) --- */

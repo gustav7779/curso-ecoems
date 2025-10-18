@@ -20,6 +20,7 @@ from sqlalchemy import func as db_func
 from sqlalchemy import case 
 from sqlalchemy.exc import IntegrityError 
 from flask_socketio import SocketIO, emit, join_room, leave_room, ConnectionRefusedError 
+from twilio.rest import Client # 🔑 AGREGADO: Importación de Twilio 🔑
 
 
 # 🔑 CONFIGURACIÓN DE LOGGING 🔑
@@ -42,6 +43,24 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 🔑 AGREGADO: CONFIGURACIÓN DE TWILIO (Variables de Entorno) 🔑
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
+
+if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER:
+    try:
+        # Asegúrate de que el número de Twilio esté en formato E.164 (ej: +15017122661)
+        twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        logging.info("Twilio client initialized successfully.")
+    except Exception as e:
+        logging.error(f"Error al inicializar cliente Twilio: {e}")
+        twilio_client = None
+else:
+    logging.warning("Twilio no está configurado (faltan ENV vars). La funcionalidad de SMS/WhatsApp estará deshabilitada.")
+    twilio_client = None
+# -------------------------------------------------------------
 
 # 🔑 SEGURIDAD: Configuración de Sesión y Fuerza Bruta 🔑
 app.config['PERMANENT_SESSION_LIFETIME'] = dt.timedelta(minutes=30) # Timeout de 30 minutos
@@ -112,6 +131,9 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(50), nullable=False, default="student")
     two_factor_secret = db.Column(db.String(32), nullable=True) 
     is_active = db.Column(db.Boolean, default=True) 
+    # 🔑 AGREGADO: Campo de número de teléfono 🔑
+    phone_number = db.Column(db.String(20), nullable=True)
+    # -----------------------------------------------------
     results = db.relationship("ExamResult", backref="user", lazy=True) 
     violation_logs = db.relationship("ViolationLog", backref="user", lazy=True) 
 
@@ -207,6 +229,42 @@ class ViolationLog(db.Model):
     details = db.Column(db.Text, nullable=True) # Detalles adicionales si es necesario
 # -------------------------------------------------------------------
 
+# ======================================================================
+# --- AGREGADO: FUNCIÓN DE UTILIDAD: ENVÍO DE NOTIFICACIONES ---
+# ======================================================================
+
+def send_twilio_notification(to_number, body_message):
+    """
+    Intenta enviar un mensaje de Twilio (SMS o WhatsApp).
+    Retorna True si tiene éxito, False si falla o no está configurado.
+    """
+    if twilio_client is None:
+        logging.warning("Twilio no está configurado. Mensaje no enviado.")
+        return False
+
+    try:
+        # 🔑 CLAVE PARA WHATSAPP: Usar el prefijo 'whatsapp:' en el número de origen y destino.
+        # to_number debe ser el número del alumno, que Twilio necesita registrar.
+        # from_ debe ser tu número de Twilio con el prefijo 'whatsapp:'.
+        
+        # 1. Adaptar el número de Twilio a formato WhatsApp (ej: +1234567 -> whatsapp:+1234567)
+        whatsapp_from = f"whatsapp:{TWILIO_PHONE_NUMBER}"
+        # 2. Adaptar el número del alumno a formato WhatsApp
+        whatsapp_to = f"whatsapp:{to_number}"
+
+        message = twilio_client.messages.create(
+            to=whatsapp_to,
+            from_=whatsapp_from,
+            body=body_message
+        )
+        logging.info(f"Notificación Twilio (WhatsApp) enviada a {to_number}. SID: {message.sid}")
+        return True
+    except Exception as e:
+        logging.error(f"Error al enviar notificación Twilio (WhatsApp) a {to_number}: {e}")
+        # En caso de error de WhatsApp (plantillas o sandbox no configurados),
+        # puedes intentar enviar un SMS como fallback aquí, pero lo mantendremos simple por ahora:
+        return False
+        
 # ======================================================================
 # --- MANEJADORES DE SOCKETIO (CHAT EN VIVO Y SEGURIDAD) ---
 # ======================================================================
@@ -909,6 +967,16 @@ def new_announcement():
         db.session.commit()
 
         logging.info(f"AUDIT LOG: Admin user {current_user.username} created new announcement '{title}'.")
+        
+        # 🔑 AGREGADO: LÓGICA DE NOTIFICACIÓN SMS/WHATSAPP DE TWILIO 🔑
+        all_students = User.query.filter_by(role='student', is_active=True).all()
+        notification_body = f"📣 Nuevo Anuncio Crítico: '{title}'. Revisa la plataforma para leer el mensaje completo."
+        
+        for student in all_students:
+            # Solo enviar si el usuario tiene un número de teléfono registrado
+            if student.phone_number:
+                send_twilio_notification(student.phone_number, notification_body)
+        # ------------------------------------------------------------
 
         flash("Anuncio creado correctamente", "success")
         return redirect(url_for("admin_panel"))
@@ -1394,6 +1462,9 @@ def manage_users():
         password = request.form.get("password")
         role = request.form.get("role", "student")
         
+        # 🔑 AGREGADO: Obtener el campo phone_number 🔑
+        phone_number = request.form.get("phone_number")
+        
         if not username or not password:
             flash("El nombre de usuario y la contraseña son obligatorios.", "danger")
             return redirect(url_for("manage_users"))
@@ -1402,8 +1473,20 @@ def manage_users():
             flash("El nombre de usuario debe tener entre 3 y 150 caracteres y solo contener letras, números y '_'.", "danger")
             return redirect(url_for("manage_users"))
         
+        # 🔑 AGREGADO: Validación básica del número de teléfono (E.164) 🔑
+        if phone_number and not re.match(r'^\+[1-9]\d{7,14}$', phone_number):
+            flash("Formato de número de teléfono inválido. Debe incluir el código de país (ej: +52XXXXXXXXXX).", "danger")
+            return redirect(url_for("manage_users"))
+        
         hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
-        new_user = User(username=username, password=hashed_password, role=role, is_active=True)
+        new_user = User(
+            username=username, 
+            password=hashed_password, 
+            role=role, 
+            is_active=True,
+            # 🔑 AGREGADO: Asignar el nuevo campo 🔑
+            phone_number=phone_number if phone_number else None
+        )
         db.session.add(new_user)
         
         try:
@@ -1648,6 +1731,30 @@ def admin_announcement_read_status():
 # ======================================================================
 # --- RUTAS DE ALUMNO (Exámenes, Reportes, Anuncios) ---
 # ======================================================================
+
+# 🔑 AGREGADO: RUTA AJAX: Guardar/Actualizar Número de Teléfono del Alumno 🔑
+@app.route("/update_phone_number", methods=["POST"])
+@login_required
+def update_phone_number():
+    if current_user.role != "student":
+        return jsonify({'success': False, 'message': 'Acceso denegado.'}), 403
+    
+    data = request.get_json()
+    phone_number = data.get('phone_number')
+
+    # Validación de formato básica para Twilio: debe empezar con + y tener al menos 8 dígitos
+    if phone_number and not re.match(r'^\+[1-9]\d{7,14}$', phone_number):
+        return jsonify({'success': False, 'message': 'Formato de número inválido. Debe incluir código de país (ej: +52XXXXXXXXXX).'}), 400
+
+    try:
+        current_user.phone_number = phone_number
+        db.session.commit()
+        logging.info(f"AUDIT LOG: User {current_user.username} updated phone number to {phone_number}.")
+        return jsonify({'success': True, 'message': 'Número de teléfono guardado correctamente.'})
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error al guardar número de teléfono para user {current_user.username}: {e}")
+        return jsonify({'success': False, 'message': 'Error interno al guardar los datos.'}), 500
 
 # --- Alumno: Crear Nuevo Reporte ---
 @app.route("/reports/new", methods=["GET", "POST"])
