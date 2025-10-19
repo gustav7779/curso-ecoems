@@ -1,1 +1,1 @@
-web: flask db upgrade && gunicorn --worker-class eventlet -w 1 -b 0.0.0.0:${PORT} app:app
+web: python app.py db_init_and_run
