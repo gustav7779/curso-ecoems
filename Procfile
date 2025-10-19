@@ -1,1 +1,1 @@
-web: flask db stamp e932173b170e
+web: flask db upgrade && gunicorn --worker-class eventlet -w 1 -b 0.0.0.0:${PORT} app:app
