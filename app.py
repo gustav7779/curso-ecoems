@@ -6,7 +6,7 @@ from datetime import datetime
 from flask_babel import Babel, format_datetime
 import datetime as dt
 import os
-import pytz 
+import pytz # CLAVE: Para manejo de zonas horarias
 import pyotp
 import qrcode
 import base64
@@ -14,29 +14,28 @@ from io import BytesIO
 import time
 import re
 import logging
-import sys 
 from werkzeug.utils import secure_filename
 from sqlalchemy import func as db_func
 from sqlalchemy import case
 from sqlalchemy.exc import IntegrityError
 from flask_socketio import SocketIO, emit, join_room, leave_room, ConnectionRefusedError
-from twilio.rest import Client
+from twilio.rest import Client # 🔑 AGREGADO: Importación de Twilio 🔑
 
 
 # 🔑 CONFIGURACIÓN DE LOGGING 🔑
 LOG_FILE = 'app.log'
 logging.basicConfig(
-    level=logging.INFO, 
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8'), 
-        logging.StreamHandler() 
+        logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8'),
+        logging.StreamHandler()
     ]
 )
 
 # --- CONFIGURACIÓN DE PRODUCCIÓN (CLAVE SECRETA Y DB) ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecretkey')
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///curso_ecoms.db') 
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///curso_ecoms.db')
 
 # --- Configuración básica de la aplicación ---
 app = Flask(__name__)
@@ -51,7 +50,7 @@ TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
 
 if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER:
     try:
-        # Aseguramos que el cliente twilio no esté usando caracteres no imprimibles (U+00A0)
+        # Asegúrate de que el número de Twilio esté en formato E.164 (ej: +15017122661)
         twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         logging.info("Twilio client initialized successfully.")
     except Exception as e:
@@ -69,6 +68,7 @@ LOCKOUT_TIME = 300 # 5 minutos en segundos
 
 # Inicialización de extensiones (en este orden recomendado)
 db = SQLAlchemy(app)
+# 🚨 ELIMINADA LA INSTANCIA DE FLASK-MIGRATE 🚨
 # migrate = Migrate(app, db) 
 
 login_manager = LoginManager()
@@ -85,19 +85,16 @@ socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 # 1. Definimos la instancia de Babel para inicializarla inmediatamente
 babel = Babel(app)
 
-# 2. Funciones de selector de Babel (SIN DECORADOR)
-# Importamos request dentro de la función para evitar el error de contexto
+# 2. Funciones de selector de Babel (DEFINIMOS SIN DECORADOR, para evitar el AttributeError)
 def get_locale_selector(): 
     """Intenta obtener el mejor locale del navegador, o usa 'es' por defecto."""
-    from flask import request as flask_request 
-    if flask_request and hasattr(flask_request, 'accept_languages'):
-        return flask_request.accept_languages.best_match(['es', 'en'])
+    if request and hasattr(request, 'accept_languages'):
+        return request.accept_languages.best_match(['es', 'en'])
     return 'es'
 
 def get_timezone_selector():
     """Retorna la zona horaria configurada en la aplicación."""
-    # Usamos app de Flask si está disponible
-    return app.config['BABEL_DEFAULT_TIMEZONE']
+    return 'America/Mexico_City'
 
 
 # 3. CONFIGURACIÓN DE BABEL
@@ -107,20 +104,19 @@ app.config['BABEL_DEFAULT_TIMEZONE'] = 'America/Mexico_City'
 # 4. EXPORTAR la función de formato a Jinja (Esto es seguro)
 app.jinja_env.globals.update(format_datetime=format_datetime)
 
-# 5. ASIGNACIÓN DIRECTA (SOLUCIONA EL ATTRIBUTEERROR)
+# 5. ASIGNACIÓN MANUAL (MÉTODO ROBUSTO)
 try:
-    # Usamos init_app para asegurar que los selectores se registren correctamente
-    babel.init_app(app, locale_selector=get_locale_selector, timezone_selector=get_timezone_selector)
-    logging.info("Babel configured successfully using init_app.")
+    babel.locale_selector_func = get_locale_selector
+    babel.timezone_selector_func = get_timezone_selector
 except Exception as e:
-    logging.error(f"CRITICAL ERROR al asignar selectores de Babel: {e}")
-
+    logging.warning(f"WARN: Fallo la asignacion manual de selectores de Babel: {e}. Usando valores por defecto.")
+    
 
 # ======================================================================
 # --- Modelos (Mantenidos del Código 2) ---
 # ======================================================================
 class User(db.Model, UserMixin):
-    # ... resto del código ...
+# ... resto del código ...
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -240,9 +236,13 @@ def send_twilio_notification(to_number, body_message):
 
     try:
         # 🔑 CLAVE PARA WHATSAPP: Usar el prefijo 'whatsapp:' en el número de origen y destino.
-        # Aseguramos que los números sean strings limpios sin U+00A0
-        whatsapp_from = f"whatsapp:{TWILIO_PHONE_NUMBER.strip()}"
-        whatsapp_to = f"whatsapp:{to_number.strip()}"
+        # to_number debe ser el número del alumno, que Twilio necesita registrar.
+        # from_ debe ser tu número de Twilio con el prefijo 'whatsapp:'.
+        
+        # 1. Adaptar el número de Twilio a formato WhatsApp (ej: +1234567 -> whatsapp:+1234567)
+        whatsapp_from = f"whatsapp:{TWILIO_PHONE_NUMBER}"
+        # 2. Adaptar el número del alumno a formato WhatsApp
+        whatsapp_to = f"whatsapp:{to_number}"
 
         message = twilio_client.messages.create(
             to=whatsapp_to,
@@ -253,6 +253,8 @@ def send_twilio_notification(to_number, body_message):
         return True
     except Exception as e:
         logging.error(f"Error al enviar notificación Twilio (WhatsApp) a {to_number}: {e}")
+        # En caso de error de WhatsApp (plantillas o sandbox no configurados),
+        # puedes intentar enviar un SMS como fallback aquí, pero lo mantendremos simple por ahora:
         return False
         
 # ======================================================================
@@ -266,8 +268,7 @@ def handle_connect():
     """
     logging.info("Socket CONNECTED. Attempting to get user context.")
     if current_user.is_authenticated:
-        # Evitamos caracteres invisibles en el nombre del room
-        join_room(str(current_user.id).strip())
+        join_room(str(current_user.id))
         logging.info(f"Socket conectado y unido al room de usuario: User {current_user.username} (ID: {current_user.id})")
 
 
@@ -275,7 +276,7 @@ def handle_connect():
 def handle_disconnect():
     """Maneja la desconexión del cliente SocketIO."""
     if current_user.is_authenticated:
-        leave_room(str(current_user.id).strip())
+        leave_room(str(current_user.id))
         logging.info(f"Socket desconectado: User {current_user.username} (ID: {current_user.id})")
 
 
@@ -286,12 +287,12 @@ def on_join(data):
         logging.warning("SECURITY: Unauthorized user tried to join admin chat.")
         return
 
-    target_user_id = str(data.get('user_id')).strip()
+    target_user_id = str(data.get('user_id'))
     join_room(target_user_id)
     logging.info(f"ADMIN CHAT: Admin {current_user.username} joined room {target_user_id}.")
     emit('status_update', 
           {'msg': f'Conectado a la sala del alumno ID {target_user_id}.'}, 
-          room=str(current_user.id).strip()
+          room=str(current_user.id)
     )
 
 @socketio.on('send_message_to_student')
@@ -303,7 +304,7 @@ def handle_admin_message(data):
         logging.warning(f"SECURITY: Non-admin user {current_user.username} attempted to send chat message.")
         return 
 
-    target_room = str(data.get('target_user_id')).strip()
+    target_room = str(data.get('target_user_id'))
     message_content = data.get('message')
 
     if target_room and message_content:
@@ -326,12 +327,10 @@ def handle_student_response(data):
     if not current_user.is_authenticated or current_user.role != 'student':
         return
 
-    # Enviamos a la sala privada del Admin (si el admin está conectado)
-    # Por simplicidad, asumimos que el admin principal es ID 1 para el chat
-    admin_room = '1' 
+    admin_room = str(data.get('target_admin_id'))
     message_content = data.get('message')
     
-    if message_content:
+    if admin_room and message_content:
         emit('admin_message_received', 
               {
                   'message': message_content,
@@ -352,7 +351,7 @@ def handle_close_chat(data):
     if not current_user.is_authenticated or current_user.role != 'admin':
         return 
         
-    target_room = str(data.get('target_user_id')).strip() 
+    target_room = str(data.get('target_user_id')) 
     admin_username = data.get('admin_username', 'Admin')
 
     if target_room:
@@ -401,14 +400,13 @@ def handle_exam_violation(data):
         logging.warning(f"🚨 SECURITY LOGGED: User: {current_user.username}, Exam ID: {exam_id}, Type: {violation_type}.")
         
         # 2. Notificar al panel de monitoreo de Admin
-        # Enviamos la alerta al room del Admin principal (ID 1)
         socketio.emit('admin_violation_alert', 
                       {'user_id': user_id, 
                        'username': current_user.username, 
                        'exam_id': exam_id, 
                        'type': violation_type, 
                        'timestamp': datetime.now().strftime("%H:%M:%S")},
-                      room='1', 
+                      room='1', # Asume que el admin principal (ID 1) recibe todas las alertas
                       namespace='/')
         
     except Exception as e:
@@ -527,8 +525,8 @@ def dashboard():
     
     # 2. WIDGET: Última Simulación/Resultado
     last_result = ExamResult.query.filter_by(user_id=current_user.id)\
-                     .order_by(ExamResult.date_taken.desc()).first()
-                     
+                      .order_by(ExamResult.date_taken.desc()).first()
+                      
     last_exam_questions_count = 0
     if last_result:
         exam = Exam.query.get(last_result.exam_id)
@@ -563,8 +561,8 @@ def dashboard():
     
     # 4. WIDGET: Historial de Reportes (Últimos 3) 🔑
     latest_reports = Report.query.filter_by(user_id=current_user.id)\
-                             .order_by(Report.date_submitted.desc())\
-                             .limit(3).all()
+                              .order_by(Report.date_submitted.desc())\
+                              .limit(3).all()
     
     # 5. Notificación de Respuesta del Admin
     for report in latest_reports:
@@ -598,7 +596,6 @@ def index():
             return redirect(url_for("dashboard"))
             
     return render_template("index.html")
-
 
 # 🔑 NUEVA RUTA: Aviso de Privacidad 🔑
 @app.route("/privacy")
@@ -873,7 +870,6 @@ def admin_add_time_to_exam():
         time_to_add_sec = int(data.get('time_sec')) 
         
         # 1. Buscar la sesión del alumno
-        # Filtramos por user_id y esperamos que solo haya una sesión activa por alumno (diseño actual)
         session_db = ActiveExamSession.query.filter_by(user_id=student_id).first() 
 
         if not session_db:
@@ -910,43 +906,26 @@ def view_violation_logs(exam_id, user_id):
     exam = Exam.query.get_or_404(exam_id)
     
     # Obtener logs de violación para el alumno y el examen
+    # Esto traerá objetos datetime sin zona horaria (naive datetime)
     logs = ViolationLog.query.filter_by(user_id=user_id, exam_id=exam_id).order_by(ViolationLog.timestamp.desc()).all()
     
     # --- 🚨 CORRECCIÓN DE ZONA HORARIA 🚨 ---
-    # Convertir a objetos aware (conscientes de la zona horaria) para formato
+    # 1. Definir la zona horaria UTC (asumimos que la DB guardó en UTC)
     utc_tz = pytz.utc
-    mexico_city_tz = pytz.timezone('America/Mexico_City')
-
-    # Al iterar, creamos una lista de logs que ya tienen el tiempo convertido a la zona horaria de México
-    logs_with_tz = []
+    
+    # 2. Iterar sobre los logs y "pegar" la información de UTC al objeto de tiempo
+    # Esto convierte el objeto naive (sin zona horaria) en aware (consciente de la zona horaria)
     for log in logs:
-        # 1. Localizar: Asumimos que lo guardado en DB es UTC (por default=datetime.utcnow)
+        # Solo modificamos si es naive (no tiene tzinfo)
         if log.timestamp and not log.timestamp.tzinfo:
-            log_time_utc = utc_tz.localize(log.timestamp)
-        else:
-            log_time_utc = log.timestamp # Si ya es aware, lo usamos directo
+            log.timestamp = utc_tz.localize(log.timestamp)
 
-        # 2. Convertir a Zona Horaria de México
-        log_time_mexico = log_time_utc.astimezone(mexico_city_tz)
-        
-        # Clonamos el log object y le asignamos el tiempo de México para el template
-        log_data = {
-            'id': log.id,
-            'violation_type': log.violation_type,
-            'details': log.details,
-            # Pasamos la hora ya en México (Naive, pero la cadena de texto es correcta)
-            'timestamp_mexico': log_time_mexico.strftime('%d/%m/%Y %H:%M:%S %Z'), 
-            # También pasamos el objeto datetime para formato manual si se necesita (pero en UTC)
-            'timestamp_utc': log.timestamp 
-        }
-        logs_with_tz.append(log_data)
     # ----------------------------------------
     
     return render_template("admin_violation_logs.html", 
                            student=student, 
                            exam=exam, 
-                           # Pasamos la nueva lista con la hora convertida
-                           logs=logs_with_tz)
+                           logs=logs)
 # 🔑 FIN DE CAMBIO/ADICIÓN SOLICITADA 🔑
 
 
@@ -1486,9 +1465,6 @@ def manage_users():
             return redirect(url_for("manage_users"))
         
         # 🔑 AGREGADO: Validación básica del número de teléfono (E.164) 🔑
-        # Limpiamos el número antes de validar (quitamos espacios invisibles)
-        if phone_number:
-            phone_number = phone_number.strip()
         if phone_number and not re.match(r'^\+[1-9]\d{7,14}$', phone_number):
             flash("Formato de número de teléfono inválido. Debe incluir el código de país (ej: +52XXXXXXXXXX).", "danger")
             return redirect(url_for("manage_users"))
@@ -1510,7 +1486,7 @@ def manage_users():
             logging.info(f"AUDIT LOG: Admin user {current_user.username} created new user '{username}' ({role}).")
 
             flash(f"Usuario {username} ({role}) creado exitosamente.", "success")
-        
+            
         except IntegrityError:
             db.session.rollback()
             flash(f"❌ Error: El usuario '{username}' ya existe. Por favor, elige otro nombre.", "danger")
@@ -1762,11 +1738,8 @@ def update_phone_number():
     except Exception:
         return jsonify({'success': False, 'message': 'Datos JSON inválidos.'}), 400
 
-    # Limpiamos el número antes de validar (quitamos espacios invisibles)
-    if phone_number:
-        phone_number = phone_number.strip()
-        
     # 2. Validación de formato básica para Twilio: debe empezar con + y tener 8 a 15 dígitos.
+    # El HTML ya hace una pre-validación, pero el servidor es la última defensa.
     if not phone_number or not re.match(r'^\+[1-9]\d{7,14}$', phone_number):
         return jsonify({'success': False, 'message': 'Formato de número inválido. Debe incluir código de país (ej: +52XXXXXXXXXX).'}), 400
 
@@ -2058,7 +2031,7 @@ def take_exam(exam_id):
                 logging.error(f"Error al registrar sesión ACTIVA (start_timer_now) para user {current_user.id}: {e}")
                 
             return '', 204 
-        
+            
         
         # 🔑 LÓGICA DE ENVÍO Y CALIFICACIÓN FINAL (POST del formulario) 🔑
         session.pop(session_key, None) 
@@ -2202,58 +2175,12 @@ def student_exam_detail(exam_id):
 
 
 # ======================================================================
-# --- INICIALIZACIÓN DE LA APLICACIÓN Y LÓGICA DE PURGA ---
+# --- INICIALIZACIÓN DE LA APLICACIÓN ---
 # ======================================================================
 
-# 🔑 NUEVA FUNCIÓN DE INICIO CON LÓGICA DE PURGA 🔑
-def init_db_and_run_server():
-    """
-    Ejecuta la inicialización o purga de la base de datos y luego inicia el servidor.
-    Se usa para el Procfile de Render.
-    """
-    with app.app_context():
-        logging.info("Executing DB purge/creation logic...")
-        
-        # 1. Purga y Creación de Tablas (Para PostgreSQL en Render)
-        try:
-            # db.create_all() crea las tablas si no existen. Esto debería resolver el UndefinedColumn si la DB estaba vacía.
-            db.create_all() 
-            logging.info("DB tables creation attempted (db.create_all() executed).")
-        
-            # 2. Creación de usuario 'admin' por defecto si no existe
-            # ESTE ES EL PASO CLAVE. Si la DB se reinicia o está vacía, crea el usuario "admin" con "1234"
-            if not User.query.filter_by(username="admin").first():
-                admin = User(username="admin", password=generate_password_hash("1234", method="pbkdf2:sha256"), role="admin", is_active=True)
-                db.session.add(admin)
-                db.session.commit()
-                logging.info("Default admin user created.")
-            
-        except Exception as e:
-            # Registramos cualquier error crítico de la DB
-            logging.error(f"CRITICAL ERROR during DB creation/schema check: {e}")
-            # NO salimos aquí para permitir que Gunicorn/SocketIO tome el control.
-
-
-    # 3. Iniciar el servidor Gunicorn/SocketIO
+if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
-    # Usamos socketio.run para iniciar el servidor con soporte para WebSockets
-    socketio.run(app, host="0.0.0.0", port=port)
-
-# 🔑 Punto de entrada principal 🔑
-if __name__ == "__main__":
-    # Si se pasa el argumento 'db_init_and_run' (desde el Procfile), ejecutamos la purga y el servidor
-    if len(sys.argv) > 1 and sys.argv[1] == 'db_init_and_run':
-        init_db_and_run_server()
-    else:
-        # Comportamiento predeterminado para el desarrollo local (si se ejecuta directamente 'python app.py')
-        with app.app_context():
-            if 'sqlite:///' in app.config['SQLALCHEMY_DATABASE_URI']:
-                db.create_all()
-                if not User.query.filter_by(username="admin").first():
-                    admin = User(username="admin", password=generate_password_hash("1234", method="pbkdf2:sha256"), role="admin", is_active=True)
-                    db.session.add(admin)
-                    db.session.commit()
-                    
-            logging.info("Starting local server...")
-            socketio.run(app, debug=True, port=5000)
+    # Esto solo se ejecuta cuando se llama directamente a python app.py (i.e., localmente)
+    # En Render, se usa el Procfile para ejecutar Gunicorn, que llama directamente al objeto 'app'.
+    socketio.run(app, host="0.0.0.0", port=port, debug=True)
