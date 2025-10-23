@@ -2183,4 +2183,6 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     # Esto solo se ejecuta cuando se llama directamente a python app.py (i.e., localmente)
     # En Render, se usa el Procfile para ejecutar Gunicorn, que llama directamente al objeto 'app'.
+    # 🔑 CORRECCIÓN CLAVE: Usamos socketio.run solo para el desarrollo local.
+    # En Render, la línea del Procfile llamará a gunicorn directamente.
     socketio.run(app, host="0.0.0.0", port=port, debug=True)
