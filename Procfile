@@ -1,1 +1,1 @@
-web: python app.py db_init_and_run
+web: bash start.sh
