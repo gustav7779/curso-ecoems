@@ -14,12 +14,15 @@ from io import BytesIO
 import time
 import re
 import logging
+from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from sqlalchemy import func as db_func
 from sqlalchemy import case
 from sqlalchemy.exc import IntegrityError
 from flask_socketio import SocketIO, emit, join_room, leave_room, ConnectionRefusedError
 from twilio.rest import Client # 🔑 AGREGADO: Importación de Twilio 🔑
+
+load_dotenv()
 
 
 # 🔑 CONFIGURACIÓN DE LOGGING 🔑
@@ -1766,7 +1769,7 @@ def new_report():
 
     if request.method == "POST":
         title = request.form["title"]
-        description = request.form["content"]
+        request.form.get("content")
         image_filename = None
 
         if len(title.strip()) == 0 or len(title) > 255:
@@ -1787,7 +1790,7 @@ def new_report():
 
         report = Report(
             title=title,
-            content=description, 
+            content="content", 
             user_id=current_user.id,
             image_filename=image_filename,
             status='Abierto',
