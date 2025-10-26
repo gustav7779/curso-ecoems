@@ -5,6 +5,7 @@ venv/
 # Archivos sensibles (Base de datos y logs)
 *.db
 app.log
+.env  
 
 # Archivos de sesión de Flask
-__pycache__/
+pycache_/
