@@ -3,8 +3,7 @@
 {% block title %}Panel de Administración{% endblock %}
 
 {% block content %}
-    <div class="page-content-wrapper"> <!-- 🔑 CONTENEDOR PARA ANIMACIÓN DE CARGA 🔑 -->
-        <div class="header-card">
+    <div class="page-content-wrapper"> <div class="header-card">
             <h1>⚙️ Panel de Administración - Bienvenido, {{ current_user.username | capitalize }}</h1>
             <p>Gestiona usuarios, exámenes y anuncios del sistema.</p>
         </div>
@@ -73,7 +72,8 @@
 
                             <li class="exam-item">
                                 <span class="exam-title">
-                                    {{ exam.title }} ({{ exam.questions | length | default(0) }} Preguntas)
+                                    {# 🔑 LÍNEA MODIFICADA: Usamos '| list | length' para asegurar que la relación de SQLAlchemy se evalúe correctamente, previniendo errores 500. #}
+                                    {{ exam.title }} ({{ exam.questions | list | length }} Preguntas)
                                     {% if active_count > 0 %}
                                         {# Badge de monitoreo en vivo #}
                                         <span class="badge badge-warning">🟢 {{ active_count }} en Vivo</span>
