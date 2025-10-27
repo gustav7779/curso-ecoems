@@ -1,11 +1,11 @@
 # Ignorar entorno virtual
 venv/
 *.pyc
+# Directorios de compilación y caché de Python
+__pycache__/
 
 # Archivos sensibles (Base de datos y logs)
 *.db
 app.log
-.env  
-
-# Archivos de sesión de Flask
-pycache_/
+.env 
+runtime.txt # Si Render genera este archivo
