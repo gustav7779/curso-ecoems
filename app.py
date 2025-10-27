@@ -91,6 +91,7 @@ babel = Babel(app)
 # 2. Funciones de selector de Babel (DEFINIMOS SIN DECORADOR, para evitar el AttributeError)
 def get_locale_selector(): 
     """Intenta obtener el mejor locale del navegador, o usa 'es' por defecto."""
+    # ESTO ACCEDE AL OBJETO REQUEST, LO CUAL CAUSA EL RUNTIMEERROR SI ES LLAMADO FUERA DE CONTEXTO
     if request and hasattr(request, 'accept_languages'):
         return request.accept_languages.best_match(['es', 'en'])
     return 'es'
@@ -108,12 +109,14 @@ app.config['BABEL_DEFAULT_TIMEZONE'] = 'America/Mexico_City'
 app.jinja_env.globals.update(format_datetime=format_datetime)
 
 # 5. ASIGNACIÓN MANUAL (MÉTODO ROBUSTO)
-try:
-    babel.locale_selector_func = get_locale_selector
-    babel.timezone_selector_func = get_timezone_selector
-except Exception as e:
-    logging.warning(f"WARN: Fallo la asignacion manual de selectores de Babel: {e}. Usando valores por defecto.")
-    
+# 💥 CORRECCIÓN: Comentamos este bloque para evitar el "RuntimeError: Working outside of request context."
+#               dado que los valores por defecto ya están configurados arriba.
+# try:
+#     babel.locale_selector_func = get_locale_selector
+#     babel.timezone_selector_func = get_timezone_selector
+# except Exception as e:
+#     logging.warning(f"WARN: Fallo la asignacion manual de selectores de Babel: {e}. Usando valores por defecto.")
+
 
 # ======================================================================
 # --- Modelos (Mantenidos del Código 2) ---
@@ -564,8 +567,8 @@ def dashboard():
     
     # 4. WIDGET: Historial de Reportes (Últimos 3) 🔑
     latest_reports = Report.query.filter_by(user_id=current_user.id)\
-                              .order_by(Report.date_submitted.desc())\
-                              .limit(3).all()
+                                 .order_by(Report.date_submitted.desc())\
+                                 .limit(3).all()
     
     # 5. Notificación de Respuesta del Admin
     for report in latest_reports:
@@ -904,7 +907,7 @@ def view_violation_logs(exam_id, user_id):
     if current_user.role != "admin":
         flash("Acceso denegado.", "danger")
         return redirect(url_for("dashboard"))
-    
+        
     student = User.query.get_or_404(user_id)
     exam = Exam.query.get_or_404(exam_id)
     
@@ -1447,7 +1450,7 @@ def manage_users():
     
     # Filtro aplicado de manera sencilla
     if not show_inactive:
-            query = query.filter_by(is_active=True) 
+        query = query.filter_by(is_active=True) 
 
     users = query.all()
 
