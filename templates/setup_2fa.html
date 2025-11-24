@@ -14,7 +14,6 @@
                 <h2>Paso 1: Escanea el Código QR</h2>
                 {% if qr_base64 %}
                 <div class="qr-code-box">
-                    <!-- 🔑 CORRECCIÓN CLAVE: Se asegura el prefijo data:image/png;base64, 🔑 -->
                     <img src="data:image/png;base64,{{ qr_base64 }}" alt="Código QR de 2FA">
                 </div>
                 {% endif %}
@@ -26,6 +25,9 @@
             <div class="step">
                 <h2>Paso 2: Verifica el Código</h2>
                 <form method="POST">
+                    
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                     <label for="totp_code">Código de 6 dígitos de tu aplicación:</label>
                     <input type="text" id="totp_code" name="totp_code" maxlength="6" required placeholder="Ej: 123456">
                     <button type="submit" class="button submit-btn">

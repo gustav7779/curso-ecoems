@@ -6,10 +6,12 @@
     <div class="container edit-question-container">
         <div class="card form-card">
             <h2 class="card-title">✏️ Editando Pregunta Q{{ question.id }}</h2>
-            <p class="exam-meta">Modifica el texto, opciones o la respuesta correcta.</p>
+            <p class="exam-meta">Modifica el texto, imagen, opciones o la respuesta correcta.</p>
 
-            <form method="POST" class="question-form" action="{{ url_for('edit_question', question_id=question.id) }}">
+            <form method="POST" class="question-form" action="{{ url_for('edit_question', question_id=question.id) }}" enctype="multipart/form-data">
                 
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="form-group">
                     <label for="subject">Materia/Categoría:</label>
                     <input type="text" id="subject" name="subject" value="{{ question.subject or '' }}" placeholder="Ej: Habilidad Matemática">
@@ -20,9 +22,20 @@
                     <textarea id="text" name="text" rows="4" required>{{ question.text }}</textarea>
                 </div>
 
-                {% if question.image_filename %}
-                    <p class="image-note">Imagen actual: <strong>{{ question.image_filename }}</strong>. Para cambiarla o eliminarla, se requiere una subida de archivo más compleja.</p>
-                {% endif %}
+                <div class="form-group image-upload-group">
+                    <label for="image_file">Imagen de Apoyo:</label>
+                    <div class="image-input-wrapper">
+                        {% if question.image_filename %}
+                            <div class="current-image-preview">
+                                <p class="small-text"><em>Imagen Actual:</em></p>
+                                <img src="{{ url_for('static', filename='images/' + question.image_filename) }}" alt="Imagen pregunta">
+                            </div>
+                        {% endif %}
+                        
+                        <input type="file" id="image_file" name="image_file" accept="image/*" class="file-input">
+                        <p class="small-text hint">Sube una nueva imagen para reemplazar la anterior (opcional).</p>
+                    </div>
+                </div>
 
                 <h3 class="options-header">Opciones de Respuesta:</h3>
                 
@@ -64,8 +77,7 @@
     </div>
     
     <style>
-        /* --- ESTILOS DE LA VISTA DE EDICIÓN (ADAPTADOS DE add_question.html) --- */
-
+        /* --- ESTILOS GENERALES --- */
         .edit-question-container {
             max-width: 700px;
             background: white;
@@ -82,10 +94,11 @@
             color: #34495e;
         }
 
+        /* Estructura de los campos */
         .form-group {
             display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+            align-items: flex-start; /* Alineación superior para textareas e imágenes */
+            margin-bottom: 15px;
         }
 
         .form-group label {
@@ -95,9 +108,10 @@
             font-weight: bold;
             color: #555;
             flex-shrink: 0; 
+            margin-top: 10px; /* Ajuste vertical */
         }
         
-        .form-group input, 
+        .form-group input[type="text"], 
         .form-group textarea, 
         .form-group select {
             flex-grow: 1; 
@@ -116,6 +130,39 @@
             outline: none;
         }
 
+        /* --- ESTILOS ESPECÍFICOS PARA LA IMAGEN --- */
+        .image-upload-group {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px dashed #bdc3c7;
+        }
+
+        .image-input-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .current-image-preview img {
+            max-width: 200px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            margin-bottom: 10px;
+            border: 2px solid white;
+        }
+
+        .file-input {
+            padding: 5px 0;
+        }
+
+        .small-text {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin: 5px 0;
+        }
+
+        /* --- BOTONES Y HEADERS --- */
         .submit-btn-custom {
             padding: 12px 20px;
             margin-top: 25px;
@@ -127,7 +174,7 @@
             font-weight: bold;
             font-size: 1.1em;
             transition: background 0.3s;
-            align-self: flex-end; 
+            width: 100%; /* Botón ancho */
         }
         .submit-btn-custom:hover {
             background: #2980b9;
@@ -139,9 +186,21 @@
             margin-top: 30px;
             border-top: 1px dashed #eee;
             padding-top: 20px;
+            margin-bottom: 15px;
         }
 
-        /* --- MEDIA QUERY PARA MÓVILES (Adaptación) --- */
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+        .back-btn:hover {
+            color: #34495e;
+        }
+
+        /* --- MEDIA QUERY PARA MÓVILES --- */
         @media (max-width: 768px) {
             .edit-question-container {
                 padding: 15px;
@@ -159,17 +218,13 @@
                 text-align: left;
                 padding: 0;
                 margin-bottom: 5px;
+                margin-top: 0;
             }
             
-            .form-group input, 
+            .form-group input[type="text"], 
             .form-group textarea, 
             .form-group select {
                 width: 100%;
-            }
-            
-            .submit-btn-custom {
-                width: 100%;
-                align-self: center;
             }
         }
     </style>

@@ -13,7 +13,6 @@
         
         <div class="report-main-grid">
             
-            <!-- --- BLOQUE DE INFORMACIÓN DEL REPORTE --- -->
             <div class="report-info">
                 <h2>{{ report.title }}</h2>
                 
@@ -37,26 +36,26 @@
 
                 {% if report.image_filename %}
                     <p class="image-label"><strong>Imagen Adjunta:</strong></p>
-                    <!-- Añadimos una clase para controlar el estilo de la imagen -->
                     <img src="{{ url_for('static', filename='images/' + report.image_filename) }}" alt="Evidencia del Reporte" class="report-evidence-img">
                 {% endif %}
 
             </div>
 
-            <!-- --- BLOQUE DE RESPUESTA DEL ADMINISTRADOR --- -->
             <div class="admin-response-section">
                 <h3>Historial de Mensajes y Respuesta</h3>
                 
                 {% if report.admin_response %}
                     <div class="admin-response-history">
                         <p class="history-label">Hilo de Comunicación:</p>
-                        <!-- Usamos pre-wrap para mantener saltos de línea del texto de la DB -->
                         <div class="response-text">{{ report.admin_response | replace('\n', '<br>') | safe }}</div>
                     </div>
                 {% endif %}
                 
                 {% if report.status != 'Cerrado' %}
                     <form method="POST" action="{{ url_for('send_report_response', report_id=report.id) }}" class="response-form">
+                        
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                         <div class="form-group">
                             <label for="admin_response">Enviar Nuevo Mensaje (No Cierra):</label>
                             <textarea id="admin_response" name="admin_response" rows="4" required placeholder="Escribe tu respuesta aquí. El mensaje se agregará al historial."></textarea>
@@ -66,8 +65,11 @@
                     </form>
                     
                     <form method="POST" action="{{ url_for('close_report', report_id=report.id) }}" 
-                          onsubmit="return confirm('¿Estás seguro de que deseas cerrar este reporte?');"
-                          class="action-form-full">
+                            onsubmit="return confirm('¿Estás seguro de que deseas cerrar este reporte?');"
+                            class="action-form-full">
+                        
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                         <button type="submit" class="button action-close danger-btn full-width-btn">✔️ Cerrar y Resolver</button>
                     </form>
                     
@@ -77,6 +79,9 @@
                     </div>
                     
                     <form method="POST" action="{{ url_for('reopen_report', report_id=report.id) }}" class="action-form-full">
+                        
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                         <button type="submit" class="button action-reopen warning-btn full-width-btn">🔁 Reabrir Reporte</button>
                     </form>
                 {% endif %}
@@ -215,7 +220,7 @@
         .action-reopen { background: #f1c40f; color: #333; }
         .action-reopen:hover { background: #e67e22; color: white; }
 
-        /* --- Estilo de formulario para textarea (heredado de base.html pero ajustado) */
+        /* --- Estilo de formulario para textarea (heredado de base.html pero ajustado) --- */
         .form-group textarea {
             width: 100%;
             padding: 10px;

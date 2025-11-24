@@ -1,316 +1,254 @@
 {% extends "base.html" %}
-{% block title %}Chat de Soporte - {{ target_user.username }}{% endblock %}
+
+{% block title %}Chat con {{ target_user.username }}{% endblock %}
+
 {% block content %}
-<div class="container chat-container">
-    <header class="chat-header">
-        <div class="user-info">
-            <i class="fas fa-headset user-icon"></i>
-            <h1 class="chat-title">Soporte para {{ target_user.username | capitalize }}</h1>
-        </div>
-        <div class="connection-status-box">
-            <p class="status-indicator" id="connection-status">Estado: Intentando conectar...</p>
-            <p class="chat-meta">Conectado como: {{ current_user.username | capitalize }}</p>
-        </div>
-    </header>
-    <div class="chat-main-area">
-        
-        <!-- Ventana de Mensajes (Historial de la Sesión Actual) -->
-        <div class="message-window" id="message-window">
-            <div class="system-message">
-                Conexión de soporte iniciada...
+<div class="chat-container-wrapper">
+    
+    <div class="chat-header-card">
+        <div class="header-info">
+            <div class="avatar-circle">{{ target_user.username[0] | upper }}</div>
+            <div>
+                <h1>Chat de Soporte</h1>
+                <p>Conversando con: <strong>{{ target_user.username }}</strong> (ID: {{ target_user.id }})</p>
             </div>
         </div>
-        
-        <!-- Formulario de Entrada de Mensajes y Botones -->
-        <form id="chat-form" class="chat-input-form">
-            <input type="text" id="message-input" placeholder="Escribe tu mensaje de soporte aquí..." required>
-            <button type="submit" class="button send-btn" title="Enviar Mensaje">
-                <i class="fas fa-paper-plane"></i> Enviar
+        <div class="header-actions">
+            <button id="end-chat-btn" class="btn-danger-sm">Finalizar Soporte</button>
+            <a href="javascript:window.close();" class="btn-close-sm">Cerrar Ventana</a>
+        </div>
+    </div>
+
+    <div class="chat-interface">
+        <div id="chat-window" class="chat-messages-area">
+            <div class="system-message">
+                <small>Has iniciado una sesión de soporte privado.</small>
+            </div>
+            </div>
+
+        <form id="admin-chat-form" class="chat-input-area">
+            <input type="text" id="message-input" placeholder="Escribe un mensaje al alumno..." required autocomplete="off">
+            <button type="submit" class="btn-send">
+                <i class="fas fa-paper-plane"></i>
             </button>
         </form>
-        
-        <!-- 🔑 Botón de Cierre de Chat 🔑 -->
-        <button id="close-chat-remote" class="button close-chat-btn" title="Cerrar la ventana del chat al alumno">
-            ❌ Cerrar Chat en Vivo
-        </button>
     </div>
-    <a href="{{ url_for('admin_panel') }}" class="btn back-btn">⬅ Volver al Panel Admin</a>
+
 </div>
 
-<!-- 🔑 SCRIPT DE SOCKETIO Y LÓGICA DE CHAT 🔑 -->
 <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. VARIABLES DE CONTEXTO
-    // 🔑 CORRECCIÓN: Aseguramos que targetUserId sea un entero válido
-    const targetUserId = parseInt("{{ target_user.id }}");
-    const currentUsername = "{{ current_user.username | capitalize }}";
-    const connectionStatus = document.getElementById('connection-status');
-    const messageWindow = document.getElementById('message-window');
-    const messageInput = document.getElementById('message-input');
-    const chatForm = document.getElementById('chat-form');
-    const closeChatButton = document.getElementById('close-chat-remote'); // Nuevo botón de cierre
-
-    // 2. CONEXIÓN AL SERVIDOR SOCKETIO
-    // 🔑 CORRECCIÓN FINAL DE CONEXIÓN: Usamos io.connect() vacío forzando WebSockets/polling 🔑
-    // Esto se conecta al mismo host/puerto y usa un transporte más robusto.
-    const socket = io.connect({ transports: ['websocket', 'polling'] });
-    
-    // 3. MANEJADORES DE EVENTOS DE SOCKETIO (ADMIN)
-    
-    // Evento 3.1: Conexión Exitosa
-    socket.on('connect', function() {
-        connectionStatus.textContent = 'Conectado';
-        connectionStatus.style.color = '#2ecc71';
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io.connect(window.location.origin);
         
-        // Pedimos al servidor que nos una al "room" del alumno (Etapa 2.1)
-        socket.emit('join_room', {
-            user_id: targetUserId,
-            username: currentUsername,
-            role: 'admin'
+        // Asegurarse de que sean cadenas para la comparación
+        const TARGET_USER_ID = "{{ target_user.id }}"; 
+        const ADMIN_ID = "{{ current_user.id }}";
+        const ADMIN_USERNAME = "{{ current_user.username }}";
+
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('admin-chat-form');
+        const messageInput = document.getElementById('message-input');
+        const endChatBtn = document.getElementById('end-chat-btn');
+
+        socket.on('connect', function() {
+            console.log("Admin conectado al chat.");
+            // 🔥 UNIRSE AL CANAL GLOBAL DE ADMINS PARA RECIBIR MENSAJES
+            socket.emit('admin_join_pulse');
         });
-        // ✅ CORRECCIÓN DE SYNTAX: Se añaden backticks (`)
-        addMessage(`Unido a la sala de soporte para ${targetUserId}.`, 'system'); 
-    });
-    
-    // Evento 3.2: Mensaje Recibido (Si el alumno responde, lo vemos aquí)
-    socket.on('admin_message_received', function(data) {
-        // ✅ CORRECCIÓN DE SYNTAX: Se añaden backticks (`)
-        addMessage(`Alumno (${data.timestamp}): ${data.message}`, 'student');
-    });
-    
-    // Evento 3.3: Manejo de Desconexión
-    socket.on('disconnect', function() {
-        connectionStatus.textContent = 'Desconectado';
-        connectionStatus.style.color = '#e74c3c';
-    });
-    
-    // 4. ENVÍO DEL FORMULARIO DE CHAT
-    chatForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const message = messageInput.value.trim();
-        if (message) {
-            // 4.1. Enviar el mensaje al servidor, especificando el room (user_id del alumno)
-            socket.emit('send_message_to_student', {
-                target_user_id: targetUserId, // El room/ID del alumno
-                message: message,
-            });
-            // 4.2. Mostrar el mensaje en la propia ventana del admin
-            // ✅ CORRECCIÓN DE SYNTAX: Se añaden backticks (`)
-            addMessage(`Yo (${(new Date()).toLocaleTimeString()}): ${message}`, 'admin'); 
-            messageInput.value = '';
+
+        // 2. Recibir mensajes (Ahora vienen por el canal global)
+        socket.on('admin_message_received', function(data) {
+            console.log("Mensaje recibido:", data);
+            
+            // 🔥 FILTRO DE SEGURIDAD: Solo mostrar si viene del alumno actual
+            // Convertimos a string ambos para asegurar que coincidan (ej. "2" == 2)
+            if (String(data.sender_id) === String(TARGET_USER_ID)) {
+                appendMessage(data.message, 'student', data.timestamp);
+            }
+        });
+
+        // 3. Enviar mensajes al Alumno
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const msg = messageInput.value.trim();
+            
+            if (msg) {
+                socket.emit('send_message_to_student', {
+                    target_user_id: TARGET_USER_ID,
+                    message: msg
+                });
+                appendMessage(msg, 'admin', new Date().toLocaleTimeString());
+                messageInput.value = '';
+            }
+        });
+
+        // ... (Resto del código igual: endChatBtn, appendMessage, etc.)
+        endChatBtn.addEventListener('click', function() {
+            if(confirm("¿Seguro que quieres finalizar la sesión de soporte para este alumno?")) {
+                socket.emit('close_student_chat_remote', {
+                    target_user_id: TARGET_USER_ID,
+                    admin_username: ADMIN_USERNAME
+                });
+                appendMessage("Has finalizado la sesión de chat.", 'system');
+                messageInput.disabled = true;
+                endChatBtn.disabled = true;
+            }
+        });
+
+        function appendMessage(text, type, time = '') {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message-bubble', type);
+            let content = '';
+            if (type === 'system') {
+                content = `<small>${text}</small>`;
+            } else {
+                content = `<div class="msg-content">${text}</div><div class="msg-meta">${time}</div>`;
+            }
+            msgDiv.innerHTML = content;
+            chatWindow.appendChild(msgDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
         }
     });
-    
-    // 🔑 5. LÓGICA DE CIERRE DE CHAT REMOTO 🔑
-    closeChatButton.addEventListener('click', function() {
-        // ✅ CORRECCIÓN DE SYNTAX: Se añaden backticks (`)
-        if (confirm(`¿Estás seguro de cerrar el chat de soporte con ${targetUserId}? Esto cerrará la ventana del alumno.`)) {
-            
-            // Emitir el evento de cierre al servidor
-            socket.emit('close_student_chat_remote', {
-                target_user_id: targetUserId,
-                admin_username: currentUsername
-            });
-            addMessage('El chat de soporte ha sido cerrado remotamente.', 'system');
-            
-            // Desactivar el formulario de este lado para indicar el cierre
-            messageInput.disabled = true;
-            document.querySelector('.send-btn').disabled = true;
-            closeChatButton.disabled = true;
-        }
-    });
-    
-    // 6. FUNCIÓN DE RENDERIZADO
-    function addMessage(msg, type) {
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('message');
-        msgDiv.classList.add(type + '-message');
-        
-        // Usamos innerHTML para permitir negritas en mensajes del sistema
-        msgDiv.innerHTML = msg;
-        messageWindow.appendChild(msgDiv);
-        
-        // Scroll automático al último mensaje
-        messageWindow.scrollTop = messageWindow.scrollHeight;
-    }
-});
 </script>
+
 <style>
-/* Aseguramos íconos para Font Awesome */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+    body { background-color: #f0f2f5; } /* Fondo gris claro tipo WhatsApp Web */
 
-/* --- ESTILOS VISUALES DEL CHAT (REDESIGN FINAL) --- */
-body { background-color: #f0f2f5; } /* Fondo más claro */
+    .chat-container-wrapper {
+        max-width: 800px;
+        margin: 20px auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 85vh; /* Ocupa casi toda la altura */
+    }
 
-.chat-container {
-    max-width: 680px;
-    margin: 40px auto;
-    padding: 0; /* Quitamos padding aquí para moverlo a las secciones */
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    overflow: hidden; /* Importante para el borde */
-}
+    /* Header */
+    .chat-header-card {
+        background: #34495e;
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+    }
+    .header-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .header-info h1 { margin: 0; font-size: 1.2em; }
+    .header-info p { margin: 0; font-size: 0.9em; opacity: 0.8; }
+    
+    .avatar-circle {
+        width: 40px; height: 40px; background: #e67e22; color: white;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-size: 1.2em;
+    }
 
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center; /* Alineación vertical */
-    padding: 20px 30px; /* Padding interno */
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); /* Degradado profesional */
-    color: white;
-}
+    .header-actions .btn-danger-sm {
+        background: #e74c3c; color: white; border: none; padding: 8px 12px;
+        border-radius: 5px; cursor: pointer; font-size: 0.85em; margin-right: 10px;
+    }
+    .header-actions .btn-close-sm {
+        color: #ecf0f1; text-decoration: none; font-size: 0.9em;
+    }
 
-.user-info {
-    display: flex;
-    align-items: center;
-}
+    /* Ventana de Mensajes */
+    .chat-interface {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
 
-.user-icon {
-    font-size: 2.5em;
-    color: #ecf0f1; /* Gris claro para contraste */
-    margin-right: 15px;
-    padding: 10px;
-    border-radius: 50%;
-}
+    .chat-messages-area {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background-color: #e5ddd5; /* Color fondo tipo WhatsApp */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
 
-.chat-title {
-    font-size: 1.6em;
-    font-weight: 600;
-}
+    /* Burbujas de Chat */
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 15px;
+        border-radius: 10px;
+        position: relative;
+        font-size: 0.95em;
+        line-height: 1.4;
+    }
+    
+    .message-bubble.admin {
+        align-self: flex-end;
+        background-color: #dcf8c6; /* Verde claro (Mensaje propio) */
+        color: #333;
+        border-bottom-right-radius: 0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
 
-.connection-status-box {
-    text-align: right;
-    font-size: 0.9em;
-}
+    .message-bubble.student {
+        align-self: flex-start;
+        background-color: #ffffff; /* Blanco (Mensaje recibido) */
+        color: #333;
+        border-bottom-left-radius: 0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
 
-.chat-meta {
-    color: #ffffff;
-    margin-top: 2px;
-}
+    .message-bubble.system {
+        align-self: center;
+        background-color: rgba(255, 255, 255, 0.8);
+        color: #555;
+        font-style: italic;
+        border-radius: 20px;
+        padding: 5px 15px;
+        font-size: 0.8em;
+        margin: 10px 0;
+    }
 
-.status-indicator {
-    font-weight: bold;
-    color: #34495e;
-    padding: 4px 10px;
-    background: #f1c40f; /* Amarillo para resaltar el estado */
-    border-radius: 4px;
-    display: inline-block;
-}
+    .msg-meta {
+        text-align: right;
+        font-size: 0.7em;
+        color: #999;
+        margin-top: 4px;
+    }
 
-/* VENTANA DE MENSAJES */
-.message-window {
-    height: 450px;
-    border: none;
-    padding: 20px;
-    overflow-y: auto;
-    background: #fdfdfd;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.message {
-    max-width: 80%;
-    padding: 12px 18px;
-    border-radius: 20px;
-    font-size: 0.95em;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.system-message {
-    text-align: center;
-    font-style: italic;
-    color: #95a5a6;
-    margin: 5px 0;
-    font-size: 0.8em;
-    background: transparent;
-    box-shadow: none;
-}
-
-.admin-message {
-    align-self: flex-end;
-    background-color: #3498db;
-    color: white;
-    border-bottom-right-radius: 5px;
-}
-
-.student-message {
-    align-self: flex-start;
-    background-color: #e6e6e6; /* Gris claro */
-    color: #333;
-    border-bottom-left-radius: 5px;
-}
-
-/* FORMULARIO DE INPUT Y CONTROLES */
-.chat-main-area {
-    padding: 0 30px 20px 30px; /* Padding en los laterales e inferior */
-}
-
-.chat-input-form {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-    margin-bottom: 20px;
-}
-
-#message-input {
-    flex-grow: 1;
-    padding: 15px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1em;
-}
-
-.send-btn {
-    background: #2ecc71;
-    padding: 15px 25px;
-    font-weight: bold;
-    margin: 0;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(46, 204, 113, 0.4);
-    transition: background 0.2s;
-    display: flex;
-    align-items: center;
-}
-
-.send-btn i { margin-right: 5px; }
-
-.send-btn:hover {
-    background: #27ae60;
-}
-
-/* BOTÓN DE CIERRE */
-.close-chat-btn {
-    display: block;
-    width: 100%;
-    background: #e74c3c;
-    padding: 15px;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(231, 76, 60, 0.4);
-    transition: background 0.2s;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.close-chat-btn:hover {
-    background: #c0392b;
-}
-
-.back-btn {
-    background: #95a5a6;
-    margin-top: 0;
-    display: block;
-    width: 100%;
-    text-align: center;
-    padding: 15px;
-    border-radius: 8px;
-}
+    /* Input Area */
+    .chat-input-area {
+        padding: 15px;
+        background: #f0f0f0;
+        border-top: 1px solid #ddd;
+        display: flex;
+        gap: 10px;
+    }
+    .chat-input-area input {
+        flex-grow: 1;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 25px;
+        outline: none;
+    }
+    .btn-send {
+        background: #3498db;
+        color: white;
+        border: none;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1em;
+        transition: background 0.2s;
+    }
+    .btn-send:hover { background: #2980b9; }
 </style>
 {% endblock %}

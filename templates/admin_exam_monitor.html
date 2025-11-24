@@ -5,15 +5,20 @@
 {% block content %}
 
 <div class="container monitor-container">
-    <header class="monitor-header">
+    
+    <header class="page-header">
         <h1 class="header-title">👀 Monitoreo de Alumnos en Examen</h1>
-        <h2 class="exam-info-header">Examen: {{ exam.title }}</h2>
+        <h2 class="exam-info-header">
+            Alumno: <strong>{{ student.username }}</strong> | Examen: <strong>{{ exam.title }}</strong>
+        </h2>
     </header>
 
-    <a href="{{ url_for('admin_panel') }}" class="btn back-nav-btn">⬅ Volver al Panel Admin</a>
+    <a href="{{ url_for('admin_panel') }}" class="btn back-nav-btn">
+        ⬅ Volver al Panel Admin
+    </a>
 
-    <div class="card student-list-card">
-        <h3>Estado de Presentación ({{ monitoring_data | length }} Alumnos)</h3>
+    <div class="card logs-card">
+        <h3 class="card-subtitle">Estado de Presentación ({{ monitoring_data | length }} Alumnos)</h3>
         
         <div class="table-responsive">
             <table class="monitor-table" border="1" cellpadding="10" cellspacing="0">
@@ -22,26 +27,74 @@
                         <th>Alumno</th>
                         <th>Estado Actual</th>
                         {% if current_user.role == 'admin' %}
+                        
+                        {# COLUMNA ADVERTENCIAS DE SEGURIDAD #}
+                        <th class="warnings-column">Advertencias (en vivo)</th>
+                        
                         <th class="support-action-column">Acción Soporte</th>
                         <th class="logs-column">Logs de Seguridad</th>
                         <th class="time-column">Añadir Tiempo (min)</th>
+                        
+                        {# --- 🔥 NUEVA COLUMNA: REPARACIÓN --- #}
+                        <th>🔧 Reparación</th>
+
+                        {# COLUMNA CANCELAR EXAMEN #}
+                        <th class="cancel-column">Cancelar Examen</th>
+                        
                         {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for data in monitoring_data %}
-                    {% set is_active = data.status == 'Haciendo Examen' %}
-                    <tr id="row-{{ data.user_id }}">
+                    {# Usamos los datos pre-cargados desde app.py #}
+                    {% set is_active = data.is_active %}
+                    {% set count = data.violation_count %}
+                    
+                    <tr id="row-{{ data.user_id }}" {% if count >= 3 or data.status == 'Cancelado (Bloqueado)' %}class="table-danger"{% endif %}>
                         <td data-label="Alumno"><strong>{{ data.username | capitalize }}</strong></td>
                         <td data-label="Estado">
-                            <span class="status-tag status-{{ data.status | lower | replace(' ', '-') }}">
+                            <span class="status-tag status-{{ data.status | lower | replace(' ', '-') }}"
+                                  id="status-tag-{{ data.user_id }}">
                                 {{ data.status }}
                             </span>
                         </td>
                         
                         {% if current_user.role == 'admin' %}
+                        
+                        <td data-label="Advertencias" class="warnings-cell">
+                            {% if data.status == 'No Ha Iniciado' or data.status == 'Examen Terminado' %}
+                                <span class="no-action">N/A</span>
+                            {% elif data.status == 'Cancelado (Bloqueado)' %}
+                                <span class="badge warning-badge warning-3">BLOQUEADO</span>
+                            {% else %}
+                                <span class="badge warning-badge warning-{{ [count, 3] | min }}" 
+                                      id="violation-count-{{ data.user_id }}">
+                                    {{ count }}
+                                </span>
+                                <div class="last-violation-details" id="last-violation-{{ data.user_id }}">
+                                    {% if data.last_violation %}
+                                        {% set grave_violations = ['HERRAMIENTAS_DEV', 'COPIAR_PEGAR', 'INTENTO_IMPRESION', 'CLIC_DERECHO', 'AI_VOICE_DETECTED', 'AI_NO_FACE', 'AI_MULTIPLE_FACES', 'AI_GAZE_DESVIATED'] %}
+                                        {% set severity = 'sev-grave' if data.last_violation.violation_type in grave_violations else 'sev-normal' %}
+                                        
+                                        <span class="violation-type {{ severity }}">
+                                            {% if data.last_violation.violation_type == 'AI_VOICE_DETECTED' %}🗣️ AI: Voz Detectada
+                                            {% elif data.last_violation.violation_type == 'AI_NO_FACE' %}👤 AI: No Detectado
+                                            {% elif data.last_violation.violation_type == 'AI_MULTIPLE_FACES' %}👥 AI: Múltiples Rostros
+                                            {% elif data.last_violation.violation_type == 'AI_GAZE_DESVIATED' %}👀 AI: Mirada Desviada
+                                            {% else %}{{ data.last_violation.violation_type }}
+                                            {% endif %}
+                                        </span>
+                                        <span class="violation-time">{{ data.last_violation.timestamp.strftime('%H:%M:%S') }}</span>
+                                    {% else %}
+                                        <span class="violation-type sev-normal">--</span>
+                                        <span class="violation-time">--:--:--</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+                        
                         <td data-label="Acción Soporte" class="action-cell">
-                            {# 🔑 COLUMNA DE CHAT 🔑 #}
+                            {# COLUMNA DE CHAT #}
                             {% if is_active %}
                                 <a href="{{ url_for('admin_chat', user_id=data.user_id) }}" target="_blank" class="button action-btn chat-btn">
                                     💬 Abrir Chat
@@ -52,28 +105,35 @@
                         </td>
 
                         <td data-label="Logs de Seguridad" class="logs-cell">
-                            {# 🔑 COLUMNA NUEVA: VER LOGS 🔑 #}
+                            {# COLUMNA NUEVA: VER LOGS #}
                             <a href="{{ url_for('view_violation_logs', exam_id=exam.id, user_id=data.user_id) }}" target="_blank" class="button action-btn logs-btn">
                                 🔍 Ver Logs
                             </a>
                         </td>
 
-                        {# COLUMNA DE AÑADIR TIEMPO #}
+                        {# COLUMNA DE AÑADIR/RESTAR TIEMPO (MODIFICADA) #}
                         <td data-label="Añadir Tiempo" class="time-cell">
                             {% if is_active %}
                                 <div class="time-controls">
                                     <button class="time-btn quick-add-btn" 
-                                            onclick="addTime({{ data.user_id }}, 300, 5)">+5m</button>
+                                            onclick="adjustTime({{ data.user_id }}, 300, 5, true)">+5m</button>
                                     <button class="time-btn quick-add-btn" 
-                                            onclick="addTime({{ data.user_id }}, 600, 10)">+10m</button>
+                                            onclick="adjustTime({{ data.user_id }}, 600, 10, true)">+10m</button>
                                     <button class="time-btn custom-btn" 
                                             onclick="showCustomTimeInput({{ data.user_id }})">Custom</button>
+                                    
+                                    {# BOTONES DE RESTA #}
+                                    <button class="time-btn quick-sub-btn" 
+                                            onclick="adjustTime({{ data.user_id }}, -300, 5, false)">-5m</button>
+                                    <button class="time-btn quick-sub-btn" 
+                                            onclick="adjustTime({{ data.user_id }}, -600, 10, false)">-10m</button>
+                                    {# ---------------- #}
                                     
                                     <span id="feedback-{{ data.user_id }}" class="time-feedback"></span>
                                 </div>
 
                                 <div id="custom-input-{{ data.user_id }}" class="custom-time-group" style="display: none;">
-                                    <input type="number" id="input-{{ data.user_id }}" min="1" placeholder="minutos" class="custom-time-input">
+                                    <input type="number" id="input-{{ data.user_id }}" min="-999" placeholder="minutos (+/-)" class="custom-time-input">
                                     <button class="time-btn confirm-btn" 
                                             onclick="confirmCustomTime({{ data.user_id }})">Confirmar</button>
                                 </div>
@@ -81,6 +141,71 @@
                                 <span class="no-action">N/A</span>
                             {% endif %}
                         </td>
+                        
+                        {# --- 🔥 NUEVA CELDA: BOTONES DE REPARACIÓN Y CONTROL 🔥 --- #}
+                        <td data-label="Reparación">
+                            {% if is_active or data.status == 'Cancelado (Bloqueado)' %}
+                                <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                                    
+                                    <button class="button repair-btn btn-reload" 
+                                            onclick="sendRepairCommand({{ data.user_id }}, 'reload')" 
+                                            title="Forzar recarga de página">
+                                            <i class="fas fa-sync-alt"></i>
+                                    </button>
+                        
+                                    <button class="button repair-btn btn-unlock" 
+                                            onclick="sendRepairCommand({{ data.user_id }}, 'unlock')" 
+                                            title="Desbloquear pantalla roja">
+                                            <i class="fas fa-unlock"></i>
+                                    </button>
+                        
+                                    <button class="button repair-btn btn-msg" 
+                                            onclick="sendRepairCommand({{ data.user_id }}, 'ping')" 
+                                            title="Enviar Ping/Alerta técnica">
+                                            <i class="fas fa-wifi"></i>
+                                    </button>
+
+                                    <button class="button repair-btn btn-voice" 
+                                            onclick="sendRepairCommand({{ data.user_id }}, 'speak')" 
+                                            title="Enviar mensaje de voz (TTS)">
+                                        <i class="fas fa-bullhorn"></i>
+                                    </button>
+
+                                    <button class="button repair-btn btn-freeze" 
+                                            onclick="sendRepairCommand({{ data.user_id }}, 'freeze')" 
+                                            title="Congelar/Descongelar pantalla">
+                                        <i class="fas fa-snowflake"></i>
+                                    </button>
+
+                                    <button class="button repair-btn btn-paparazzi" 
+                                            onclick="sendRepairCommand({{ data.user_id }}, 'snapshot')" 
+                                            title="Tomar captura remota ahora">
+                                        <i class="fas fa-camera-retro"></i>
+                                    </button>
+                                    </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {# -------------------------------------------- #}
+
+                        {# CELDA CANCELAR EXAMEN #}
+                        <td data-label="Cancelar Examen" class="cancel-cell">
+                            {% if is_active %}
+                                <button class="button action-btn cancel-exam-btn"
+                                        data-user-id="{{ data.user_id }}"
+                                        data-username="{{ data.username }}"
+                                        data-exam-id="{{ exam.id }}"
+                                        onclick="showCancelModal({{ data.user_id }}, '{{ data.username }}', {{ exam.id }})">
+                                    ❌ Cancelar
+                                </button>
+                            {% elif data.status == 'Cancelado (Bloqueado)' %}
+                                <span class="status-tag status-exam-cancelado">CANCELADO</span>
+                            {% else %}
+                                <span class="no-action">No Activo</span>
+                            {% endif %}
+                        </td>
+                        
                         {% endif %}
                     </tr>
                     {% endfor %}
@@ -90,70 +215,123 @@
     </div>
 </div>
 
-{# 🔑 LÓGICA JAVASCRIPT PARA AÑADIR TIEMPO Y SOCKETIO 🔑 #}
-<script>
-    // URL del endpoint de Flask que creamos
-    const ADD_TIME_URL = '{{ url_for("admin_add_time_to_exam") }}';
+{# OVERLAY MODAL PARA CANCELACIÓN #}
+<div id="cancel-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 class="modal-title">Motivo de Cancelación del Examen</h3>
+        <p>Estudiante: <strong id="modal-username"></strong></p>
+        
+        <textarea id="cancellation-reason" rows="4" placeholder="Escribe aquí el motivo de la cancelación. El alumno lo verá." required></textarea>
+        
+        <div class="modal-actions">
+            <button class="button action-btn confirm-cancel-btn" onclick="confirmCancellation()">
+                Enviar Cancelación
+            </button>
+            <button class="button action-btn close-modal-btn" onclick="closeCancelModal()">
+                Cancelar
+            </button>
+        </div>
+        <input type="hidden" id="modal-student-id">
+        <input type="hidden" id="modal-exam-id" value="{{ exam.id }}">
+    </div>
+</div>
 
-    // 1. Manejadores de Eventos
-    async function addTime(studentId, seconds, minutes) {
-        // Muestra un mensaje temporal mientras procesa
-        updateFeedback(studentId, `Añadiendo ${minutes} minutos...`, 'processing');
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
+{# LÓGICA JAVASCRIPT #}
+<script>
+    // URL de los endpoints de Flask
+    const ADJUST_TIME_URL = '{{ url_for("admin_adjust_exam_time") }}';
+    const CANCEL_EXAM_URL = '{{ url_for("admin_cancel_exam") }}';
+    const EXAM_ID = {{ exam.id }};
+    
+    // Obtener el token CSRF del meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Conectarse a Socket.IO
+    const socket = io.connect();
+
+    // --- 🔥 LÓGICA DE REPARACIÓN REMOTA (ACTUALIZADA) 🔥 ---
+    function sendRepairCommand(userId, command) {
+        let payload = null;
+
+        // Si es comando de voz, pedir el texto
+        if (command === 'speak') {
+            payload = prompt("Escribe el mensaje que quieres que la computadora del alumno diga en voz alta:");
+            if (!payload) return; // Cancelar si no escribe nada
+        }
+
+        if (!confirm(`¿Enviar comando '${command}'?`)) return;
+
+        // Usamos SocketIO para esto
+        socket.emit('admin_repair_command', {
+            target_user_id: userId,
+            command: command,
+            payload: payload // Enviamos el texto extra
+        });
+        
+        // Feedback visual simple (puedes mejorarlo)
+        if (command === 'snapshot') {
+            alert("📸 Solicitud de captura enviada. Si el alumno está conectado, la imagen llegará pronto.");
+        } else {
+            alert(`🔧 Comando '${command}' enviado.`);
+        }
+    }
+    // -----------------------------------------
+
+    // 1. Manejadores de Eventos (Tiempo)
+    async function adjustTime(studentId, seconds, minutes, isAdd) {
+        const actionText = isAdd ? `Añadiendo +${minutes}` : `Restando -${minutes}`;
+        updateFeedback(studentId, `${actionText} minutos...`, 'processing');
         
         try {
-            const response = await fetch(ADD_TIME_URL, {
+            const response = await fetch(ADJUST_TIME_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({
-                    student_id: studentId,
-                    time_sec: seconds
-                })
+                body: JSON.stringify({ student_id: studentId, time_sec: seconds })
             });
 
             const result = await response.json();
 
             if (result.success) {
-                // El servidor respondió OK y ya emitió la señal SocketIO
-                updateFeedback(studentId, `✅ +${minutes} min añadidos.`, 'success');
+                const sign = seconds >= 0 ? '+' : '-';
+                const absMinutes = Math.abs(seconds / 60);
+                updateFeedback(studentId, `✅ ${sign}${absMinutes} min ajustados.`, 'success');
             } else {
                 updateFeedback(studentId, `❌ Error: ${result.message}`, 'error');
             }
         } catch (error) {
-            console.error('Error de red al añadir tiempo:', error);
+            console.error('Error de red al ajustar tiempo:', error);
             updateFeedback(studentId, `❌ Error de conexión.`, 'error');
         }
     }
 
+    function confirmCustomTime(studentId) {
+        const inputElement = document.getElementById(`input-${studentId}`);
+        const minutes = parseFloat(inputElement.value);
+
+        if (isNaN(minutes) || minutes === 0) {
+            alert('Por favor, introduce un número válido y diferente de cero (positivo o negativo).');
+            return;
+        }
+
+        const seconds = Math.round(minutes * 60);
+        adjustTime(studentId, seconds, Math.abs(minutes), seconds >= 0);
+
+        document.getElementById(`custom-input-${studentId}`).style.display = 'none';
+        document.querySelector(`#row-${studentId} .time-controls`).style.display = 'flex';
+        inputElement.value = '';
+    }
+    
     function showCustomTimeInput(studentId) {
-        // Oculta los botones rápidos y muestra el input personalizado
         document.querySelector(`#row-${studentId} .time-controls`).style.display = 'none';
         document.getElementById(`custom-input-${studentId}`).style.display = 'flex';
         document.getElementById(`input-${studentId}`).focus();
     }
-
-    function confirmCustomTime(studentId) {
-        const inputElement = document.getElementById(`input-${studentId}`);
-        const minutes = parseInt(inputElement.value);
-
-        if (isNaN(minutes) || minutes <= 0) {
-            alert('Por favor, introduce un número válido de minutos.');
-            return;
-        }
-
-        const seconds = minutes * 60;
-        
-        // Ejecuta la función principal para añadir tiempo
-        addTime(studentId, seconds, minutes);
-
-        // Oculta el input y restablece los botones
-        document.getElementById(`custom-input-${studentId}`).style.display = 'none';
-        document.querySelector(`#row-${studentId} .time-controls`).style.display = 'flex';
-        inputElement.value = ''; // Limpia el valor
-    }
-
-    // 2. Función de Retroalimentación
+    
     function updateFeedback(studentId, message, type) {
         const feedbackElement = document.getElementById(`feedback-${studentId}`);
         feedbackElement.textContent = message;
@@ -162,26 +340,192 @@
         feedbackElement.style.fontWeight = 'bold';
         
         if (type !== 'processing') {
-             setTimeout(() => {
-                feedbackElement.textContent = '';
-            }, 5000);
+             setTimeout(() => { feedbackElement.textContent = ''; }, 5000);
+        }
+    }
+
+    // 2. Manejadores de Eventos (Cancelación de Examen)
+    function showCancelModal(studentId, username, examId) {
+        document.getElementById('modal-student-id').value = studentId;
+        document.getElementById('modal-exam-id').value = examId;
+        document.getElementById('modal-username').textContent = username;
+        document.getElementById('cancellation-reason').value = '';
+        document.getElementById('cancel-modal').style.display = 'flex';
+        document.getElementById('cancellation-reason').focus();
+    }
+
+    function closeCancelModal() {
+        document.getElementById('cancel-modal').style.display = 'none';
+    }
+
+    async function confirmCancellation() {
+        const studentId = document.getElementById('modal-student-id').value;
+        const examId = document.getElementById('modal-exam-id').value;
+        const reason = document.getElementById('cancellation-reason').value.trim();
+        const studentRow = document.getElementById(`row-${studentId}`);
+
+        if (reason.length < 5) {
+            alert('Por favor, ingresa un motivo de cancelación detallado (mínimo 5 caracteres).');
+            return;
+        }
+
+        const confirmBtn = document.querySelector('.confirm-cancel-btn');
+        confirmBtn.textContent = 'Enviando...';
+        confirmBtn.disabled = true;
+
+        try {
+            const response = await fetch(CANCEL_EXAM_URL, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ student_id: studentId, exam_id: examId, reason: reason })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`✅ Examen CANCELADO para ${document.getElementById('modal-username').textContent}. Se ha notificado al alumno.`);
+                
+                if (studentRow) {
+                    const statusCell = studentRow.querySelector('#status-tag-' + studentId);
+                    statusCell.textContent = 'Cancelado (Bloqueado)'; 
+                    statusCell.className = 'status-tag status-cancelado-bloqueado'; 
+                    
+                    // Ocultar acciones al cancelar
+                    studentRow.querySelector('.warnings-cell').innerHTML = '<span class="badge warning-badge warning-3">CANCELADO</span>';
+                    studentRow.querySelector('.support-action-column').innerHTML = '<span class="no-action">Cancelado</span>';
+                    studentRow.querySelector('.time-cell').innerHTML = '<span class="no-action">Cancelado</span>';
+                    studentRow.querySelector('.cancel-cell').innerHTML = '<span class="status-tag status-cancelado-bloqueado">CANCELADO</span>';
+                    studentRow.classList.add('table-danger');
+                }
+                
+                closeCancelModal();
+            } else {
+                alert(`❌ Error al cancelar el examen: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Error de red al cancelar el examen:', error);
+            alert('❌ Error de conexión al servidor.');
+        } finally {
+            confirmBtn.textContent = 'Enviar Cancelación';
+            confirmBtn.disabled = false;
         }
     }
     
-    // 3. SocketIO para notificaciones del Admin (Si se implementa el historial de violaciones)
-    // const socket = io.connect();
-    // socket.on('admin_violation_alert', function(data) {
-    //     console.warn(`ALERTA DE VIOLACIÓN: ${data.user} - Tipo: ${data.type}`);
-    //     // Lógica para mostrar una alerta visual o sonora al administrador aquí.
-    // });
+    // 3. Lógica de SocketIO (Recepción de Alertas)
+    
+    // Conexión inicial del Admin al Monitor
+    socket.on('connect', function() {
+        console.log("Admin Monitor Conectado."); 
+    });
+
+    // Handler para recibir la alerta de violación
+    socket.on('admin_violation_alert', function(data) {
+        if (data.exam_id != EXAM_ID) return;
+        
+        const userId = data.user_id;
+        const newCount = data.warning_count;
+        const violationType = data.type;
+        const timestamp = data.timestamp;
+
+        const countElement = document.getElementById(`violation-count-${userId}`);
+        const studentRow = document.getElementById(`row-${userId}`);
+        const lastViolationContainer = document.getElementById(`last-violation-${userId}`);
+
+        if (countElement && lastViolationContainer) {
+            // 1. Actualizar el Conteo
+            countElement.textContent = newCount;
+            const badgeClassNum = Math.min(newCount, 3);
+            countElement.className = `badge warning-badge warning-${badgeClassNum}`;
+            
+            // 2. Actualizar Detalles de Última Violación
+            const typeElement = lastViolationContainer.querySelector('.violation-type');
+            
+            const graveViolations = ['HERRAMIENTAS_DEV', 'COPIAR_PEGAR', 'INTENTO_IMPRESION', 'CLIC_DERECHO', 'AI_VOICE_DETECTED', 'AI_NO_FACE', 'AI_MULTIPLE_FACES', 'AI_GAZE_DESVIATED'];
+            const isGrave = graveViolations.includes(violationType);
+            
+            let displayMessage;
+            
+            if (violationType === 'AI_VOICE_DETECTED') {
+                displayMessage = '🗣️ AI: Voz Detectada';
+            } else if (violationType === 'AI_NO_FACE') {
+                displayMessage = '👤 AI: No Detectado';
+            } else if (violationType === 'AI_MULTIPLE_FACES') {
+                displayMessage = '👥 AI: Múltiples Rostros';
+            } else if (violationType === 'AI_GAZE_DESVIATED') {
+                displayMessage = '👀 AI: Mirada Desviada';
+            } else {
+                displayMessage = violationType;
+            }
+
+            typeElement.textContent = displayMessage;
+            typeElement.classList.remove('sev-normal', 'sev-grave');
+            typeElement.classList.add(isGrave ? 'sev-grave' : 'sev-normal');
+            
+            lastViolationContainer.querySelector('.violation-time').textContent = timestamp;
+            
+            // 3. Activar animación de "flash"
+            const cell = studentRow.querySelector('.warnings-cell');
+            if (cell) {
+                cell.classList.remove('flash-animation');
+                void cell.offsetWidth;
+                cell.classList.add('flash-animation');
+            }
+        }
+        
+        // 4. Manejar el bloqueo automático
+        if (data.type === 'EXAM_CANCELED_AUTO_BLOCK' || newCount >= 3) {
+            if (countElement) {
+                countElement.textContent = `BLOQ. (${newCount})`;
+                countElement.className = 'badge warning-badge warning-3';
+            }
+            
+            if (studentRow) {
+                studentRow.classList.add('table-danger'); 
+                const statusTag = studentRow.querySelector('#status-tag-' + userId);
+                if (statusTag) {
+                     statusTag.textContent = 'Cancelado (Bloqueado)';
+                     statusTag.className = 'status-tag status-cancelado-bloqueado';
+                     studentRow.querySelector('.support-action-column').innerHTML = '<span class="no-action">Bloqueado</span>';
+                     studentRow.querySelector('.time-cell').innerHTML = '<span class="no-action">Bloqueado</span>';
+                     studentRow.querySelector('.cancel-cell').innerHTML = '<span class="status-tag status-cancelado-bloqueado">BLOQUEADO</span>';
+                }
+            }
+        }
+    });
+
 </script>
 
 <style>
     /* Aseguramos que se cargue la librería de íconos para la interfaz */
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+    /* 🔥 ESTILOS BOTONES DE REPARACIÓN 🔥 */
+    .repair-btn {
+        border: none;
+        border-radius: 6px;
+        color: white;
+        padding: 6px 10px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        margin-bottom: 2px; /* Pequeña separación vertical si se envuelven */
+    }
+    .repair-btn:hover { transform: scale(1.1); }
+    
+    /* Botones originales */
+    .btn-reload { background: #3498db; } /* Azul */
+    .btn-unlock { background: #2ecc71; } /* Verde */
+    .btn-msg { background: #f1c40f; color: #333; } /* Amarillo */
+
+    /* 🔥 NUEVOS BOTONES 🔥 */
+    .btn-voice { background: #9b59b6; } /* Morado */
+    .btn-freeze { background: #34495e; } /* Azul Hielo/Oscuro */
+    .btn-paparazzi { background: #e67e22; } /* Naranja Cámara */
 
     .monitor-container {
-        max-width: 1400px; /* Aumentamos el ancho para la nueva columna */
+        max-width: 1600px;
         margin: 30px auto;
         padding: 20px;
     }
@@ -245,23 +589,27 @@
     }
     .monitor-table tr:nth-child(even) { background-color: #f9f9f9; }
 
-    /* 🔑 ANCHOS ESPECÍFICOS PARA CONTROLAR LA COLUMNA 🔑 */
-    .monitor-table th.support-action-column { width: 10%; } /* Reducido */
-    .monitor-table th.logs-column { width: 10%; } /* Reducido */
-    .monitor-table th.time-column { width: 250px; } /* Ancho fijo para los botones */
+    /* ANCHOS ESPECÍFICOS */
+    .monitor-table th.support-action-column { width: 10%; } 
+    .monitor-table th.logs-column { width: 10%; } 
+    .monitor-table th.time-column { width: 300px; } 
+    .monitor-table th.cancel-column { width: 10%; } 
+    .monitor-table th.warnings-column { width: 15%; }
+
 
     /* Etiquetas de Estado */
     .status-tag {
         padding: 6px 12px;
-        border-radius: 20px; /* Pill shape */
+        border-radius: 20px;
         font-weight: bold;
         font-size: 0.85em;
         display: inline-block;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .status-no-ha-iniciado { background: #e0e0e0; color: #555; }
-    .status-examen-terminado { background: #d4edda; color: #1a7d3f; } /* Verde suave */
-    .status-haciendo-examen { background: #fff3cd; color: #956504; } /* Amarillo/Naranja de advertencia */
+    .status-examen-terminado { background: #d4edda; color: #1a7d3f; }
+    .status-haciendo-examen { background: #fff3cd; color: #956504; }
+    .status-exam-cancelado, .status-cancelado-bloqueado { background: #f8d7da; color: #721c24; } 
 
     /* Botones de Soporte */
     .chat-btn, .logs-btn {
@@ -279,40 +627,65 @@
         background: #2980b9; 
     }
     .logs-btn {
-        background: #9b59b6; /* Morado para Logs/Seguridad */
+        background: #9b59b6;
     }
     .logs-btn:hover {
         background: #8e44ad;
     }
+    
+    /* BOTÓN DE CANCELACIÓN (ROJO) */
+    .cancel-exam-btn {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        font-size: 0.9em;
+        white-space: nowrap;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-weight: bold;
+    }
+    .cancel-exam-btn:hover {
+        background-color: #c0392b;
+    }
 
     .no-action { color: #7f8c8d; font-style: italic; font-size: 0.9em; }
 
-    /* 🔑 ESTILOS AÑADIDOS PARA LA FUNCIONALIDAD DE TIEMPO 🔑 */
+    /* ESTILOS PARA AJUSTE DE TIEMPO */
     .time-controls, .custom-time-group {
         display: flex;
+        flex-wrap: wrap;
         justify-content: center;
         align-items: center;
         gap: 5px;
     }
     .time-btn {
-        background: #2ecc71;
         color: white;
         border: none;
-        padding: 6px 10px;
+        padding: 6px 8px;
         border-radius: 4px;
         cursor: pointer;
         font-size: 0.8em;
         transition: background 0.2s;
         font-weight: bold;
     }
+    .quick-add-btn { background: #2ecc71; }
     .quick-add-btn:hover { background: #27ae60; }
-    .custom-btn { background: #f39c12; }
+    
+    .quick-sub-btn { 
+        background: #3498db;
+        order: 4;
+    }
+    .quick-sub-btn:hover { background: #2980b9; }
+
+    .custom-btn { background: #f39c12; order: 3; }
     .custom-btn:hover { background: #e67e22; }
     .confirm-btn { background: #3498db; }
     .confirm-btn:hover { background: #2980b9; }
 
     .custom-time-input {
-        width: 60px;
+        width: 80px;
         padding: 5px;
         border: 1px solid #ccc;
         border-radius: 4px;
@@ -325,10 +698,150 @@
         font-size: 0.8em;
         width: 100%;
         text-align: center;
+        bottom: -20px;
     }
-    .time-cell { position: relative; }
+    .time-cell { position: relative; padding-bottom: 30px; }
 
-    /* Responsive Table - Aseguramos que la columna de tiempo funcione en móvil */
+
+    /* ESTILOS DEL MODAL OVERLAY */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .modal-title {
+        color: #e74c3c;
+        border-bottom: 2px solid #e74c3c;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    #cancellation-reason {
+        width: 100%;
+        padding: 10px;
+        margin: 15px 0;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: space-around;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .confirm-cancel-btn {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        font-weight: bold;
+        flex-grow: 1;
+    }
+    .confirm-cancel-btn:hover { background-color: #c0392b; }
+
+    .close-modal-btn {
+        background-color: #95a5a6;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        flex-grow: 1;
+    }
+    .close-modal-btn:hover { background-color: #7f8c8d; }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ESTILOS DE CONTADOR DE ADVERTENCIAS */
+     .warnings-cell {
+        font-weight: bold;
+        vertical-align: middle;
+        text-align: center;
+        min-width: 150px; 
+     }
+     
+     .warning-badge {
+         padding: 5px 10px;
+         border-radius: 8px;
+         font-size: 1.1em;
+         font-weight: bold;
+         transition: background-color 0.3s;
+         color: white;
+         display: block;
+         width: 50px;
+         margin: 0 auto 5px auto;
+     }
+     
+     .warning-0 { background-color: #3498db; }
+     .warning-1 { background-color: #f39c12; }
+     .warning-2 { background-color: #e67e22; }
+     .warning-3 { background-color: #e74c3c; }
+     
+     .table-danger {
+         background-color: #fbecec !important;
+         border-left: 5px solid #e74c3c;
+     }
+
+    /* DETALLES DE VIOLACIÓN EN VIVO */
+    .last-violation-details {
+        font-size: 0.85em;
+        color: #555;
+    }
+    .violation-type {
+        display: block;
+        font-weight: bold;
+    }
+    
+    /* Colores por Severidad */
+    .violation-type.sev-normal { color: #f39c12; }
+    .violation-type.sev-grave { color: #e74c3c; }
+
+    .violation-time {
+        display: block;
+        font-size: 0.9em;
+        color: #7f8c8d;
+    }
+    
+    /* Animación de "flash" */
+    @keyframes flash {
+        0% { background-color: #fff3cd; }
+        100% { background-color: transparent; }
+    }
+    .warnings-cell.flash-animation {
+        animation: flash 1.5s ease-out;
+    }
+
+    /* Responsive Table */
     @media (max-width: 600px) {
         .monitor-container { padding: 10px; }
         .monitor-table thead { display: none; }
@@ -336,47 +849,28 @@
             display: block;
             width: 100%;
         }
-        .monitor-table tr { 
-            margin-bottom: 15px;
+        .monitor-table tr {
             border: 1px solid #ddd;
-            border-radius: 8px;
+            margin-bottom: 10px;
+            border-radius: 5px;
         }
         .monitor-table td {
-            text-align: right;
-            padding-left: 50%;
+            text-align: right; 
+            padding-left: 50%; 
             position: relative;
+            border-bottom: 1px solid #eee;
         }
         .monitor-table td:before {
             content: attr(data-label);
             position: absolute;
-            left: 10px;
+            left: 15px;
             width: 45%;
-            font-weight: bold;
+            padding-right: 10px;
+            white-space: nowrap;
             text-align: left;
-            color: #555;
-        }
-        .action-cell, .logs-cell, .time-cell { 
-            text-align: center !important; 
-            padding-left: 10px !important;
-        }
-        .chat-btn, .logs-btn { width: 90%; margin: 5px auto; display: block; }
-        .time-controls, .custom-time-group {
-            justify-content: center; 
+            font-weight: bold;
+            color: #34495e;
         }
     }
-
-    .back-nav-btn {
-        background: #7f8c8d;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 5px;
-        text-decoration: none;
-        font-weight: bold;
-        margin-bottom: 20px;
-        display: inline-block;
-        transition: background 0.2s;
-    }
-    .back-nav-btn:hover { background: #5c6a74; }
-
 </style>
 {% endblock %}

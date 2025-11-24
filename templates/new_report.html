@@ -10,6 +10,8 @@
 
             <form method="POST" enctype="multipart/form-data" class="report-form">
                 
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="form-group">
                     <label for="title">Título/Asunto:</label>
                     <input type="text" id="title" name="title" placeholder="Ej: No puedo ver las opciones de la Pregunta 5" required>

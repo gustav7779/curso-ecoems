@@ -1,11 +1,9 @@
-# Ignorar entorno virtual
+# Directorio del entorno virtual
 venv/
 *.pyc
-# Directorios de compilación y caché de Python
 __pycache__/
-
-# Archivos sensibles (Base de datos y logs)
+# Archivos de la base de datos
 *.db
-app.log
-.env 
-runtime.txt # Si Render genera este archivo
+/instance/
+# Archivos de logs
+*.log

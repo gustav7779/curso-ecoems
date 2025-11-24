@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Simulador de Rendimiento: {{ exam.title }}{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="page-content-wrapper"> 
+    <div class="header-card simulator-header">
+        <h1><i class="fas fa-magic"></i> Simulador de Carga y Rendimiento</h1>
+        <p>Análisis predictivo de la dificultad de las preguntas para el examen: <strong>{{ exam.title }}</strong>.</p>
+    </div>
+
+    <div class="container simulator-container">
+        
+        <a href="{{ url_for('admin_panel') }}" class="btn back-nav-btn animated-btn">
+            ← Volver al Panel de Gestión
+        </a>
+
+        <div class="card data-summary-card">
+            <h3 class="card-subtitle"><i class="fas fa-microchip"></i> Rendimiento Histórico Analizado</h3>
+            
+            <div id="loading-indicator">
+                <i class="fas fa-spinner fa-spin"></i> Cargando datos históricos...
+            </div>
+            
+            <div id="simulator-results" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card stat-blue">
+                        <div class="stat-icon"><i class="fas fa-question-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="total-analyzed-count">0</span>
+                            <span class="stat-label">Preguntas con Historial</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-green">
+                        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="predicted-score-percent">--%</span>
+                            <span class="stat-label">Predicción de Aprobación</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-danger">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="red-flag-count">0</span>
+                            <span class="stat-label">Preguntas Bandera Roja</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-results">
+                    <h4 class="section-title">Preguntas a Revisar (Dificultad < 30%):</h4>
+                    <ul id="red-flag-list" class="red-flag-list">
+                        </ul>
+                </div>
+            </div>
+            
+            <div id="no-data-message" class="no-items-message" style="display: none;">
+                Aún no hay suficientes datos históricos para generar una simulación para este examen. Pídele a los alumnos que lo tomen.
+            </div>
+
+        </div>
+
+        <div class="card chart-card">
+            <h3 class="card-subtitle"><i class="fas fa-bezier-curve"></i> Distribución de Dificultad por Pregunta</h3>
+            <p class="chart-description">Porcentaje de aciertos (Dificultad) por cada pregunta del examen.</p>
+            <div class="chart-canvas-container">
+                <canvas id="difficultyChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const EXAM_ID = {{ exam.id }};
+        const DATA_API_URL = '{{ url_for("api_exam_performance", exam_id=exam.id) }}';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const simulatorResults = document.getElementById('simulator-results');
+        const noDataMessage = document.getElementById('no-data-message');
+
+        // Función principal para obtener y mostrar datos
+        function loadSimulatorData() {
+            fetch(DATA_API_URL, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                }
+            })
+            .then(response => {
+                loadingIndicator.style.display = 'none';
+                if (!response.ok) {
+                    // Si el error es 404 (No hay datos), mostrar mensaje específico
+                    if (response.status === 404) {
+                         noDataMessage.style.display = 'block';
+                         return null;
+                    }
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data || data.total_analyzed === 0) {
+                    noDataMessage.style.display = 'block';
+                    return;
+                }
+
+                simulatorResults.style.display = 'block';
+                
+                // 1. Actualizar Tarjetas de Resumen
+                document.getElementById('total-analyzed-count').textContent = data.total_analyzed;
+                document.getElementById('predicted-score-percent').textContent = data.predicted_score + '%';
+                document.getElementById('red-flag-count').textContent = data.red_flag_questions.length;
+                
+                // 2. Llenar Lista de Banderas Rojas
+                const redFlagList = document.getElementById('red-flag-list');
+                redFlagList.innerHTML = '';
+                if (data.red_flag_questions.length > 0) {
+                    data.red_flag_questions.forEach(q => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span class="flag-icon">🚩</span> Q${q.id}: ${q.text.substring(0, 50)}... (Acierto: ${q.score}%)`;
+                        redFlagList.appendChild(li);
+                    });
+                } else {
+                    redFlagList.innerHTML = '<li class="text-center success-text">No se detectaron preguntas ambiguas (< 30% acierto).</li>';
+                }
+
+                // 3. Crear Gráfica de Dificultad
+                createDifficultyChart(data.difficulty_distribution);
+            })
+            .catch(error => {
+                console.error('Error cargando la simulación:', error);
+                loadingIndicator.textContent = `❌ Error: ${error.message}`;
+                loadingIndicator.style.display = 'block';
+            });
+        }
+
+        // Función para crear la gráfica de barras
+        function createDifficultyChart(distribution) {
+            const labels = distribution.map((item, index) => `Q${index + 1} (${item.subject})`);
+            const dataValues = distribution.map(item => item.difficulty);
+            
+            // Colores basados en la dificultad (Verde para fácil, Rojo para difícil)
+            const backgroundColors = dataValues.map(score => {
+                if (score >= 70) return 'rgba(46, 204, 113, 0.7)'; // Verde (Fácil)
+                if (score >= 30) return 'rgba(52, 152, 219, 0.7)'; // Azul (Normal)
+                return 'rgba(231, 76, 60, 0.7)'; // Rojo (Difícil)
+            });
+
+            new Chart(document.getElementById('difficultyChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Porcentaje de Aciertos (%)',
+                        data: dataValues,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Tasa de Acierto (%)' }
+                        },
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Acierto: ${context.parsed.y}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        loadSimulatorData();
+    });
+</script>
+
+<style>
+    /* Estilos generales del contenedor y botones */
+    .simulator-header {
+        background: linear-gradient(135deg, #3498db, #2980b9); 
+        color: white;
+        padding: 35px;
+        text-align: center;
+        border-radius: 0 0 18px 18px; 
+        margin-bottom: 40px;
+    }
+    .simulator-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    .card {
+        padding: 30px;
+        border-radius: 15px; 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
+        background: white;
+        margin-bottom: 30px;
+    }
+    .card-subtitle {
+        color: #34495e;
+        font-size: 1.6em;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .card-subtitle i { color: #f39c12; margin-right: 10px; }
+
+    /* --- Indicador de Carga --- */
+    #loading-indicator {
+        text-align: center;
+        padding: 40px;
+        color: #3498db;
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+    #loading-indicator i {
+        margin-right: 10px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* --- Grid de Estadísticas (Mini Tarjetas) --- */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 10px;
+    }
+    .stat-card {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        background: #34495e;
+    }
+    .stat-icon { font-size: 2em; margin-right: 15px; opacity: 0.9; }
+    .stat-number { font-size: 1.8em; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 0.8em; opacity: 0.9; text-transform: uppercase; }
+    
+    .stat-blue { background: linear-gradient(135deg, #3498db, #2980b9); }
+    .stat-green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+    .stat-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+
+    /* --- Gráfica y Banderas Rojas --- */
+    .chart-card {
+        border: 1px solid #ddd;
+        padding: 20px;
+        height: 500px;
+    }
+    .chart-description {
+        color: #7f8c8d;
+        margin-bottom: 20px;
+    }
+    .chart-canvas-container { height: 400px; position: relative; }
+    
+    .section-title {
+        color: #e74c3c;
+        font-size: 1.4em;
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px dashed #eee;
+        font-weight: 600;
+    }
+    .red-flag-list {
+        list-style: none;
+        padding: 0;
+    }
+    .red-flag-list li {
+        background: #fbecec;
+        color: #a93226;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-left: 4px solid #e74c3c;
+        border-radius: 4px;
+        font-size: 0.95em;
+        font-weight: 500;
+    }
+    .flag-icon { margin-right: 10px; font-weight: bold; }
+    .success-text { color: #2ecc71 !important; background: #dff0d8 !important; border-left-color: #2ecc71 !important; }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .chart-card { height: 450px; }
+        .chart-canvas-container { height: 300px; }
+    }
+    
+</style>
+{% endblock %}

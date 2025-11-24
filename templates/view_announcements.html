@@ -1,358 +1,383 @@
 {% extends "base.html" %}
 
-{% block title %}Avisos y Anuncios{% endblock %}
+{% block title %}Avisos y Anuncios Críticos{% endblock %}
 
 {% block content %}
-    <div class="header-announcement-title">
-        <h1>📢 Avisos y Anuncios del Curso</h1>
-    </div>
-    
-    {# 🔑 CAMBIO CLAVE: Mostrar overlay si el usuario NO tiene número de teléfono registrado 🔑 #}
-    {% if not current_user.phone_number %}
-    <div id="subscription-overlay" class="sub-overlay">
-        <div class="overlay-content">
-            {# 🔑 TÍTULO Y TEXTO ACTUALIZADOS PARA WHATSAPP/SMS 🔑 #}
-            <h1 class="sub-title"><i class="fab fa-whatsapp"></i> ¡No te pierdas ningun aviso!</h1>
-            <p class="sub-text">Introduce un **número de teléfono (WhatsApp/SMS)** al cual se le enviará un mensaje cada vez que el administrador publique un anuncio importante.</p>
-            
-            <p class="sub-warning">
-                **IMPORTANTE:** Debe incluir el código de país. Ej: **+52**5512345678 (México) o **+1**5551234567 (EE. UU.).
-            </p>
-
-            <form id="subscription-form" class="subscription-form"> 
-                {# 🔑 CAMBIO: Input de Email a Teléfono 🔑 #}
-                <input type="tel" id="phone_number" name="phone_number" placeholder="+CódigoPaísNúmero (ej: +52...)" required>
-                <button type="submit" class="button confirm-btn">
-                    Confirmar Número de Teléfono
-                </button>
-            </form>
-            <p class="sub-skip" id="skip-button">Omitir por ahora y ver anuncios.</p>
-        </div>
-        </div>
-    {% endif %}
-
-    <div class="container announcement-list-container">
-        
-        <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn">⬅ Volver al Panel</a>
-        
-        {# Mensaje de confirmación/éxito si ya tienen el número guardado #}
-        {% if current_user.phone_number %}
-            <div class="alert alert-success success-phone-alert">
-                <i class="fas fa-check-circle"></i> Tus notificaciones están activadas y se enviarán al número **{{ current_user.phone_number }}**.
-            </div>
-        {% endif %}
-
-        {% for ann_status in announcements %}
-            {% set announcement = ann_status.announcement %}
-            
-            <div class="announcement-card {% if ann_status.is_new %}announcement-new{% endif %}">
-                <div class="announcement-header">
-                    
-                    <h2 class="announcement-title-text">{{ announcement.title }}</h2>
-                    
-                    {% if ann_status.is_new %}
-                        <span class="new-tag" data-announcement-id="{{ announcement.id }}">¡NUEVO!</span>
-                    {% endif %}
-                    
-            </div>
-                
-                <p class="announcement-content">{{ announcement.content | safe }}</p>
-                <hr class="separator">
-                
-                <p class="announcement-meta">
-                    Publicado por: <strong>{{ announcement.publisher.username }}</strong>
-                    el {{ announcement.date_published | datetimeformat('dd/MM/yyyy HH:mm') }}
-                </p>
-            </div>
-        {% else %}
-            <p class="no-items-message">Aún no hay anuncios ni avisos publicados por la administración.</p>
-        {% endfor %}
-
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 🔑 CORRECCIÓN CLAVE: Asegurar que Jinja resuelve las URLs como strings
-            // Usa un marcador de posición '0' que será reemplazado en JS.
-            const markReadUrlTemplate = "{{ url_for('mark_announcement_read', announcement_id=0) }}";
-            const updatePhoneUrl = "{{ url_for('update_phone_number') }}"; // URL para guardar el número
-            
-            let newTags = document.querySelectorAll('.new-tag');
-            let idsToMark = [];
-
-            // 1. Identificar y marcar los anuncios como leídos via AJAX
-            newTags.forEach(function(tag) {
-                const annId = tag.getAttribute('data-announcement-id');
-                idsToMark.push(annId);
-                
-                // Ocultar la etiqueta "¡NUEVO!" y quitar el color rojo de la tarjeta
-                const card = tag.closest('.announcement-card');
-                if (card) {
-                    card.classList.remove('announcement-new');
-                    card.style.borderLeftColor = '#3498db'; 
-                }
-                tag.style.display = 'none'; 
-            });
-            
-            if (idsToMark.length > 0) {
-                idsToMark.forEach(function(announcementId) {
-                    // Reemplaza '0' en la plantilla con el ID real del anuncio
-                    const finalUrl = markReadUrlTemplate.replace('0', announcementId); 
-                    
-                    // Enviamos la petición asíncrona
-                    fetch(finalUrl, { method: 'GET' })
-                        .catch(error => console.error('Error marcando como leído:', error));
-                });
-            }
-
-            // --- LÓGICA DE OVERLAY DE NOTIFICACIÓN DE TELÉFONO ---
-            const subOverlay = document.getElementById('subscription-overlay');
-            const skipButton = document.getElementById('skip-button'); 
-            const subForm = document.getElementById('subscription-form');
-            const phoneInput = document.getElementById('phone_number');
-
-            if (subForm) {
-                // 🔑 Manejador del botón "Omitir por ahora" 🔑
-                if (skipButton && subOverlay) {
-                    skipButton.addEventListener('click', function() {
-                        // Ocultamos el overlay al presionar Omitir
-                        subOverlay.style.opacity = 0;
-                        setTimeout(() => {
-                            subOverlay.style.display = 'none';
-                        }, 300);
-                    });
-                }
-                
-                subForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const phoneNumber = phoneInput.value.trim();
-
-                    // 🔑 VALIDACIÓN CLAVE (Formato Twilio): Debe empezar con + y tener 8 a 15 dígitos. 🔑
-                    const phoneRegex = /^\+[1-9]\d{7,14}$/;
-                    if (!phoneRegex.test(phoneNumber)) {
-                        // Reemplazamos alert() por una función de retroalimentación en pantalla
-                        alert("ERROR: El formato del número es inválido. Debe empezar con el código de país (ej: +525512345678).");
-                        phoneInput.focus();
-                        return;
-                    }
-
-                    // Petición AJAX para guardar el número en la base de datos
-                    fetch(updatePhoneUrl, { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone_number: phoneNumber })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Reemplazamos alert() por una función de retroalimentación en pantalla
-                            alert("✅ ¡Número confirmado! Recibirás las notificaciones por WhatsApp/SMS.");
-                            subOverlay.style.opacity = 0;
-                            setTimeout(() => {
-                                // Ocultamos y luego recargamos para reflejar el nuevo estado (panel de éxito)
-                                subOverlay.style.display = 'none';
-                                window.location.reload(); 
-                            }, 300);
-                        } else {
-                            // Muestra el mensaje de error que viene de Flask
-                            alert('❌ Error al guardar el número: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error de conexión:', error);
-                        alert('Error de conexión con el servidor.');
-                    });
-                });
-            }
-        });
-    </script>
-   <style>
-    /* --- ESTILOS DEL OVERLAY DE SUSCRIPCIÓN --- */
-    .sub-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        opacity: 1;
-        transition: opacity 0.3s ease-out;
-    }
-    .overlay-content {
-        background: #ffffff;
-        color: #333;
-        padding: 40px;
-        border-radius: 15px;
-        text-align: center;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-        max-width: 450px;
-        border-top: 8px solid #3498db;
-    }
-    .sub-title {
-        color: #2ecc71;
-        font-size: 1.8em;
-        margin-bottom: 10px;
-    }
-    .sub-text {
-        font-size: 1.1em;
-        margin-bottom: 20px;
-        color: #555;
-    }
-    .sub-warning {
-        color: #e67e22;
-        font-size: 0.95em;
-        margin-bottom: 25px;
-    }
-    .subscription-form input[type="tel"] {
-        width: 95%;
-        padding: 12px;
-        margin-bottom: 15px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-        font-size: 1em;
-        text-align: center;
-    }
-    .confirm-btn {
-        background: #2ecc71 !important;
-        width: 100%;
-        padding: 12px 0;
-        font-size: 1.1em;
-        font-weight: bold;
-        border-radius: 8px;
-    }
-    .confirm-btn:hover {
-        background: #27ae60 !important;
-    }
-    .sub-skip {
-        cursor: pointer;
-        color: #7f8c8d;
-        margin-top: 15px;
-        text-decoration: underline;
-        font-size: 0.9em;
-    }
-    .sub-skip:hover {
-        color: #333;
-    }
-    .success-phone-alert {
-        background-color: #d4edda;
-        color: #155724;
-        border-color: #c3e6cb;
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        font-weight: 600;
-    }
+    <div class="announcement-hero">
+        <div class="announcement-hero-content">
+            <h1 class="hero-title">Centro de Avisos y Alertas</h1>
+            <p class="hero-subtitle">Mantente al día con los anuncios más importantes de tu curso. ¡Tu éxito comienza aquí!</p>
+        </div>
+    </div>
     
-    /* --- ESTILOS ANTERIORES (CONSERVADOS) --- */
-    .header-announcement-title {
-        background: #2c3e50;
+    <div class="container announcement-list-container">
+        
+        <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn animated-btn">
+            <i class="fas fa-arrow-left"></i> Volver al Panel
+        </a>
+        
+        <div class="card-grid">
+            {% for ann_status in announcements %}
+                {% set announcement = ann_status.announcement %}
+                
+                <div class="announcement-card-v2 {% if ann_status.is_new %}announcement-new-v2{% endif %}" data-announcement-id="{{ announcement.id }}">
+                    <div class="card-icon">
+                        {% if ann_status.is_new %}
+                            <i class="fas fa-bell animate-ring"></i>
+                        {% else %}
+                            <i class="fas fa-bullhorn"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-content-wrapper">
+                        <div class="card-header-v2">
+                            <h2 class="card-title-text">{{ announcement.title }}</h2>
+                            
+                            {% if ann_status.is_new %}
+                                <span class="new-tag-v2" data-announcement-id="{{ announcement.id }}">¡NUEVO!</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Resumen (Mantiene el truncate y safe para evitar código roto en la vista previa) -->
+                        <div class="card-content-summary">
+                            {{ announcement.content | striptags | truncate(100, True, '...') }}
+                        </div>
+                        
+                        <div class="card-meta">
+                            <p class="meta-info">
+                                <i class="fas fa-user-shield"></i> <strong>{{ announcement.publisher.username }}</strong>
+                            </p>
+                            <p class="meta-info">
+                                <i class="fas fa-clock"></i> {{ announcement.date_published | datetimeformat('dd/MM/yyyy HH:mm') }}
+                            </p>
+                        </div>
+                        
+                        <button class="btn read-more-btn" onclick="toggleDetails(this)">
+                            Leer Completo <i class="fas fa-chevron-down"></i>
+                        </button>
+                        
+                        <div class="full-content-detail">
+                            <hr class="detail-separator">
+                            
+                            <!-- 🔥 CAMBIO APLICADO AQUÍ: DIV con SAFE para renderizar HTML/Estilos 🔥 -->
+                            <div class="announcement-body full-content">
+                                {{ announcement.content | safe }}
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="no-items-message-v2">
+                    <i class="far fa-smile-beam"></i> ¡Todo despejado! Aún no hay anuncios ni avisos publicados por la administración.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const markReadUrlTemplate = "{{ url_for('mark_announcement_read', announcement_id=0) }}";
+            let newTags = document.querySelectorAll('.new-tag-v2');
+
+            // 1. Marcar como leído
+            newTags.forEach(function(tag) {
+                const annId = tag.getAttribute('data-announcement-id');
+                const finalUrl = markReadUrlTemplate.replace('0', annId); 
+                
+                // Petición asíncrona para marcar como leído
+                fetch(finalUrl, { method: 'GET' })
+                    .catch(error => console.error('Error marcando como leído:', error));
+
+                // Ocultar la etiqueta y animación después de un breve tiempo para el efecto visual
+                setTimeout(() => {
+                    tag.style.display = 'none';
+                    const card = tag.closest('.announcement-card-v2');
+                    if (card) {
+                        card.classList.remove('announcement-new-v2');
+                        const bell = card.querySelector('.animate-ring');
+                        if (bell) {
+                             bell.classList.remove('animate-ring');
+                             bell.classList.add('fa-bullhorn');
+                             bell.classList.remove('fa-bell');
+                        }
+                    }
+                }, 2000); 
+            });
+            
+        });
+
+        // 2. Función para expandir/colapsar el contenido completo
+        function toggleDetails(button) {
+            const card = button.closest('.announcement-card-v2');
+            const fullContentDetail = card.querySelector('.full-content-detail');
+            const chevron = button.querySelector('.fas');
+
+            if (fullContentDetail.style.maxHeight) {
+                // Colapsar
+                fullContentDetail.style.maxHeight = null;
+                fullContentDetail.style.opacity = 0;
+                chevron.classList.remove('fa-chevron-up');
+                chevron.classList.add('fa-chevron-down');
+                button.innerHTML = 'Leer Completo <i class="fas fa-chevron-down"></i>';
+            } else {
+                // Expandir
+                fullContentDetail.style.maxHeight = fullContentDetail.scrollHeight + "px";
+                fullContentDetail.style.opacity = 1;
+                chevron.classList.remove('fa-chevron-down');
+                chevron.classList.add('fa-chevron-up');
+                button.innerHTML = 'Mostrar Menos <i class="fas fa-chevron-up"></i>';
+            }
+        }
+    </script>
+    
+    <style>
+    /* ------------------------------------------------ */
+    /* --- ESTILOS VISUALES MODERNOS E INTERACTIVOS --- */
+    /* ------------------------------------------------ */
+    
+    /* Fuente de iconos: Font Awesome (asumimos que está incluida en base.html) */
+    
+    /* --- HERO SECTION --- */
+    .announcement-hero {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); /* Azul degradado */
         color: white;
-        padding: 25px;
+        padding: 40px 20px;
         text-align: center;
-        border-radius: 0 0 10px 10px;
         margin-bottom: 30px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        border-radius: 0 0 20px 20px;
     }
-    .header-announcement-title h1 {
+    .hero-title {
+        font-size: 2.5em;
+        font-weight: 700;
+        margin-bottom: 5px;
+        letter-spacing: 1px;
+    }
+    .hero-subtitle {
+        font-size: 1.1em;
+        opacity: 0.9;
         margin: 0;
     }
+    
+    /* --- GRID Y CONTENEDOR --- */
     .announcement-list-container {
-        max-width: 900px;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 20px;
     }
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin-top: 20px;
+    }
+    
+    /* --- BOTÓN VOLVER --- */
     .back-nav-btn {
-        background: #7f8c8d;
-        padding: 10px 15px;
-        margin-bottom: 20px;
-        transition: background 0.3s, transform 0.2s;
-        display: inline-block;
+        background: #95a5a6;
+        color: white;
+        padding: 10px 18px;
+        margin-bottom: 25px;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
     }
     .back-nav-btn:hover {
-        background: #5c6a74;
-        transform: translateX(-3px);
+        background: #7f8c8d;
+    }
+    .back-nav-btn i {
+        margin-right: 8px;
+    }
+
+    /* --- TARJETA PRINCIPAL (V2) --- */
+    .announcement-card-v2 {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        display: flex;
+        padding: 20px;
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        align-items: flex-start; /* Alineación superior */
+    }
+    .announcement-card-v2:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
     }
     
-    /* --- Tarjeta de Anuncio --- */
-    .announcement-card {
-        background: white;
-        padding: 20px;
-        margin-bottom: 25px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        border-left: 5px solid #3498db;
-        transition: border-left-color 0.5s;
+    /* Indicador de NUEVO */
+    .announcement-new-v2 {
+        border-left: 5px solid #e74c3c; /* Borde rojo sutil */
+        animation: pulseBorder 2s infinite;
     }
-    .announcement-header {
+    
+    /* Icono lateral */
+    .card-icon {
+        flex-shrink: 0;
+        margin-right: 15px;
+        color: #3498db;
+        font-size: 1.8em;
+        padding-top: 5px;
+    }
+    .announcement-new-v2 .card-icon {
+        color: #e74c3c;
+    }
+
+    /* Anillo de animación para el icono (Nuevo) */
+    .animate-ring {
+        animation: ring 2s ease-in-out infinite;
+    }
+    @keyframes ring {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes pulseBorder {
+        0% { border-left-color: #e74c3c; }
+        50% { border-left-color: #f39c12; }
+        100% { border-left-color: #e74c3c; }
+    }
+
+
+    .card-content-wrapper {
+        flex-grow: 1;
+        overflow: hidden;
+    }
+    .card-header-v2 {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
+        align-items: flex-start;
         margin-bottom: 10px;
     }
-    .announcement-title-text {
+    .card-title-text {
+        font-size: 1.2em;
         color: #2c3e50;
         margin: 0;
-        font-size: 1.4em;
+        line-height: 1.3;
     }
-    .new-tag {
+    
+    .new-tag-v2 {
         background: #e74c3c;
         color: white;
-        padding: 4px 8px;
+        padding: 3px 8px;
         border-radius: 4px;
-        font-size: 0.85em;
+        font-size: 0.75em;
         font-weight: bold;
+        flex-shrink: 0;
+        margin-left: 10px;
     }
-    .announcement-new {
-        background: #fffafa;
-        border-left-color: #e74c3c !important;
+    
+    .card-content-summary {
+        font-size: 0.95em;
+        color: #7f8c8d;
+        margin-bottom: 15px;
+        line-height: 1.5;
+        font-style: italic;
     }
-    .announcement-content {
+
+    /* Meta (Fecha/Autor) */
+    .card-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85em;
+        color: #34495e;
+        border-top: 1px dashed #ecf0f1;
+        padding-top: 10px;
+        margin-bottom: 15px;
+    }
+    .card-meta i {
+        margin-right: 5px;
+        color: #3498db;
+    }
+    .meta-info {
+        margin: 0;
+    }
+
+    /* Botón Leer Más/Menos */
+    .read-more-btn {
+        background: #ecf0f1;
+        color: #34495e;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 50px;
+        font-size: 0.9em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        width: 100%;
+        text-align: center;
+    }
+    .read-more-btn:hover {
+        background: #bdc3c7;
+    }
+    .read-more-btn i {
+        margin-left: 5px;
+        transition: transform 0.3s;
+    }
+
+    /* Contenido Completo (Animado) */
+    .full-content-detail {
+        max-height: 0; /* Colapsado por defecto */
+        opacity: 0;
+        transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out;
+        overflow: hidden;
+    }
+    
+    /* 🔥 ESTILOS DEL CUERPO DEL ANUNCIO (Rich Text) 🔥 */
+    .full-content {
         margin-top: 15px;
         line-height: 1.6;
-        white-space: pre-wrap;
+        color: #555;
+        /* Importante: 'normal' para que el HTML del editor se renderice bien */
+        white-space: normal; 
     }
-    .separator {
+    
+    /* Estilos básicos para elementos dentro del anuncio (por si el editor no los pone) */
+    .full-content p { margin-bottom: 10px; }
+    .full-content ul, .full-content ol { margin-left: 20px; margin-bottom: 10px; }
+    .full-content strong { color: #333; }
+    
+    .detail-separator {
         border: 0;
         border-top: 1px solid #eee;
-        margin: 15px 0 10px 0;
+        margin: 15px 0;
     }
-    .announcement-meta {
-        font-size: 0.9em;
-        color: #7f8c8d;
-        margin-bottom: 0;
+
+    /* --- Mensaje Sin Elementos --- */
+    .no-items-message-v2 {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 30px;
+        background: #fcf8e3;
+        color: #8a6d3b;
+        border: 1px solid #faebcc;
+        border-radius: 10px;
+        font-size: 1.2em;
+        margin-top: 50px;
     }
-    .no-items-message {
-        padding: 15px;
-        background: #fdf3c7;
-        border-left: 5px solid #f1c40f;
-        border-radius: 5px;
-        margin-top: 15px;
-        font-weight: bold;
+    .no-items-message-v2 i {
+        margin-right: 10px;
+        font-size: 1.5em;
+        vertical-align: middle;
     }
-    /* --- MEDIA QUERY (Ajustes para Móvil) --- */
-    @media (max-width: 600px) {
-        .announcement-list-container {
-            width: 100%;
-            padding: 0 10px;
+
+    /* --- Media Queries --- */
+    @media (max-width: 768px) {
+        .announcement-hero {
+            padding: 30px 10px;
+            border-radius: 0 0 15px 15px;
         }
-        .announcement-card {
+        .hero-title {
+            font-size: 2em;
+        }
+        .card-grid {
+            gap: 20px;
+        }
+        .announcement-card-v2 {
             padding: 15px;
         }
-        .announcement-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        .announcement-title-text {
-            margin-bottom: 5px;
-        }
-        .back-nav-btn {
-            width: 100%;
-        }
     }
-</style>
+    </style>
 {% endblock %}

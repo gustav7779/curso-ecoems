@@ -3,463 +3,571 @@
 {% block title %}Panel de Administración{% endblock %}
 
 {% block content %}
-    <div class="page-content-wrapper"> <div class="header-card">
-            <h1>⚙️ Panel de Administración - Bienvenido, {{ current_user.username | capitalize }}</h1>
-            <p>Gestiona usuarios, exámenes y anuncios del sistema.</p>
-        </div>
+<div class="page-content-wrapper"> 
+    <div class="header-card">
+        <h1>⚙️ Panel de Administración - Bienvenido, {{ current_user.username | capitalize }}</h1>
+        <p>Gestiona usuarios, exámenes y anuncios del sistema.</p>
+    </div>
 
-        <div class="container admin-container">
+    <div class="control-tower-container hidden-card">
+        <a href="{{ url_for('admin_dashboard') }}" class="control-tower-button-link management-effect">
+            <div class="button-icon">
+                <i class="fas fa-broadcast-tower"></i>
+            </div>
+            <div class="button-text">
+                <strong>Torre de Control</strong>
+                <span>Acceder al dashboard de métricas y monitoreo en vivo.</span>
+            </div>
+        </a>
+    </div>
+    <div class="container admin-container">
+        
+        <div class="flex-container">
             
-            <div class="flex-container">
-                
-                {# Secciones solo para el rol 'admin' #}
-                {% if current_user.role == 'admin' %}
-                <div class="card management-card management-effect hidden-card">
-                    <h2>⬇️ Exportar Datos</h2>
-                    <p>Descarga un archivo CSV con el historial completo de resultados.</p>
-                    <a href="{{ url_for('export_results') }}" class="button export-btn" style="background: #1abc9c;">
-                        <i class="fas fa-file-csv"></i> Descargar Reporte CSV
-                    </a>
-                </div>
-                
-                <div class="card management-card management-effect hidden-card">
-                    <h2>🧑‍🎓 Gestión de Usuarios</h2>
-                    <p>Crea o elimina cuentas de estudiantes y administradores.</p>
-                    <a href="{{ url_for('manage_users') }}" class="button primary-btn">👥 Administrar Alumnos</a>
-                </div>
-                {% endif %}
-
-                <div class="card management-card management-effect hidden-card">
-                    <h2>🛠️ Gestión de Reportes</h2>
-                    <p>Revisa las fallas o problemas reportados por los alumnos.</p>
-                    <a href="{{ url_for('admin_reports') }}" class="button danger-btn">📋 Ver Reportes</a>
-                </div>
-                
-                {# Seguridad 2FA solo para el rol 'admin' #}
-                {% if current_user.role == 'admin' %}
-                <div class="card management-card security-card management-effect hidden-card">
-                    <h2>🔒 Seguridad (2FA)</h2>
-                    {% if current_user.two_factor_secret %}
-                        <p>La autenticación de dos factores está **activa**.</p>
-                        <form method="POST" action="{{ url_for('disable_2fa') }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de desactivar 2FA?');">
-                            <button type="submit" class="button" style="background: #e74c3c;">Desactivar 2FA</button>
-                        </form>
-                        <a href="{{ url_for('setup_2fa') }}" class="button" style="background: #f39c12; margin-top: 10px;">Reconfigurar</a>
-                    {% else %}
-                        <p>Asegura tu cuenta de administrador con un código TOTP (Google Authenticator).</p>
-                        <a href="{{ url_for('setup_2fa') }}" class="button success-btn">Activar 2FA ahora</a>
-                    {% endif %}
-                </div>
-                {% endif %}
-
-            </div>
-
-            <div class="card exam-card hidden-card">
-                <h2>📝 Gestión de Exámenes</h2>
-                <p>Lista de exámenes disponibles. Haz clic para añadir preguntas o ver resultados.</p>
-                <a href="{{ url_for('new_exam') }}" class="button success-btn add-exam-btn">➕ Crear Nuevo Examen</a>
-                
-                {% if exams %}
-                    <ul class="exam-list">
-                        {% for exam in exams %}
-                            {# Bucle para encontrar el conteo de alumnos tomando el examen (del Código 2) #}
-                            {% set active_count = 0 %}
-                            {% for ex_id, ex_title, count in active_exams_summary %}
-                                {% if ex_id == exam.id %}
-                                    {% set active_count = count %}
-                                {% endif %}
-                            {% endfor %}
-
-                            <li class="exam-item">
-                                <span class="exam-title">
-                                    {# 🔑 LÍNEA MODIFICADA: Usamos '| list | length' para asegurar que la relación de SQLAlchemy se evalúe correctamente, previniendo errores 500. #}
-                                    {{ exam.title }} ({{ exam.questions | list | length }} Preguntas)
-                                    {% if active_count > 0 %}
-                                        {# Badge de monitoreo en vivo #}
-                                        <span class="badge badge-warning">🟢 {{ active_count }} en Vivo</span>
-                                    {% endif %}
-                                </span>
-                                <div class="exam-actions">
-                                    
-                                    {# 🔑 BOTÓN DE MONITOREO (Solo Admin) - AJUSTE DE TAMAÑO 🔑 #}
-                                    {% if current_user.role == 'admin' %}
-                                    <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="button action-btn monitor-btn" 
-                                        style="background: #e67e22; font-size: 0.8em; padding: 6px 8px; margin: 0 4px 0 0;">
-                                        👀 Monitorear
-                                    </a>
-                                    {% endif %}
-                                    
-                                    <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="button action-btn edit-btn-blue" style="margin: 0 4px 0 0;">
-                                        ⚙️ Editar Examen
-                                    </a>
-                                    
-                                    <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">
-                                        ✏️ Añadir Preguntas
-                                    </a>
-                                    <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="button action-btn view-btn" style="margin: 0 4px 0 0;">
-                                        📖 Ver Resultados
-                                    </a>
-                                    
-                                    <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de DUPLICAR el examen \'{{ exam.title }}\'?');" style="margin: 0;">
-                                        <button type="submit" class="button action-btn duplicate-btn" style="margin: 0 4px 0 0;">📋 Duplicar</button>
-                                    </form>
-                                    
-                                    <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de eliminar el examen: {{ exam.title }}? Esto eliminará TODAS las preguntas y respuestas asociadas.');" style="margin: 0;">
-                                        <input type="submit" value="🗑️ Eliminar" class="button action-btn delete-btn" style="margin: 0;">
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="no-items-message">Aún no hay exámenes creados.</p>
-                {% endif %}
-            </div>
-
-            {# Gestión de Anuncios solo para el rol 'admin' #}
+            {# Secciones solo para el rol 'admin' #}
             {% if current_user.role == 'admin' %}
-            <div class="card announcement-card hidden-card">
-                <h2>📢 Gestión de Anuncios</h2>
-                <div class="announcement-controls">
-                    <a href="{{ url_for('new_announcement') }}" class="button primary-btn announcement-action-btn">Crear Nuevo Anuncio</a>
-                    <a href="{{ url_for('admin_announcement_read_status') }}" class="button primary-btn announcement-action-btn" style="background: #16a085;">👁️ Trazabilidad de Lectura</a>
-                </div>
-                
-                <h3 class="subsection-title">Anuncios Publicados</h3>
-                
-                {% if announcements_list %}
-                    <ul class="announcement-list">
-                        {% for announcement in announcements_list %}
-                            <li class="exam-item">
-                                <div>
-                                    <strong>{{ announcement.title }}</strong><br>
-                                    <span class="announcement-status status-{{ announcement.is_active | lower }}">
-                                        (Estado: {% if announcement.is_active %}Activo{% else %}Inactivo{% endif %})
-                                    </span>
-                                </div>
-
-                                <div class="exam-actions">
-                                    <a href="{{ url_for('edit_announcement', announcement_id=announcement.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">✏️ Editar</a>
-
-                                    <form method="POST"
-                                        action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}"
-                                        class="inline-form"
-                                        onsubmit="return confirm('¿Seguro que quieres eliminar este anuncio?');" style="margin: 0;">
-                                        <button type="submit" class="button delete-btn action-btn" style="margin: 0;">🗑️ Eliminar</button>
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="no-items-message">No hay anuncios publicados.</p>
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            <div class="logout-end-container hidden-card">
-                <a href="{{ url_for('logout') }}" class="btn final-logout-btn">
-                    Cerrar Sesión
+            <div class="card management-card management-effect hidden-card">
+                <h2>⬇️ Exportar Datos</h2>
+                <p>Descarga un archivo CSV con el historial completo de resultados.</p>
+                <a href="{{ url_for('export_results') }}" class="button export-btn" style="background: #1abc9c;">
+                    <i class="fas fa-file-csv"></i> Descargar Reporte CSV
                 </a>
             </div>
             
-        </div>
-    </div>
+            <div class="card management-card management-effect hidden-card">
+                <h2>🧑‍🎓 Gestión de Usuarios</h2>
+                <p>Crea o elimina cuentas de estudiantes y administradores.</p>
+                <a href="{{ url_for('manage_users') }}" class="button primary-btn">👥 Administrar Alumnos</a>
+            </div>
+            {% endif %}
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const contentWrapper = document.querySelector('.page-content-wrapper');
-            const managementCards = document.querySelectorAll('.management-effect');
-            const examListItems = document.querySelectorAll('.exam-list li');
-            // Recopila todas las secciones/tarjetas que deben aparecer escalonadamente
-            const allCards = document.querySelectorAll('.hidden-card');
+            <div class="card management-card management-effect hidden-card">
+                <h2>🛠️ Gestión de Reportes</h2>
+                <p>Revisa las fallas o problemas reportados por los alumnos.</p>
+                <a href="{{ url_for('admin_reports') }}" class="button danger-btn">📋 Ver Reportes</a>
+            </div>
             
-            // 1. Animación de Fade-in escalonada (Staggered Fade-in)
-            function staggerFadeIn() {
-                allCards.forEach((card, index) => {
-                    setTimeout(() => {
-                        card.classList.remove('hidden-card');
-                        card.style.opacity = '1';
-                        card.style.transform = 'translateY(0)';
-                    }, 100 + index * 100); // 100ms de retraso entre tarjetas
-                });
-                // Muestra el contenedor principal (para el fade-in general del fondo)
-                if (contentWrapper) {
-                    contentWrapper.style.opacity = '1';
-                    contentWrapper.style.transform = 'translateY(0)';
-                }
-            }
+            {# Seguridad 2FA solo para el rol 'admin' #}
+            {% if current_user.role == 'admin' %}
+            <div class="card management-card security-card management-effect hidden-card">
+                <h2>🔒 Seguridad (2FA)</h2>
+                {% if current_user.two_factor_secret %}
+                    <p>La autenticación de dos factores está **activa**.</p>
+                    <form method="POST" action="{{ url_for('disable_2fa') }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de desactivar 2FA?');">
+                        
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            // Iniciar la animación escalonada
-            staggerFadeIn();
+                        <button type="submit" class="button" style="background: #e74c3c;">Desactivar 2FA</button>
+                    </form>
+                    <a href="{{ url_for('setup_2fa') }}" class="button" style="background: #f39c12; margin-top: 10px;">Reconfigurar</a>
+                {% else %}
+                    <p>Asegura tu cuenta de administrador con un código TOTP (Google Authenticator).</p>
+                    <a href="{{ url_for('setup_2fa') }}" class="button success-btn">Activar 2FA ahora</a>
+                {% endif %}
+            </div>
+            {% endif %}
 
+        </div>
 
-            // 2. Efecto de "Brillo de Mouse" en tarjetas de Gestión
-            managementCards.forEach(card => {
-                // Previene que se dispare el evento si la tarjeta no es un enlace directo
-                if (card.querySelector('a')) {
-                    card.style.cursor = 'pointer';
-                }
+        <div class="card exam-card hidden-card">
+            <h2>📝 Gestión de Exámenes</h2>
+            <p>Lista de exámenes disponibles. Haz clic para añadir preguntas o ver resultados.</p>
+            <a href="{{ url_for('new_exam') }}" class="button success-btn add-exam-btn">➕ Crear Nuevo Examen</a>
+            
+            {% if exams %}
+                <ul class="exam-list">
+                    {% for exam in exams %}
+                        {# Bucle para encontrar el conteo de alumnos tomando el examen (del Código 2) #}
+                        {% set active_count = 0 %}
+                        {% for ex_id, ex_title, count in active_exams_summary %}
+                            {% if ex_id == exam.id %}
+                                {% set active_count = count %}
+                            {% endif %}
+                        {% endfor %}
 
-                card.addEventListener('mousemove', (e) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
-                    // Sombra dinámica con luz más brillante
-                    card.style.boxShadow = `
-                        0 15px 40px rgba(0, 0, 0, 0.3), 
-                        radial-gradient(circle at ${x}px ${y}px, rgba(255, 255, 255, 0.45) 10%, transparent 60%)
-                    `;
-                    card.style.transform = 'translateY(-10px)'; // Levantamiento más notable
-                });
+                        <li class="exam-item">
+                            <span class="exam-title">
+                                {# 🔑 LÍNEA MODIFICADA: Usamos '| list | length' para asegurar que la relación de SQLAlchemy se evalúe correctamente, previniendo errores 500. #}
+                                {{ exam.title }} ({{ exam.questions | list | length }} Preguntas)
+                                {% if active_count > 0 %}
+                                    {# Badge de monitoreo en vivo #}
+                                    <span class="badge badge-warning">🟢 {{ active_count }} en Vivo</span>
+                                {% endif %}
+                            </span>
+                            <div class="exam-actions">
+                                
+                                {# 🔑 BOTÓN DE RENDIMIENTO/SIMULADOR (NUEVO) 🔑 #}
+                                <a href="{{ url_for('exam_simulator_view', exam_id=exam.id) }}" class="button action-btn simulator-btn" 
+                                    style="background: #9b59b6; margin: 0 4px 0 0;">
+                                    📊 Ver Rendimiento
+                                </a>
+                                
+                                {# 🔑 BOTÓN DE MONITOREO (Solo Admin) 🔑 #}
+                                {% if current_user.role == 'admin' %}
+                                <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="button action-btn monitor-btn" 
+                                    style="background: #e67e22; font-size: 0.8em; padding: 6px 8px; margin: 0 4px 0 0;">
+                                    👀 Monitorear
+                                </a>
+                                {% endif %}
+                                
+                                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="button action-btn edit-btn-blue" style="margin: 0 4px 0 0;">
+                                    ⚙️ Editar Examen
+                                </a>
+                                
+                                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">
+                                    ✏️ Añadir Preguntas
+                                </a>
+                                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="button action-btn view-btn" style="margin: 0 4px 0 0;">
+                                    📖 Ver Resultados
+                                </a>
+                                
+                                <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de DUPLICAR el examen \'{{ exam.title }}\'?');" style="margin: 0;">
+                                    
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                card.addEventListener('mouseleave', () => {
-                    // Restaura la sombra original
-                    card.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
-                    card.style.transform = 'translateY(0)'; 
-                });
+                                    <button type="submit" class="button action-btn duplicate-btn" style="margin: 0 4px 0 0;">📋 Duplicar</button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de eliminar el examen: {{ exam.title }}? Esto eliminará TODAS las preguntas y respuestas asociadas.');" style="margin: 0;">
+                                    
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                    <input type="submit" value="🗑️ Eliminar" class="button action-btn delete-btn" style="margin: 0;">
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="no-items-message">Aún no hay exámenes creados.</p>
+            {% endif %}
+        </div>
+
+        {# Gestión de Anuncios solo para el rol 'admin' #}
+        {% if current_user.role == 'admin' %}
+        <div class="card announcement-card hidden-card">
+            <h2>📢 Gestión de Anuncios</h2>
+            <div class="announcement-controls">
+                <a href="{{ url_for('new_announcement') }}" class="button primary-btn announcement-action-btn">Crear Nuevo Anuncio</a>
+                <a href="{{ url_for('admin_announcement_read_status') }}" class="button primary-btn announcement-action-btn" style="background: #16a085;">👁️ Trazabilidad de Lectura</a>
+            </div>
+            
+            <h3 class="subsection-title">Anuncios Publicados</h3>
+            
+            {% if announcements_list %}
+                <ul class="announcement-list">
+                    {% for announcement in announcements_list %}
+                        <li class="exam-item">
+                            <div>
+                                <strong>{{ announcement.title }}</strong><br>
+                                <span class="announcement-status status-{{ announcement.is_active | lower }}">
+                                    (Estado: {% if announcement.is_active %}Activo{% else %}Inactivo{% endif %})
+                                </span>
+                            </div>
+
+                            <div class="exam-actions">
+                                <a href="{{ url_for('edit_announcement', announcement_id=announcement.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">✏️ Editar</a>
+
+                                <form method="POST"
+                                    action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}"
+                                    class="inline-form"
+                                    onsubmit="return confirm('¿Seguro que quieres eliminar este anuncio?');" style="margin: 0;">
+                                    
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                    <button type="submit" class="button delete-btn action-btn" style="margin: 0;">🗑️ Eliminar</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="no-items-message">No hay anuncios publicados.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="logout-end-container hidden-card">
+            <a href="{{ url_for('logout') }}" class="btn final-logout-btn">
+                Cerrar Sesión
+            </a>
+        </div>
+        
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- LÓGICA DE ANIMACIÓN (Existente) ---
+        const contentWrapper = document.querySelector('.page-content-wrapper');
+        const managementCards = document.querySelectorAll('.management-effect');
+        const examListItems = document.querySelectorAll('.exam-list li');
+        const allCards = document.querySelectorAll('.hidden-card');
+        
+        function staggerFadeIn() {
+            allCards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.remove('hidden-card');
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 100 + index * 100); 
             });
+            if (contentWrapper) {
+                contentWrapper.style.opacity = '1';
+                contentWrapper.style.transform = 'translateY(0)';
+            }
+        }
+        staggerFadeIn();
 
-            // 3. Efecto de "Lift" sutil en los items de examen
-            examListItems.forEach(item => {
-                item.addEventListener('mouseenter', () => {
-                    item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                    item.style.transform = 'translateY(-1px)';
-                });
-                item.addEventListener('mouseleave', () => {
-                    item.style.boxShadow = 'none';
-                    item.style.transform = 'translateY(0)';
-                });
+        managementCards.forEach(card => {
+            if (card.querySelector('a')) {
+                card.style.cursor = 'pointer';
+            }
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.boxShadow = `
+                    0 15px 40px rgba(0, 0, 0, 0.3), 
+                    radial-gradient(circle at ${x}px ${y}px, rgba(255, 255, 255, 0.45) 10%, transparent 60%)
+                `;
+                card.style.transform = 'translateY(-10px)'; 
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+                card.style.transform = 'translateY(0)'; 
             });
         });
-    </script>
 
-    <style>
-        /* --- ESTADO INICIAL PARA ANIMACIÓN ESCALONADA (Staggered Fade-in) --- */
-        .hidden-card {
-            opacity: 0 !important;
-            transform: translateY(20px) !important;
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-        }
-        .page-content-wrapper {
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-        }
+        examListItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                item.style.transform = 'translateY(-1px)';
+            });
+            item.addEventListener('mouseleave', () => {
+                item.style.boxShadow = 'none';
+                item.style.transform = 'translateY(0)';
+            });
+        });
+    });
+</script>
 
-        /* --- Contenedor Principal y Header Falso --- */
-        .admin-container {
-            padding: 0 20px;
-            max-width: 1100px;
-            margin: 0 auto 30px auto;
-        }
-        
-        .header-card {
-            /* Degradado y estilo limpio */
-            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); 
-            color: white;
-            padding: 35px;
-            text-align: center;
-            border-radius: 0 0 18px 18px; 
-            margin-bottom: 40px;
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-        }
-        .header-card h1 {
-            font-size: 2.2em; 
-            font-weight: 800;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-            margin-bottom: 5px;
-        }
-        .header-card p {
-            color: #ecf0f1;
-        }
+<style>
+    /* --- ESTADO INICIAL PARA ANIMACIÓN ESCALONADA (Staggered Fade-in) --- */
+    .hidden-card {
+        opacity: 0 !important;
+        transform: translateY(20px) !important;
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+    .page-content-wrapper {
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
 
-        /* --- Flex Container (Herramientas Rápidas) --- */
-        .flex-container {
-            display: flex;
-            gap: 25px; 
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-        }
+    /* --- Contenedor Principal y Header Falso --- */
+    .admin-container {
+        padding: 0 20px;
+        max-width: 1100px;
+        margin: 0 auto 30px auto;
+    }
+    
+    .header-card {
+        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); 
+        color: white;
+        padding: 35px;
+        text-align: center;
+        border-radius: 0 0 18px 18px; 
+        margin-bottom: 40px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    }
+    .header-card h1 {
+        font-size: 2.2em; 
+        font-weight: 800;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        margin-bottom: 5px;
+    }
+    .header-card p {
+        color: #ecf0f1;
+    }
 
-        /* --- Tarjetas (General y Dinámico) --- */
-        .card {
-            flex: 1 1 280px; 
-            padding: 30px;
-            border-radius: 15px; 
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
-            transition: all 0.3s ease; 
-            background: #ffffff;
-            border: 1px solid #f0f0f0; 
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .security-card {
-            border-top: 5px solid #ff7f50 !important;
-        }
+    /* --- 🔥 NUEVO: BOTÓN TORRE DE CONTROL "SPR BONITO" 🔥 --- */
+    .control-tower-container {
+        display: flex;
+        justify-content: center;
+        padding: 10px 20px;
+        margin: -25px auto 30px auto; /* Ligeramente superpuesto al header */
+        position: relative;
+        z-index: 50; /* Sobre el fondo pero debajo del header-card */
+        max-width: 1100px;
+    }
+    
+    a.control-tower-button-link {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        max-width: 800px; /* Ancho máximo del botón */
+        padding: 25px 35px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        color: #2c3e50;
+        text-decoration: none;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+    }
 
-        .card h2 {
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-            color: #2c3e50;
-            font-size: 1.8em;
-            font-weight: 700;
-            transition: color 0.3s;
-        }
+    /* Aplicar el efecto de hover de las otras tarjetas */
+    a.control-tower-button-link:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        color: #3498db;
+    }
 
-        .card h2:hover {
-            color: #3498db; 
+    .control-tower-button-link .button-icon {
+        font-size: 3.5em;
+        margin-right: 25px;
+        color: #3498db;
+        transition: color 0.3s ease;
+    }
+
+    .control-tower-button-link:hover .button-icon {
+        color: #2980b9;
+    }
+
+    .control-tower-button-link .button-text strong {
+        display: block;
+        font-size: 1.8em;
+        font-weight: 700;
+    }
+    
+    .control-tower-button-link .button-text span {
+        font-size: 1.1em;
+        color: #555;
+    }
+    /* --- 🔥 FIN DE ESTILOS DE BOTÓN 🔥 --- */
+
+
+    /* --- Flex Container (Herramientas Rápidas) --- */
+    .flex-container {
+        display: flex;
+        gap: 25px; 
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+    }
+
+    /* --- Tarjetas (General y Dinámico) --- */
+    .card {
+        flex: 1 1 280px; 
+        padding: 30px;
+        border-radius: 15px; 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
+        transition: all 0.3s ease; 
+        background: #ffffff;
+        border: 1px solid #f0f0f0; 
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .security-card {
+        border-top: 5px solid #ff7f50 !important;
+    }
+
+    .card h2 {
+        border-bottom: 2px solid #ecf0f1;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+        color: #2c3e50;
+        font-size: 1.8em;
+        font-weight: 700;
+        transition: color 0.3s;
+    }
+
+    .card h2:hover {
+        color: #3498db; 
+    }
+    
+    /* --- Botones y Acciones --- */
+    .button {
+        display: inline-block;
+        padding: 10px 15px;
+        border-radius: 5px;
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        text-align: center;
+        transition: background 0.3s ease, transform 0.1s;
+        margin: 0; 
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Botón Crear Nuevo Examen (Prominente) */
+    .add-exam-btn {
+        margin-top: 20px;
+        padding: 14px 30px; 
+        font-size: 1.15em;
+        border-radius: 50px; 
+        box-shadow: 0 6px 18px rgba(46, 204, 113, 0.6); 
+    }
+
+    /* Estilos del Botón Monitorear (Línea Modificada) */
+    .monitor-btn {
+        background-color: #e67e22 !important; 
+        font-size: 0.8em; /* 🔑 AJUSTE CRÍTICO: Tamaño más pequeño 🔑 */
+        padding: 6px 8px !important; 
+    }
+    .monitor-btn:hover {
+        background-color: #d35400 !important;
+    }
+    
+    /* 🔑 Colores Específicos Restaurados 🔑 */
+    .primary-btn { background: #3498db; }
+    .success-btn { background: #2ecc71; }
+    .danger-btn { background: #e74c3c; }
+    .export-btn { background: #1abc9c !important; }
+    .export-btn:hover { background: #16a085 !important; }
+
+    .edit-btn-blue { background: #3498db !important; } /* Editar Examen (Azul) */
+    .action-btn.edit-btn { background: #f39c12; } /* Añadir Preguntas (Amarillo) */
+    .action-btn.view-btn { background: #3498db; } /* Ver Resultados (Azul) */
+    .action-btn.delete-btn { background: #e74c3c; } /* Eliminar (Rojo) */
+    .action-btn.duplicate-btn { background: #9b59b6; } /* Duplicar (Púrpura) */
+    .action-btn.duplicate-btn:hover { background: #8e44ad; } 
+    
+    /* --- Listas de Exámenes (Bloques y Hover) --- */
+    .exam-list, .announcement-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 15px;
+    }
+    
+    .exam-list li, .announcement-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 10px; /* Más padding para que parezca bloque */
+        margin: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+        border-radius: 8px;
+        transition: all 0.2s ease-out; 
+        background: white; 
+    }
+    .exam-list li:hover, .announcement-list li:hover {
+        background: #fcfcfc;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Sombra al pasar el ratón */
+        transform: translateY(-1px); /* Pequeño levantamiento */
+    }
+    
+    .exam-actions {
+        display: flex;
+        gap: 4px; /* Espacio reducido para que parezca un bloque de botones */
+        flex-wrap: nowrap; 
+        min-width: fit-content;
+        align-items: center;
+    }
+    .exam-actions .inline-form {
+        display: flex;
+        align-items: center;
+    }
+
+    .exam-title, .announcement-list strong {
+        font-weight: 700;
+        color: #2c3e50;
+        flex-grow: 1;
+        margin-right: 15px;
+        font-size: 1.1em;
+        transition: color 0.3s;
+    }
+    .exam-list li:hover .exam-title {
+        color: #3498db; 
+    }
+    
+    /* --- ESTILO DEL BOTÓN DE CERRAR SESIÓN FINAL --- */
+    .logout-end-container {
+        text-align: center;
+        margin-top: 40px;
+        padding: 20px;
+        border-top: 1px solid #eee;
+    }
+    
+    .final-logout-btn {
+        background: #e74c3c;
+        padding: 12px 30px;
+        font-size: 1.1em;
+        font-weight: 700;
+        border-radius: 50px;
+        box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
+    }
+    .final-logout-btn:hover {
+        background: #c0392b;
+        transform: scale(1.02);
+    }
+
+    /* --- MEDIA QUERIES (Adaptabilidad para Móvil) --- */
+    @media (max-width: 768px) {
+        /* 🔥 Apilar la cuadrícula de estadísticas en móvil */
+        .stats-grid {
+            grid-template-columns: 1fr;
         }
-        
-        /* --- Botones y Acciones --- */
-        .button {
-            display: inline-block;
+    }
+    
+    /* 🔥🔥 NUEVO: MEDIA QUERY PARA BOTÓN TORRE DE CONTROL 🔥🔥 */
+    @media (max-width: 600px) {
+        .control-tower-container {
+            margin-top: -15px;
             padding: 10px 15px;
-            border-radius: 5px;
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
+        }
+        a.control-tower-button-link {
+            flex-direction: column;
             text-align: center;
-            transition: background 0.3s ease, transform 0.1s;
-            /* Eliminamos el margen base y lo controlamos en .exam-actions para evitar conflictos */
-            margin: 0; 
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        /* Botón Crear Nuevo Examen (Prominente) */
-        .add-exam-btn {
-            margin-top: 20px;
-            padding: 14px 30px; 
-            font-size: 1.15em;
-            border-radius: 50px; 
-            box-shadow: 0 6px 18px rgba(46, 204, 113, 0.6); 
-        }
-
-        /* Estilos del Botón Monitorear (Línea Modificada) */
-        .monitor-btn {
-            background-color: #e67e22 !important; 
-            font-size: 0.8em; /* 🔑 AJUSTE CRÍTICO: Tamaño más pequeño 🔑 */
-            padding: 6px 8px !important; 
-        }
-        .monitor-btn:hover {
-            background-color: #d35400 !important;
-        }
-        
-        /* 🔑 Colores Específicos Restaurados 🔑 */
-        .primary-btn { background: #3498db; }
-        .success-btn { background: #2ecc71; }
-        .danger-btn { background: #e74c3c; }
-        .export-btn { background: #1abc9c !important; }
-        .export-btn:hover { background: #16a085 !important; }
-
-        .edit-btn-blue { background: #3498db !important; } /* Editar Examen (Azul) */
-        .action-btn.edit-btn { background: #f39c12; } /* Añadir Preguntas (Amarillo) */
-        .action-btn.view-btn { background: #3498db; } /* Ver Resultados (Azul) */
-        .action-btn.delete-btn { background: #e74c3c; } /* Eliminar (Rojo) */
-        .action-btn.duplicate-btn { background: #9b59b6; } /* Duplicar (Púrpura) */
-        .action-btn.duplicate-btn:hover { background: #8e44ad; } 
-        
-        /* --- Listas de Exámenes (Bloques y Hover) --- */
-        .exam-list, .announcement-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 15px;
-        }
-        
-        .exam-list li, .announcement-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 10px; /* Más padding para que parezca bloque */
-            margin: 5px 0;
-            border-bottom: 1px solid #f0f0f0;
-            border-radius: 8px;
-            transition: all 0.2s ease-out; 
-            background: white; 
-        }
-        .exam-list li:hover, .announcement-list li:hover {
-            background: #fcfcfc;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Sombra al pasar el ratón */
-            transform: translateY(-1px); /* Pequeño levantamiento */
-        }
-        
-        .exam-actions {
-            display: flex;
-            gap: 4px; /* Espacio reducido para que parezca un bloque de botones */
-            flex-wrap: nowrap; 
-            min-width: fit-content;
-            align-items: center;
-        }
-        /* Ajuste para que los formularios inline no rompan el flex */
-        .exam-actions .inline-form {
-            display: flex;
-            align-items: center;
-        }
-
-
-        .exam-title, .announcement-list strong {
-            font-weight: 700;
-            color: #2c3e50;
-            flex-grow: 1;
-            margin-right: 15px;
-            font-size: 1.1em;
-            transition: color 0.3s;
-        }
-        .exam-list li:hover .exam-title {
-            color: #3498db; 
-        }
-        
-        /* --- ESTILO DEL BOTÓN DE CERRAR SESIÓN FINAL --- */
-        .logout-end-container {
-            text-align: center;
-            margin-top: 40px;
             padding: 20px;
-            border-top: 1px solid #eee;
+        }
+        .control-tower-button-link .button-icon {
+            font-size: 2.8em;
+            margin-right: 0;
+            margin-bottom: 10px;
+        }
+        .control-tower-button-link .button-text strong {
+            font-size: 1.4em;
+        }
+        .control-tower-button-link .button-text span {
+            font-size: 0.9em;
         }
         
-        .final-logout-btn {
-            background: #e74c3c;
-            padding: 12px 30px;
-            font-size: 1.1em;
-            font-weight: 700;
-            border-radius: 50px;
-            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
-        }
-        .final-logout-btn:hover {
-            background: #c0392b;
-            transform: scale(1.02);
-        }
+        /* Ajustar el header-card para que no sea tan grande en móvil */
+         .header-card {
+            padding: 25px 20px;
+            margin-bottom: 30px;
+         }
+         .header-card h1 {
+            font-size: 1.8em; /* Reducido de 2.2em */
+         }
 
-        /* --- MEDIA QUERIES (Adaptabilidad para Móvil) --- */
-        @media (max-width: 600px) {
-            .header-card h1 {
-                font-size: 1.4em;
-            }
-            .exam-actions {
-                flex-direction: column;
-                gap: 5px;
-            }
-            .exam-actions .button, .exam-actions .inline-form, .exam-actions .inline-form input {
-                width: 100%;
-                padding: 10px 15px; 
-                margin: 0;
-            }
-            .announcement-controls {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .announcement-action-btn {
-                width: 100%;
-                margin: 0;
-            }
-            .final-logout-btn {
-                width: 100%;
-            }
+        .exam-actions {
+            flex-direction: column;
+            gap: 5px;
         }
-    </style>
+        .exam-actions .button, .exam-actions .inline-form, .exam-actions .inline-form input {
+            width: 100%;
+            padding: 10px 15px; 
+            margin: 0;
+        }
+        .announcement-controls {
+            flex-direction: column;
+            gap: 10px;
+        }
+        .announcement-action-btn {
+            width: 100%;
+            margin: 0;
+        }
+        .final-logout-btn {
+            width: 100%;
+        }
+    }
+</style>
 {% endblock %}

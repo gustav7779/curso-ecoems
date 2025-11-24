@@ -1,843 +1,805 @@
 {% extends "base.html" %}
 
+{# Se usa el título del Examen #}
 {% block title %}Presentar Examen: {{ exam.title }}{% endblock %}
 
 {% block content %}
+
+    {# --- MARCA DE AGUA DE SEGURIDAD --- #}
+    <div id="watermark-overlay">
+        {# 50 repeticiones para cubrir toda la pantalla #}
+        {% for _ in range(50) %} 
+            <div class="watermark-text">{{ current_user.username }} - ID: {{ current_user.id }}</div>
+        {% endfor %}
+    </div>
     
+    {# --- 1. ELEMENTOS FLOTANTES --- #}
     <div class="header-controls-group">
+        {# Botón de Ayuda (Timbre) #}
+        <button id="request-help-btn" class="btn help-btn" title="Solicitar hablar con el profesor">
+            🙋‍♂️ Hablar con Gus
+        </button>
+
         <a href="{{ url_for('new_report') }}" 
-            id="report-error-button" 
-            class="btn report-error-btn" 
-            target="_blank" 
-            title="Reportar un problema sin perder el examen">
-            🚨 Reportar Error
+           id="report-error-button" 
+           class="btn report-error-btn" 
+           target="_blank" 
+           title="Reportar un problema sin perder el examen">
+           🚨 Reportar Error
         </a>
 
         <div id="fixed-timer-container" class="fixed-timer-box">
-            <span>⏰ Tiempo Restante:</span>
-            <div id="countdown" class="countdown-display">03:00:00</div>
+            <span>⏰ Tiempo:</span>
+            <div id="countdown" class="countdown-display">Cargando...</div>
         </div>
     </div>
     
+    {# --- PANEL DE CHAT --- #}
     <div id="student-chat-panel" class="student-chat-panel">
         <div class="chat-panel-header">
             <strong>💬 Soporte en Vivo</strong>
             <span class="close-chat" id="close-chat-button">×</span>
         </div>
-        <div id="chat-messages" class="chat-messages">
-            </div>
+        <div id="chat-messages" class="chat-messages"></div>
         <form id="student-chat-form" class="student-chat-form">
             <input type="text" id="student-message-input" placeholder="Escribe tu consulta rápida..." required>
             <button type="submit" class="chat-send-btn">Enviar</button>
         </form>
     </div>
+
+    {# --- 2. OVERLAYS --- #}
+
+    {# Overlay de Bienvenida #}
     <div id="welcome-overlay" class="overlay">
         <div class="overlay-content">
             <h1 class="welcome-title">✨ ¡Momento de Brillar, {{ current_user.username }}! ✨</h1>
             <p class="exam-prep-text">Estás a punto de comenzar el examen **{{ exam.title }}**.</p>
-            <p class="exam-info-text">Tienes **3 horas (180 minutos)**. El tiempo comienza a correr apenas presiones el botón.</p>
-            <p class="exam-info-text">Concentración, calma y confianza. ¡Da tu mejor esfuerzo!</p>
+            <p class="exam-info-text">Tienes **3 horas (180 minutos)** aproximadamente.</p>
             
             <button id="start-exam-button" class="button start-btn">
                 Comenzar Examen Ahora 🚀
             </button>
+            
             <p class="warning-text">Recuerda: El envío es automático si el tiempo se agota.</p>
+            <p class="permission-note" style="margin-top: 10px; font-size: 0.9em; color: #3498db;">
+                ℹ️ Al hacer clic, el navegador te pedirá permiso para usar la cámara y el micrófono. 
+                <strong>Por favor, acepta para activar el monitoreo.</strong>
+            </p>
+        </div>
+    </div>
+
+    {# Overlay de Cancelación #}
+    <div id="cancellation-overlay" class="overlay" style="display: none;">
+        <div class="overlay-content cancel-content">
+            <h1 class="cancel-title">🚫 Examen Cancelado 🚫</h1>
+            <p class="cancel-info-text">Tu examen ha sido cancelado.</p>
+            <h3 class="reason-label">Motivo:</h3>
+            <div id="cancellation-reason-display" class="reason-box"></div>
+            
+            <a href="{{ url_for('new_report') }}" target="_blank" class="button" style="background-color: #e67e22; margin-right: 10px; text-decoration: none; display: inline-block; color: white; padding: 10px 20px; border-radius: 6px;">
+                🚨 Reportar Error
+            </a>
+
+            <button id="back-to-exams-button" class="button back-btn">Regresar al Inicio</button>
+        </div>
+    </div>
+
+    {# Modal de Confirmación de Envío #}
+    <div id="confirm-submit-modal" class="overlay" style="display: none; z-index: 10000;">
+        <div class="overlay-content" style="max-width: 450px; border-color: #f39c12;">
+            <h2 id="confirm-modal-text" class="confirm-title" style="color: #34495e; font-size: 1.5em; line-height: 1.4;">
+                ¿Estás seguro de entregar?
+            </h2>
+            <p>Si envías ahora, no podrás cambiar tus respuestas.</p>
+            <div class="modal-actions" style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+                <button id="confirm-submit-btn-yes" class="action-btn confirm-btn-yes">✅ Sí, Enviar</button>
+                <button id="confirm-submit-btn-no" class="action-btn confirm-btn-no">No, Cancelar</button>
+            </div>
         </div>
     </div>
     
+    {# Overlay de Rayo Congelante #}
+    <div id="freeze-overlay" class="overlay" style="display: none; background: rgba(255, 255, 255, 0.95); z-index: 20000;">
+        <div style="text-align: center; color: #2c3e50;">
+            <h1 style="font-size: 3em;">❄️ EXAMEN PAUSADO ❄️</h1>
+            <p style="font-size: 1.5em;">El administrador ha congelado tu pantalla momentáneamente.</p>
+            <i class="fas fa-snowflake fa-spin" style="font-size: 4em; color: #3498db; margin-top: 20px;"></i>
+        </div>
+    </div>
+    
+    {# 🔥 ELEMENTOS DE IA OCULTOS (Opacity 0.01) 🔥 #}
+    <video id="ai-video-feed" width="320" height="240" style="position:fixed; top:0; left:0; opacity:0.01; pointer-events:none; z-index:-1;" autoplay muted playsinline></video>
+    <canvas id="ai-canvas" style="position:fixed; top:0; left:0; opacity:0; pointer-events:none; z-index:-1;"></canvas>
+    
+    {# --- 3. CONTENIDO DEL EXAMEN --- #}
     <div class="exam-header-info">
         <h2 class="exam-title-main">📝 Examen: {{ exam.title }}</h2>
         <p class="exam-description">{{ exam.description }}</p>
+        <p class="exam-subject-header">Monitoreo de Seguridad: <span class="security-status-active">Activado</span></p>
+        
+        {# Fallback: Botón de inicio manual #}
+        <div id="manual-start-container" style="display: none; background: #f1c40f; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 2px solid #f39c12;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">⚠️ Iniciar Examen</h3>
+            <button id="manual-start-btn" class="button start-btn" style="padding: 10px 20px; font-size: 1em;">▶️ ACTIVAR CÁMARA E INICIAR</button>
+        </div>
     </div>
 
     <div class="container exam-container">
+        {# Mapa de Preguntas #}
+        <div class="question-map-container">
+            <h3>Mapa del Examen</h3>
+            <div class="question-map-grid fase-1" id="question-map-grid">
+                {% for q in exam.questions %}
+                    <a href="#q-{{ q.id }}" 
+                       class="question-map-btn {% if saved_answers.get(q.id) %}answered{% endif %}" 
+                       id="map-btn-{{ q.id }}"
+                       data-index="{{ loop.index0 }}"
+                       title="Pregunta {{ loop.index }}">
+                       {{ loop.index }}
+                    </a>
+                {% endfor %}
+            </div>
+            <div class="map-legend">
+                <span class="legend-item legend-unanswered"></span> Pendiente
+                <span class="legend-item legend-answered"></span> Respondida
+                <span class="legend-item legend-flagged"></span> Marcada
+            </div>
+        </div>
         
+        {# Formulario Principal #}
         <form method="POST" class="exam-form" id="exam-form">
+            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            {# 🔥 INPUT OCULTO PARA RRWEB (GRABACIÓN) 🔥 #}
+            <input type="hidden" name="recording_data" id="recording-data-input">
+
             {% for question in exam.questions %}
-                <div class="question-card">
+                <div class="question-card" 
+                     id="q-{{ question.id }}" 
+                     data-index="{{ loop.index0 }}" 
+                     style="{% if not loop.first %}display: none;{% endif %}"> 
                     
                     <p class="question-meta">
-                        <strong>Materia:</strong> <span class="subject-tag">{{ question.subject or 'General' }}</span>
-                        | <strong>Pregunta {{ loop.index }}</strong>
+                        <span><strong>Materia:</strong> <span class="subject-tag">{{ question.subject or 'General' }}</span> <strong>Pregunta {{ loop.index }} de {{ loop.length }}</strong></span>
                     </p>
-                    
                     <p class="question-text question-centered">{{ question.text }}</p>
-
                     {% if question.image_filename %}
                         <img src="{{ url_for('static', filename='images/' + question.image_filename) }}" 
-                             alt="Imagen de apoyo para la pregunta" 
-                             class="question-image">
+                             alt="Imagen de apoyo" 
+                             class="question-image"
+                             draggable="false"> 
                     {% endif %}
-
                     <div class="options-group">
-                        {% set options = [
-                            ('A', question.option_a), 
-                            ('B', question.option_b), 
-                            ('C', question.option_c), 
-                            ('D', question.option_d)
-                        ] %}
-                        
+                        {% set options = [('A', question.option_a), ('B', question.option_b), ('C', question.option_c), ('D', question.option_d)] %}
                         {% set q_name = 'q' + question.id | string %}
                         {% set saved_response = saved_answers.get(question.id, '') %}
-
                         {% for letter, option_text in options %}
                             {% if option_text %}
-                                <label class="option-label option-centered-text">
-                                    <input type="radio" 
-                                                    name="{{ q_name }}" 
-                                                    value="{{ letter }}" 
-                                                    required
-                                                    {% if saved_response == letter %}checked{% endif %}
-                                                    onchange="autoSave('{{ question.id }}', this.value)"> 
-                                    <div class="option-text-wrapper">
-                                        <strong>{{ letter }})</strong> {{ option_text }}
-                                    </div>
+                                <label class="option-label" style="justify-content: flex-start !important;">
+                                    <input type="radio" name="{{ q_name }}" value="{{ letter }}" required data-qid="{{ question.id }}" {% if saved_response == letter %}checked{% endif %}> 
+                                    <div class="option-text-wrapper" style="text-align: left !important; margin: 0 !important;"><strong>{{ letter }})</strong> {{ option_text }}</div>
                                 </label>
                             {% endif %}
                         {% endfor %}
                     </div>
-                    
+                    <div class="question-nav-buttons">
+                        {% if not loop.last %}
+                            <button type="button" class="button flag-and-next-btn" data-qid="{{ question.id }}">🚩 Marcar y Siguiente</button>
+                            <button type="button" class="button next-question-btn">Siguiente Pregunta →</button>
+                        {% else %}
+                            <button type="button" class="button review-mode-btn">🔄 Ir a Revisión (🚩)</button>
+                            <button type="button" class="button finish-directly-btn">✅ Finalizar y Entregar Ahora</button>
+                        {% endif %}
+                    </div>
                 </div>
             {% endfor %}
 
-            <button type="submit" class="button submit-btn">✅ Enviar Examen y Calificar</button>
+            <div id="review-mode-info" style="display: none;">
+                <h3>Modo de Revisión</h3>
+                <p>Estás en modo de revisión. Usa el "Mapa del Examen" para saltar a las preguntas marcadas (🚩). Presiona entregar cuando estés listo.</p>
+            </div>
+            
+            <button type="submit" class="button submit-btn" id="final-submit-button" style="display: none;">✅ Entregar Examen y Calificar</button>
         </form>
-
         <a href="{{ url_for('exams_list') }}" class="btn back-nav-btn">⬅ Volver a la Lista de Exámenes</a>
-
     </div>
     
+    {# --- LIBRERÍAS JS --- #}
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    {# LIBRERÍAS DE IA #}
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script> 
+    
+    {# GRABACIÓN DE SESIÓN (RRWEB) #}
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+    
     <script>
-        // 🔑 VARIABLES DE TIEMPO (desde Flask) 🔑
-        let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}"); 
-        let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}");
-        let DURATION_SEC = (3 * 60 * 60) + TIME_ADDED_SEC; 
-        
-        const examForm = document.getElementById('exam-form');
-        const countdownDisplay = document.getElementById('countdown');
-        const overlay = document.getElementById('welcome-overlay');
-        const startButton = document.getElementById('start-exam-button');
-        let timerInterval = null; 
-        
-        // 🌟 BANDERA DE SEGURIDAD GLOBAL 🌟
-        let isExamActive = START_TIME_UTC_SEC > 0;
-        let violationReported = false; // Bandera para reportar solo una vez por cambio de foco/visibilidad.
-
-        // ====================================================================
-        // 1. CHAT EN VIVO Y NOTIFICACIONES INSTANTÁNEAS (Código 1)
-        // ====================================================================
-        const currentUserId = parseInt("{{ current_user.id }}");
-        const examId = parseInt("{{ exam.id }}");
-        const username = "{{ current_user.username }}";
-        const socket = io.connect(); 
-        
-        const chatPanel = document.getElementById('student-chat-panel');
-        const chatMessagesWindow = document.getElementById('chat-messages');
-        const closeChatButton = document.getElementById('close-chat-button');
-        const studentChatForm = document.getElementById('student-chat-form');
-        const studentMessageInput = document.getElementById('student-message-input');
-
-
-        // Evento 1.1: Conexión Exitosa - Unir a la sala privada
-        socket.on('connect', function() {
-            socket.emit('join_room', { user_id: currentUserId, username: username });
-            console.log(`SocketIO: Conectado. Unido al room: ${currentUserId}`);
-        });
-
-        // Evento 1.2: Mensaje Recibido del Admin (Muestra el panel)
-        socket.on('chat_notification', function(data) {
-            if (data.sender === 'Admin') {
-                addChatMessage(data.message, 'admin');
-                chatPanel.style.display = 'flex';
-            }
-        });
-        
-        // 🌟 NUEVO EVENTO 1.3: Recibir Actualización de Tiempo del Admin (Añadir Tiempo) 🌟
-        socket.on('time_update', function(data) {
-            const newTotalExtraSec = data.extra_time_sec;
-            const addedTimeDiff = newTotalExtraSec - TIME_ADDED_SEC;
-            
-            TIME_ADDED_SEC = newTotalExtraSec;
-            DURATION_SEC = (3 * 60 * 60) + TIME_ADDED_SEC;
-
-            const addedMinutes = Math.round(addedTimeDiff / 60);
-            showFloatingNotification(`🔔 Gus : Se te añadieron ${addedMinutes} minutos extra por un problema técnico.`, 'info');
-            
-            if (timerInterval || START_TIME_UTC_SEC > 0) {
-                updateCountdown();
-                if (!timerInterval) {
-                    timerInterval = setInterval(updateCountdown, 1000);
-                }
-            }
-        });
-        
-        // 🔑 Evento 1.4: Cierre Remoto del Chat por el Admin (Aviso de chat)
-        socket.on('close_chat_signal', function(data) {
-            addChatMessage(`**Soporte Finalizado:** ${data.msg}`, 'system');
-            
-            chatPanel.style.opacity = '0';
-            setTimeout(() => { chatPanel.style.display = 'none'; chatPanel.style.opacity = '1'; }, 500); 
-
-            studentMessageInput.disabled = true;
-            document.querySelector('.chat-send-btn').disabled = true;
-            chatMessagesWindow.innerHTML = '';
-        });
-
-
-        // 🔑 Evento 1.5: Envío de Mensajes del Alumno 🔑
-        studentChatForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const message = studentMessageInput.value.trim();
-
-            if (message && !studentMessageInput.disabled) {
-                socket.emit('send_message_to_admin', { 
-                    target_admin_id: 1, // Enviamos el mensaje al ID 1 (Admin)
-                    message: message
+        document.addEventListener('DOMContentLoaded', function() {
+            // =================================================================
+            // 0. GRABACIÓN DE SESIÓN (RRWEB)
+            // =================================================================
+            let eventsMatrix = [];
+            if (typeof rrweb !== 'undefined') {
+                rrweb.record({
+                    emit(event) { eventsMatrix.push(event); },
+                    maskAllInputs: false
                 });
-
-                addChatMessage(message, 'student');
-                studentMessageInput.value = '';
-                studentMessageInput.focus();
             }
-        });
 
-        // 1.6: Cerrar el panel de chat manualmente por el alumno
-        closeChatButton.addEventListener('click', function() {
-            chatPanel.style.display = 'none';
-        });
+            // =================================================================
+            // 1. CONFIGURACIÓN Y VARIABLES
+            // =================================================================
+            let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}"); 
+            let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}"); 
+            
+            let BASE_DURATION_SEC = 3 * 60 * 60; // 3 Horas
+            let DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC; 
+            
+            let IS_EXAM_CANCELLED = "{{ is_cancelled | lower }}" === "true"; 
+            let CANCELLATION_REASON = "{{ cancellation_reason | default('') }}";
+            const EXAM_ID = parseInt("{{ exam.id }}");
+            const currentUserId = parseInt("{{ current_user.id }}");
+            const username = "{{ current_user.username }}";
+            const SAVE_ANSWER_URL = '{{ url_for("save_answer") }}';
+            const START_TIMER_URL = '{{ url_for("take_exam", exam_id=exam.id) }}';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-        // 1.7: Función para añadir mensajes a la ventana del chat
-        function addChatMessage(msg, type) {
-            const timestamp = (new Date()).toLocaleTimeString();
-            const sender = type === 'admin' ? 'Admin' : 'Yo';
+            // Referencias DOM
+            const examForm = document.getElementById('exam-form');
+            const countdownDisplay = document.getElementById('countdown');
+            const welcomeOverlay = document.getElementById('welcome-overlay');
+            const cancellationOverlay = document.getElementById('cancellation-overlay');
+            const backToExamsButton = document.getElementById('back-to-exams-button');
+            const reportErrorButton = document.getElementById('report-error-button');
+            const requestHelpBtn = document.getElementById('request-help-btn');
+            const startButton = document.getElementById('start-exam-button');
+            const manualStartBtn = document.getElementById('manual-start-btn');
+            const manualStartContainer = document.getElementById('manual-start-container');
+            const mapContainer = document.getElementById('question-map-grid');
+            const finalSubmitButton = document.getElementById('final-submit-button');
+            const reviewModeInfo = document.getElementById('review-mode-info');
+            const studentChatForm = document.getElementById('student-chat-form');
+            const studentMessageInput = document.getElementById('student-message-input');
+            const closeChatButton = document.getElementById('close-chat-button');
+            const questionCards = document.querySelectorAll('.question-card');
+            const totalQuestions = questionCards.length;
             
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('chat-message', type + '-chat-message');
-            
-            if (type === 'system') {
-                msgDiv.innerHTML = msg; 
-            } else {
-                msgDiv.innerHTML = `<strong>${sender} (${timestamp}):</strong> ${msg}`;
-            }
-            
-            chatMessagesWindow.appendChild(msgDiv);
-            chatMessagesWindow.scrollTop = chatMessagesWindow.scrollHeight;
-        }
+            // Estado
+            let currentQuestionIndex = 0;
+            let isReportingError = false; 
+            let isRequestingPermissions = false; 
+            let timerInterval = null; 
+            let isExamActive = START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED;
+            let violationReported = false; 
+            let isSubmitting = false; 
 
-        // 1.8: Función de Notificación Flotante (se mantiene solo para el dashboard/reportes)
-        function showFloatingNotification(message) {
-            const container = document.getElementById('flash-container');
-            if (!container) return; 
-
-            const notification = document.createElement('div');
-            notification.classList.add('flash-message', 'flash-info');
+            let proctoringClicks = [];
+            let questionTimeSpent = {}; 
+            let lastTimeUpdate = Date.now();
+            const REPORT_INTERVAL = 30000; 
+            let proctoringIntervalId = null; 
             
-            notification.innerHTML = message;
-            
-            container.appendChild(notification);
+            // Variables IA
+            let audioStream = null;
+            let isAudioProcessing = false;
+            let isFaceProcessing = false;
+            let objectDetector = null; 
+            let isObjectProcessing = false;
 
-            setTimeout(function() {
-                notification.style.opacity = '0';
-                setTimeout(function() {
-                    notification.remove();
-                }, 500); 
-            }, 10000); 
-        }
-        
-        // ====================================================================
-        // 2. LÓGICA DE SEGURIDAD ANTI-TRAMPAS (Código ACTUALIZADO)
-        // ====================================================================
-        
-        /**
-         * Envía un evento de violación al servidor a través de SocketIO si el examen está activo.
-         * Utiliza la bandera 'violationReported' para evitar spam de logs.
-         * @param {string} violationType - El tipo de violación ('TAB_CHANGE' o 'WINDOW_BLUR').
-         */
-        function reportViolation(violationType) {
-            if (isExamActive && !violationReported && socket.connected) {
+            // 🔥 CONFIGURACIÓN SENSIBLE AJUSTADA 🔥
+            const AUDIO_THRESHOLD = 40; // Escala 0-255. 40 es susurro fuerte/voz normal baja.
+            const VOICE_THRESHOLD_COUNT = 20; // Necesita 20 muestreos seguidos para ser voz (ignora clics)
+            const PHONE_CONFIDENCE = 0.30; // 30% de confianza (Detecta rápido)
+            
+            let voiceDetectedStrike = 0;
+            let faceDetectedStrike = 0;
+            let phoneDetectedStrike = 0; 
+            let multipleFaceStrike = 0;
+            let gazeDetectedStrike = 0; 
+
+            // =================================================================
+            // 2. SOCKET IO
+            // =================================================================
+            const socket = io.connect(window.location.origin, { transports: ['websocket', 'polling'] });
+            
+            socket.on('connect', function() {
+                socket.emit('join_room', { user_id: currentUserId, username: username });
+                if (isExamActive && !proctoringIntervalId) {
+                    proctoringIntervalId = setInterval(sendProctoringData, REPORT_INTERVAL);
+                    document.addEventListener('click', captureClick); 
+                    startProctoringMonitoring(); 
+                }
+            });
+
+            socket.on('chat_notification', function(data) { if (data.sender === 'Admin') { addChatMessage(data.message, 'admin'); document.getElementById('student-chat-panel').style.display = 'flex'; } });
+            socket.on('time_update', function(data) { 
+                const newTotalExtraSec = data.extra_time_sec; 
+                TIME_ADDED_SEC = newTotalExtraSec; 
+                DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC; 
+                if (timerInterval || START_TIME_UTC_SEC > 0) { 
+                    window.updateCountdown(); 
+                    if (!timerInterval) timerInterval = setInterval(window.updateCountdown, 1000); 
+                } 
+            });
+            socket.on('exam_cancelled_alert', function(data) { if (data.exam_id === EXAM_ID) { IS_EXAM_CANCELLED = true; CANCELLATION_REASON = data.reason; stopExamAndShowCancellation(CANCELLATION_REASON); } });
+            socket.on('close_chat_signal', function(data) { 
+                addChatMessage(`**Soporte Finalizado:** ${data.msg}`, 'system'); 
+                document.getElementById('student-chat-panel').style.opacity = '0'; 
+                setTimeout(() => { document.getElementById('student-chat-panel').style.display = 'none'; document.getElementById('student-chat-panel').style.opacity = '1'; }, 500); 
+            });
+
+            // COMANDOS DE ADMIN
+            socket.on('execute_repair', function(data) {
+                if (data.command === 'reload') { showFloatingNotification("♻️ Reiniciando...", "info"); setTimeout(() => window.location.reload(), 1500); }
+                else if (data.command === 'unlock') { 
+                    document.getElementById('cancellation-overlay').style.display = 'none';
+                    document.querySelector('.exam-header-info').style.display = 'block';
+                    document.querySelector('.header-controls-group').style.display = 'flex';
+                    examForm.style.display = 'block';
+                    isExamActive = true; IS_EXAM_CANCELLED = false;
+                    startProctoringMonitoring();
+                    window.updateCountdown(); 
+                    if (!timerInterval) timerInterval = setInterval(window.updateCountdown, 1000);
+                    showFloatingNotification("🔓 Desbloqueado.", "success"); 
+                }
+                else if (data.command === 'speak') { 
+                    const msg = new SpeechSynthesisUtterance(data.payload); msg.lang = 'es-MX'; window.speechSynthesis.speak(msg); showFloatingNotification("📢 ADMIN: " + data.payload, "info"); 
+                }
+                else if (data.command === 'freeze') { const f = document.getElementById('freeze-overlay'); f.style.display = (f.style.display === 'block' || f.style.display === 'flex') ? 'none' : 'flex'; }
+                else if (data.command === 'snapshot') { html2canvas(document.body).then(c => { socket.emit('exam_violation', { user_id: currentUserId, username: username, exam_id: EXAM_ID, type: 'SOLICITUD_MANUAL_FOTO', screenshot: c.toDataURL('image/jpeg', 0.5) }); }); }
+            });
+
+            // Chat Logic
+            studentChatForm.addEventListener('submit', function(e) { e.preventDefault(); const message = studentMessageInput.value.trim(); if (message && !studentMessageInput.disabled) { socket.emit('send_message_to_admin', { target_admin_id: 1, message: message }); addChatMessage(message, 'student'); studentMessageInput.value = ''; studentMessageInput.focus(); } });
+            closeChatButton.addEventListener('click', () => document.getElementById('student-chat-panel').style.display = 'none');
+            function addChatMessage(msg, type) { const div = document.createElement('div'); div.className = `chat-message ${type}-chat-message`; div.innerHTML = msg; const win = document.getElementById('chat-messages'); win.appendChild(div); win.scrollTop = win.scrollHeight; }
+
+            // =================================================================
+            // 3. LÓGICA DE IA (OPTIMIZADA)
+            // =================================================================
+            function processAudioStream(stream) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioContext();
+                const analyser = ctx.createAnalyser();
+                const mic = ctx.createMediaStreamSource(stream);
+                const proc = ctx.createScriptProcessor(2048, 1, 1);
+                mic.connect(analyser); analyser.connect(proc); proc.connect(ctx.destination);
+                const data = new Uint8Array(analyser.frequencyBinCount);
                 
-                socket.emit('exam_violation', {
-                    user_id: currentUserId,
-                    username: username,
-                    exam_id: examId,
-                    type: violationType // Enviamos el código en inglés (WINDOW_BLUR/TAB_CHANGE)
+                proc.onaudioprocess = () => {
+                    if (!isExamActive || isSubmitting) return;
+                    analyser.getByteFrequencyData(data);
+                    let sum = 0;
+                    for(let i = 0; i < data.length; i++) sum += data[i];
+                    const avg = sum / data.length;
+
+                    // 🔥 NUEVA LÓGICA DE AUDIO: PROMEDIO DIRECTO (0-255) 🔥
+                    if (avg > AUDIO_THRESHOLD) { 
+                        voiceDetectedStrike++; 
+                        // Requiere 20 frames de ruido continuo para ignorar un clic
+                        if (voiceDetectedStrike > VOICE_THRESHOLD_COUNT) { 
+                            reportViolation('AI_VOICE_DETECTED'); 
+                            voiceDetectedStrike = 0; 
+                        } 
+                    } else { 
+                        // Si baja el volumen, reseteamos el contador rápido
+                        voiceDetectedStrike = 0; 
+                    }
+                };
+            }
+
+            async function runFaceDetection() {
+                const video = document.getElementById('ai-video-feed');
+                try {
+                    await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
+                    await faceapi.nets.faceLandmark68Net.loadFromUri('/static/models');
+                    
+                    setInterval(async () => {
+                        if (!isExamActive || video.paused || video.readyState < 2) return;
+                        const dets = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })).withFaceLandmarks();
+                        
+                        if (dets.length === 0) { 
+                            faceDetectedStrike++; 
+                            if (faceDetectedStrike >= 3) { reportViolation('AI_NO_FACE'); faceDetectedStrike = 0; } 
+                            gazeDetectedStrike = 0; 
+                        } else { 
+                            faceDetectedStrike = 0; 
+                            const lm = dets[0].landmarks;
+                            const nose = lm.getNose()[3];
+                            const jaw = lm.getJawOutline();
+                            const w = jaw[16].x - jaw[0].x;
+                            const d = nose.x - jaw[0].x;
+                            const r = d/w;
+                            if (r < 0.25 || r > 0.75) {
+                                gazeDetectedStrike++;
+                                if (gazeDetectedStrike >= 3) { reportViolation('AI_GAZE_DESVIATED'); gazeDetectedStrike = 0; }
+                            } else { gazeDetectedStrike = 0; }
+                        }
+                        if (dets.length > 1) { 
+                             multipleFaceStrike++; 
+                             if (multipleFaceStrike > 3) { reportViolation('AI_MULTIPLE_FACES'); multipleFaceStrike = 0; } 
+                        } else { multipleFaceStrike = 0; }
+                    }, 1500);
+                } catch(e) { console.error("FaceAPI Error:", e); }
+            }
+
+            async function runObjectDetection() {
+                const video = document.getElementById('ai-video-feed');
+                try {
+                    objectDetector = await cocoSsd.load();
+                    isObjectProcessing = true;
+                    // 🔥 ESCANEO RÁPIDO: 250ms 🔥
+                    setInterval(async () => {
+                        if (!isExamActive || !isObjectProcessing || video.paused || video.readyState < 2) return;
+                        const preds = await objectDetector.detect(video);
+                        const phone = preds.find(p => (p.class === 'cell phone' || p.class === 'remote') && p.score > PHONE_CONFIDENCE);
+                        if (phone) { 
+                            phoneDetectedStrike++; 
+                            // Detecta a la segunda coincidencia (0.5s)
+                            if (phoneDetectedStrike >= 2) { reportViolation('AI_PROHIBITED_OBJECT_PHONE'); phoneDetectedStrike = 0; } 
+                        } else { phoneDetectedStrike = 0; }
+                    }, 250);
+                } catch(e) { console.error("CocoSSD Error:", e); }
+            }
+
+            function startProctoringMonitoring() {
+                if (isAudioProcessing || !isExamActive) return;
+                isRequestingPermissions = true;
+                navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: true })
+                .then(stream => {
+                    isRequestingPermissions = false;
+                    isAudioProcessing = true;
+                    const video = document.getElementById('ai-video-feed');
+                    video.srcObject = stream;
+                    video.play().then(() => {
+                        processAudioStream(stream);
+                        runFaceDetection();
+                        runObjectDetection();
+                        showFloatingNotification("🤖 Vigilante AI INICIADO.", "success");
+                    }).catch(err => console.error("Video Play Error:", err));
+                }).catch(e => {
+                    isRequestingPermissions = false;
+                    showFloatingNotification("⚠️ Necesitas dar permisos de cámara.", "warning");
                 });
+            }
+
+            function reportViolation(type) {
+                if (isReportingError || isRequestingPermissions || !isExamActive || violationReported) return;
+                violationReported = true;
+                let msg = "Anomalía detectada.";
+                const sign = " ATTE: Gus";
+
+                if (type === 'AI_PROHIBITED_OBJECT_PHONE') msg = "Uso de celular detectado. Guarda el celular si no se cancelara el examen." + sign;
+                else if (type === 'AI_NO_FACE') msg = "Manten tu mirada al centro de la pantalla, no voltes a otros lados" + sign;
+                else if (type === 'AI_GAZE_DESVIATED') msg = "Manten tu mirada al centro de la pantalla, no voltes a otros lados" + sign; 
+                else if (type === 'AI_VOICE_DETECTED') msg = "Ruido fuerte detectado, guarda silencio o el examen se va a cancelar:" + sign;
+                else if (type === 'TAB_CHANGE' || type === 'WINDOW_BLUR') msg = "Deja de cambiar de pestaña , si no el examen se te va a cancelar.";
+                else if (type === 'AI_MULTIPLE_FACES') msg = "Se detectaron múltiples personas. Solo tú puedes estar." + sign;
                 
-                violationReported = true; 
-                console.warn(`[SEGURIDAD] Violación detectada: ${violationType}. Notificando a Admin.`);
-                
-                // Opcional: Mostrar advertencia al alumno
-                // Usamos un alert temporalmente, pero se recomienda un modal personalizado
-                alert(`ADVERTENCIA: Se ha detectado un cambio de foco. Esto será notificado al administrador.`);
-            }
-        }
-
-        // 2.1: Detección de Foco Perdido (WINDOW_BLUR)
-        window.addEventListener('blur', () => {
-             // Solo reportamos si la ventana se desenfoca
-             reportViolation('WINDOW_BLUR');
-        });
-
-        // 2.2: Detección de Tab Hidden (TAB_CHANGE)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // El usuario ha cambiado de pestaña o minimizado el navegador
-                reportViolation('TAB_CHANGE');
-            } else {
-                // El usuario ha vuelto a la pestaña (restablecer el reporte)
-                violationReported = false; 
-            }
-        });
-        
-        // 2.3: Restablecer la bandera al volver al foco de la ventana
-        window.addEventListener('focus', function() {
-             violationReported = false; // Restablecer bandera al volver
-        });
-        
-        // ====================================================================
-        // 3. LÓGICA DE AUTO-SAVE (Código 1)
-        // ====================================================================
-        function autoSave(questionId, responseValue) {
-            if (!isExamActive) {
-                console.warn("No se puede guardar: El examen aún no ha comenzado o ya terminó.");
-                return;
+                showFloatingNotification(msg, "danger");
+                html2canvas(document.body, {logging: false}).then(c => {
+                    socket.emit('exam_violation', { user_id: currentUserId, username: username, exam_id: EXAM_ID, type: type, screenshot: c.toDataURL('image/jpeg', 0.4) });
+                });
+                setTimeout(() => violationReported = false, 8000);
             }
 
-            fetch('{{ url_for("save_answer") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    question_id: questionId,
-                    response: responseValue
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-                console.log(`Auto-Save Q${questionId}: Respuesta guardada.`);
-            })
-            .catch(error => {
-                console.error('Error de Guardado Automático:', error);
+            // Listeners de UI
+            if(reportErrorButton) reportErrorButton.addEventListener('click', () => { isReportingError = true; setTimeout(() => isReportingError = false, 15000); });
+            if(requestHelpBtn) requestHelpBtn.addEventListener('click', () => { 
+                isReportingError = true; socket.emit('student_requests_chat'); 
+                requestHelpBtn.textContent = "✅ Enviado"; requestHelpBtn.disabled = true; 
+                showFloatingNotification("Has solicitado ayuda. Espera a que Gus te contacte.", "info"); 
+                setTimeout(() => { requestHelpBtn.textContent = "🙋‍♂️ Hablar con Gus"; requestHelpBtn.disabled = false; isReportingError = false; }, 30000); 
             });
-        }
-        
-        // ====================================================================
-        // 4. LÓGICA DE CRONÓMETRO Y CONTROL (Código 1)
-        // ====================================================================
-        function formatTime(totalSeconds) {
-            if (totalSeconds < 0) totalSeconds = 0;
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
+            document.addEventListener('visibilitychange', () => { if (document.hidden && !isReportingError) reportViolation('TAB_CHANGE'); });
+            window.addEventListener('blur', () => { if (!isReportingError && !isRequestingPermissions) reportViolation('WINDOW_BLUR'); });
 
-            const pad = num => String(num).padStart(2, '0');
-            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-        }
-
-        function updateCountdown() {
-            const currentTimeSec = Math.floor(Date.now() / 1000);
-            
-            if (!isExamActive) {
-                clearInterval(timerInterval);
-                countdownDisplay.textContent = formatTime(DURATION_SEC); 
-                return;
-            }
-
-            const elapsedTimeSec = currentTimeSec - START_TIME_UTC_SEC;
-            let remainingTimeSec = DURATION_SEC - elapsedTimeSec;
-
-            if (remainingTimeSec <= 0) {
-                remainingTimeSec = 0;
-                countdownDisplay.textContent = "00:00:00";
-                
-                document.querySelector('.submit-btn').disabled = true;
-                
-                setTimeout(() => {
-                    alert("¡El tiempo ha terminado! El examen será enviado automáticamente.");
-                    examForm.submit(); 
-                }, 100);
-
-                clearInterval(timerInterval);
-                isExamActive = false; // Detener la seguridad
-                return; 
-            }
-
-            countdownDisplay.textContent = formatTime(remainingTimeSec);
-            
-            // Lógica de cambio de color
-            if (remainingTimeSec <= 600) { 
-                countdownDisplay.style.backgroundColor = '#e74c3c'; 
-                countdownDisplay.style.color = 'white';
-            } else if (remainingTimeSec <= 1800) { 
-                 countdownDisplay.style.backgroundColor = '#f1c40f'; 
-                 countdownDisplay.style.color = '#333';
-            } else {
-                 countdownDisplay.style.backgroundColor = ''; 
-                 countdownDisplay.style.color = 'white'; 
-            }
-        }
-        
-        function startExam() {
-            fetch('{{ url_for("take_exam", exam_id=exam.id) }}', { 
-                method: 'POST',
-                body: new URLSearchParams({ action: 'start_timer_now' }), 
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            }).then(response => {
-                if (response.ok) {
-                    // Al recibir la confirmación del servidor, iniciamos el contador
-                    START_TIME_UTC_SEC = Math.floor(Date.now() / 1000); 
-                    isExamActive = true; // Activar la seguridad al iniciar el examen
-
-                    overlay.style.opacity = 0;
-                    setTimeout(() => {
-                        overlay.style.display = 'none';
-                        updateCountdown();
-                        timerInterval = setInterval(updateCountdown, 1000);
-                    }, 500);
-                } else {
-                    throw new Error('Server response not OK');
-                }
-            })
-            .catch(error => {
-                console.error("Error al iniciar el temporizador en el servidor:", error);
-                alert("Error al iniciar el examen. Por favor, recarga la página.");
+            // Navegación y AutoSave
+            let currentQ = 0;
+            function showQ(idx) { if(questionCards[currentQ]) questionCards[currentQ].style.display='none'; if(questionCards[idx]) { questionCards[idx].style.display='block'; currentQ=idx; } }
+            examForm.addEventListener('click', (e) => {
+                if(e.target.classList.contains('next-question-btn')) { e.preventDefault(); if(currentQ < totalQuestions-1) showQ(currentQ+1); }
+                if(e.target.classList.contains('flag-and-next-btn')) { e.preventDefault(); const qid = e.target.dataset.qid; toggleFlag(qid); if(currentQ < totalQuestions-1) showQ(currentQ+1); }
+                if(e.target.classList.contains('review-mode-btn')) { e.preventDefault(); mapContainer.classList.remove('fase-1'); mapContainer.classList.add('fase-2'); reviewModeInfo.style.display='block'; finalSubmitButton.style.display='block'; document.querySelector('.question-map-container').scrollIntoView({behavior:'smooth'}); }
+                if(e.target.classList.contains('finish-directly-btn') || e.target.id === 'final-submit-button') { e.preventDefault(); showConfirmSubmitModal(true); }
+                if(e.target.type === 'radio') { autoSave(e.target.dataset.qid, e.target.value); }
             });
-        }
-        
-        // LÓGICA DE INICIO Y VERIFICACIÓN AL CARGAR
-        // Verificamos si hay tiempo de inicio guardado
-        if (START_TIME_UTC_SEC === 0) {
-            // Caso 1: Primer intento o sesión reiniciada. Muestra el overlay y el tiempo completo.
-            overlay.style.display = 'flex';
-            updateCountdown(); 
-            if (startButton) {
-                startButton.addEventListener('click', startExam);
-            }
-        } else {
-            // Caso 2: Recarga o Sesión activa. Oculta el overlay e inicia el cronómetro.
-            const currentTimeSec = Math.floor(Date.now() / 1000);
-            const remainingTime = DURATION_SEC - (currentTimeSec - START_TIME_UTC_SEC);
+            mapContainer.addEventListener('click', (e) => { e.preventDefault(); if(mapContainer.classList.contains('fase-2') && e.target.classList.contains('flagged')) { showQ(parseInt(e.target.dataset.index)); } });
+
+            function captureClick(e) { if (!isExamActive) return; proctoringClicks.push({x:e.clientX,y:e.clientY,t:Date.now()}); }
+            function sendProctoringData() { socket.emit('proctoring_update', {exam_id: EXAM_ID, time_data: questionTimeSpent, click_data: proctoringClicks}); proctoringClicks=[]; }
+            function autoSave(qid, val) { if(!isExamActive) return; fetch(SAVE_ANSWER_URL, {method:'POST', headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken}, body:JSON.stringify({question_id:qid, response:val})}).then(() => { const b = document.getElementById('map-btn-'+qid); if(b) { b.classList.add('answered'); b.classList.remove('flagged'); } }); }
             
-            // Ocultamos el overlay si estamos en una sesión ya iniciada
-            overlay.style.display = 'none';
-            
-            if (remainingTime <= 0) {
-                updateCountdown(); // Muestra 00:00:00 y bloquea
-            } else {
-                updateCountdown(); 
-                timerInterval = setInterval(updateCountdown, 1000);
+            // 🔥 FUNCIÓN SUBMIT REPARADA 🔥
+            function submitExamFinally(submissionType = 'manual') {
+                isSubmitting = true; 
+                isExamActive = false; 
+                
+                if (proctoringIntervalId) clearInterval(proctoringIntervalId);
+                sendProctoringData(true); 
+                if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+                
+                // Guardar video
+                const recordingInput = document.getElementById('recording-data-input');
+                if (recordingInput) { recordingInput.value = JSON.stringify(eventsMatrix); }
+
+                const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'submission_type'; inp.value = submissionType; examForm.appendChild(inp); 
+                
+                // 🔥 FIX: Forzar validación y envío aunque haya campos required vacíos (para enviar lo que haya)
+                examForm.setAttribute('novalidate', 'true'); 
+                examForm.submit(); 
             }
+
+            function formatTime(s) { if(s<0)s=0; const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60; return `${h}:${m.toString().padStart(2,'0')}:${sc.toString().padStart(2,'0')}`; }
+            
+            // 🔥 FIX: CRONÓMETRO NO SE QUEDA EN 1 SEGUNDO 🔥
+            window.updateCountdown = function() { 
+                const now = Math.floor(Date.now()/1000); 
+                if(!isExamActive) { clearInterval(timerInterval); return; } 
+                const left = DURATION_SEC - (now - START_TIME_UTC_SEC); 
+                
+                // Si quedan 1 segundo o menos, enviamos
+                if(left <= 1) { 
+                    countdownDisplay.textContent = "00:00:00";
+                    submitExamFinally('auto'); 
+                    return; 
+                } 
+                countdownDisplay.textContent = formatTime(left); 
+            };
+
+            const FLAG_STORAGE_KEY = `flaggedQuestions_exam_${EXAM_ID}`;
+            function loadFlaggedQuestions() { const f=localStorage.getItem(FLAG_STORAGE_KEY); return f?JSON.parse(f):[]; }
+            function saveFlaggedQuestions(arr) { localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(arr)); }
+            function toggleFlag(qid) {
+                let f = loadFlaggedQuestions(); const idx = f.indexOf(qid);
+                const btn = document.getElementById(`map-btn-${qid}`);
+                const card = document.getElementById(`q-${qid}`);
+                if(idx > -1) { f.splice(idx, 1); if(btn) btn.classList.remove('flagged'); if(card) card.classList.remove('flagged'); } 
+                else { f.push(qid); if(btn) { btn.classList.add('flagged'); btn.classList.remove('answered'); } if(card) card.classList.add('flagged'); }
+                saveFlaggedQuestions(f);
+            }
+            loadFlaggedQuestions().forEach(qid => { const btn = document.getElementById(`map-btn-${qid}`); const card = document.getElementById(`q-${qid}`); if(btn && !btn.classList.contains('answered')) btn.classList.add('flagged'); if(card) card.classList.add('flagged'); });
+
+            const confirmModal = document.getElementById('confirm-submit-modal');
+            const btnYes = document.getElementById('confirm-submit-btn-yes');
+            const btnNo = document.getElementById('confirm-submit-btn-no');
+            window.showConfirmSubmitModal = function() { isSubmitting=true; if(timerInterval) { clearInterval(timerInterval); timerInterval=null; } confirmModal.style.display='flex'; };
+            btnYes.addEventListener('click', () => submitExamFinally('manual'));
+            btnNo.addEventListener('click', () => { confirmModal.style.display='none'; isSubmitting=false; if(isExamActive) timerInterval=setInterval(window.updateCountdown, 1000); });
+            function stopExamAndShowCancellation(reason) { isExamActive = false; clearInterval(timerInterval); examForm.style.display = 'none'; document.querySelector('.exam-header-info').style.display = 'none'; document.querySelector('.header-controls-group').style.display = 'none'; document.getElementById('cancellation-reason-display').textContent = reason; cancellationOverlay.style.display = 'flex'; }
+
+            function startExam() {
+                startProctoringMonitoring();
+                fetch(START_TIMER_URL, { method: 'POST', body: new URLSearchParams({ action: 'start_timer_now' }), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken } })
+                .then(r => { if(r.ok) window.location.reload(); });
+            }
+
+            if (START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED) {
+                isExamActive = true;
+                if(examForm) examForm.style.display = 'block';
+                if(manualStartContainer) manualStartContainer.style.display = 'none';
+                if(welcomeOverlay) welcomeOverlay.style.display = 'none';
+                window.updateCountdown();
+                timerInterval = setInterval(window.updateCountdown, 1000);
+                setTimeout(startProctoringMonitoring, 1000);
+                if(questionCards[0]) questionCards[0].style.display='block';
+                mapContainer.classList.add('fase-1');
+            } else if (START_TIME_UTC_SEC === 0) {
+                if(examForm) examForm.style.display = 'none';
+                if(welcomeOverlay) welcomeOverlay.style.display = 'flex';
+                if(startButton) startButton.addEventListener('click', startExam);
+                if(manualStartContainer) manualStartContainer.style.display = 'block'; 
+                if(manualStartBtn) manualStartBtn.addEventListener('click', startExam);
+            }
+            if(IS_EXAM_CANCELLED) { stopExamAndShowCancellation(CANCELLATION_REASON); welcomeOverlay.style.display='none'; }
+        });
+
+        // 🔥🔥 ADVERTENCIAS CHIQUITAS Y BONITAS (BOTTOM-LEFT) 🔥🔥
+        function showFloatingNotification(msg, type) {
+            // Crear contenedor si no existe
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = "position: fixed; bottom: 20px; left: 20px; z-index: 10005; display: flex; flex-direction: column-reverse; gap: 10px; pointer-events: none;";
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            let bgColor = 'rgba(255, 255, 255, 0.95)';
+            let borderColor = '#3498db';
+            let icon = 'ℹ️';
+
+            if(type === 'danger') { borderColor = '#e74c3c'; icon = '⚠️'; }
+            if(type === 'success') { borderColor = '#2ecc71'; icon = '✅'; }
+
+            toast.style.cssText = `
+                pointer-events: auto;
+                background: ${bgColor};
+                color: #333;
+                padding: 12px 18px;
+                border-radius: 50px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border-left: 5px solid ${borderColor};
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                opacity: 0;
+                transform: translateX(-20px);
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                max-width: 300px;
+            `;
+
+            toast.innerHTML = `<span style="font-size: 1.2em;">${icon}</span> <span>${msg}</span>`;
+            container.appendChild(toast);
+
+            // Animación Entrada
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(0)';
+            });
+
+            // Animación Salida
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-20px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 5000);
         }
     </script>
     
     <style>
-        /* --- POSICIONAMIENTO GLOBAL DE ELEMENTOS SUPERIORES --- */
+        /* --- ESTILOS GENERALES --- */
+        .msg-gus-btn { background: #9b59b6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
         
-        /* Contenedor que agrupa los elementos superiores (para control de separación) */
-        .header-controls-group {
-            position: fixed;
-            top: 50px; 
-            right: 20px;
-            z-index: 100;
-            display: flex; /* Usamos flex para ordenar */
-            flex-direction: row; /* Elementos en fila */
-            gap: 15px; /* Separación entre el botón y el cronómetro */
-        }
+        /* Marca de Agua */
+        #watermark-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9998; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; overflow: hidden; pointer-events: none; }
+        .watermark-text { font-size: 1.2em; color: #000000; opacity: 0.10; font-weight: bold; transform: rotate(-30deg); padding: 20px; white-space: nowrap; user-select: none; }
         
-        /* --- BOTÓN DE REPORTE FLOTANTE (Ahora dentro de header-controls-group) --- */
-        .report-error-btn {
-            position: static; /* Ya no es fixed */
-            top: auto; 
-            right: auto; 
-            background: #e67e22; 
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: background 0.3s;
-            font-size: 1em;
-            text-decoration: none; 
-            align-self: flex-start; /* Alinea al inicio del grupo (arriba) */
-        }
-
-        .report-error-btn:hover {
-            background: #d35400;
-        }
+        /* Controles Superiores */
+        .header-controls-group { position: fixed; top: 50px; right: 20px; z-index: 100; display: flex; flex-direction: row; gap: 15px; }
+        .report-error-btn { position: static; background: #e67e22; color: white; padding: 10px 15px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 1em; text-decoration: none; align-self: flex-start; }
+        .report-error-btn:hover { background: #d35400; }
         
-        /* --- CRONÓMETRO FIJO (Ahora dentro de header-controls-group) --- */
-        .fixed-timer-box {
-            position: static; /* Ya no es fixed */
-            top: auto; 
-            right: auto;
-            background: #3498db;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 1em;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            align-self: flex-start; /* Alinea al inicio del grupo (arriba) */
-        }
-        .countdown-display {
-            font-size: 1.8em;
-            font-family: 'Courier New', Courier, monospace;
-            margin-top: 5px;
-            padding: 5px 0;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 4px;
-            transition: background-color 0.5s, color 0.5s;
-        }
+        /* Botón de Ayuda */
+        .help-btn { background: #9b59b6; color: white; border: none; cursor: pointer; padding: 10px 15px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 1em; text-decoration: none; align-self: flex-start; }
+        .help-btn:hover { background: #8e44ad; }
+        .help-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
         
-        /* --- CLAVES PARA EL OVERLAY --- */
-        @keyframes subtleScale {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6); 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            opacity: 1;
-            transition: opacity 0.5s ease-out;
-        }
-        .overlay-content {
-            background: linear-gradient(135deg, #f0f9ff, #ffffff);
-            color: #333;
-            padding: 50px 40px;
-            border-radius: 20px; 
-            text-align: center;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-            max-width: 550px;
-            border: 4px solid #3498db; 
-            animation: subtleScale 5s infinite; 
-        }
-        .welcome-title {
-            color: #3498db; 
-            font-size: 2.8em;
-            margin-bottom: 20px;
-            font-weight: 800;
-        }
-        .exam-prep-text, .exam-info-text {
-            font-size: 1.1em;
-            margin-bottom: 15px;
-            color: #555;
-        }
-        .warning-text {
-            color: #e74c3c;
-            font-weight: bold;
-            margin-top: 15px;
-            font-size: 0.9em;
-        }
-        .start-btn {
-            background: #2ecc71 !important; 
-            padding: 15px 40px;
-            font-size: 1.3em;
-            margin-top: 30px;
-            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4);
-            transition: background 0.2s, transform 0.2s;
-        }
-        .start-btn:hover {
-            background: #27ae60 !important;
-            transform: scale(1.05);
-        }
-
-        /* --- Contenedor Principal y Centrado --- */
-        .exam-container {
-            max-width: 800px;
-            margin: 0 auto 30px auto; 
-            padding: 0 10px;
-        }
-
-        /* --- Título de la Página (Fuera de la Tarjeta) --- */
-        .exam-header-info {
-            max-width: 800px;
-            margin: 20px auto 60px auto; 
-            text-align: center;
-            padding: 0 10px;
-        }
-
-        .exam-title-main { 
-            color: #2c3e50; 
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
+        /* Timer */
+        .fixed-timer-box { position: static; background: #3498db; color: white; padding: 10px 15px; border-radius: 8px; text-align: center; font-size: 1em; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); align-self: flex-start; }
+        .countdown-display { font-size: 1.8em; font-family: 'Courier New', Courier, monospace; margin-top: 5px; padding: 5px 0; background: rgba(0, 0, 0, 0.15); border-radius: 4px; transition: background-color 0.5s, color 0.5s; }
         
-        .exam-description {
-            color: #555;
-            font-style: italic;
-            margin-bottom: 30px;
-        }
+        /* Overlays */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 1; transition: opacity 0.5s ease-out; }
+        .overlay-content { background: linear-gradient(135deg, #f0f9ff, #ffffff); color: #333; padding: 50px 40px; border-radius: 20px; text-align: center; box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3); max-width: 550px; border: 4px solid #3498db; animation: subtleScale 5s infinite; }
+        @keyframes subtleScale { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .welcome-title { color: #3498db; font-size: 2.8em; margin-bottom: 20px; font-weight: 800; }
+        .exam-prep-text, .exam-info-text { font-size: 1.1em; margin-bottom: 15px; color: #555; }
+        .warning-text { color: #e74c3c; font-weight: bold; margin-top: 15px; font-size: 0.9em; }
+        .start-btn { background: #2ecc71 !important; padding: 15px 40px; font-size: 1.3em; margin-top: 30px; box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4); transition: background 0.2s, transform 0.2s; }
+        .start-btn:hover { background: #27ae60 !important; transform: scale(1.05); }
         
-        /* --- Tarjeta de Pregunta --- */
-        .question-card {
-            background: white;
-            padding: 25px;
-            margin-bottom: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            border-left: 4px solid #3498db;
-        }
+        /* Cancelación */
+        .cancel-content { background: linear-gradient(135deg, #f8d7da, #ffffff); border: 4px solid #e74c3c; animation: none; box-shadow: 0 15px 30px rgba(231, 76, 60, 0.4); }
+        .cancel-title { color: #e74c3c; font-size: 3em; margin-bottom: 20px; }
+        .cancel-info-text { font-size: 1.2em; color: #c0392b; font-weight: bold; }
+        .reason-label { margin-top: 25px; color: #34495e; font-size: 1.1em; border-bottom: 1px dashed #ccc; padding-bottom: 10px; }
+        .reason-box { background-color: #fcebe9; padding: 15px; margin: 10px 0; border-left: 5px solid #e74c3c; border-radius: 5px; text-align: left; white-space: pre-wrap; color: #333; font-style: italic; }
         
-        .question-meta {
-            font-size: 0.95em;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px dashed #eee;
-            color: #555;
-        }
+        /* Botones Generales */
+        .back-btn { background: #3498db !important; padding: 15px 40px; font-size: 1.3em; margin-top: 30px; box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4); }
+        .back-btn:hover { background: #2980b9 !important; transform: scale(1.05); }
+        .back-nav-btn { display: inline-block; margin-top: 30px; background: #7f8c8d; padding: 10px 15px; border-radius: 5px; font-weight: bold; color: white; text-decoration: none; transition: background 0.3s; }
+        .back-nav-btn:hover { background: #5c6a74; }
         
-        /* CLAVE 1: Centrar el texto de la pregunta */
-        .question-text.question-centered {
-            text-align: center;
-        }
-
-        .question-text {
-            font-size: 1.1em; 
-            font-weight: bold;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        /* --- Imagen de Apoyo --- */
-        .question-image {
-            max-width: 100%; 
-            height: auto; 
-            margin: 15px auto; /* Centrar la imagen si es más pequeña que el contenedor */
-            display: block; /* Necesario para que margin: auto funcione */
-            border-radius: 8px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .subject-tag {
-            display: inline-block;
-            background: #e6f3ff;
-            color: #004aad;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            font-weight: 600;
-        }
+        /* Confirmación Modal */
+        .confirm-content { border-color: #f39c12; animation: none; }
+        .confirm-title { color: #f39c12; font-size: 2.5em; margin-bottom: 20px; }
+        .confirm-text { font-size: 1.2em; color: #34495e; margin-bottom: 30px; }
+        .modal-actions { display: flex; justify-content: center; gap: 15px; }
+        .modal-actions .action-btn { padding: 12px 25px; font-size: 1.1em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; }
+        .confirm-btn-yes { background: #2ecc71; color: white; }
+        .confirm-btn-yes:hover { background: #27ae60; transform: scale(1.05); }
+        .confirm-btn-no { background: #e74c3c; color: white; }
+        .confirm-btn-no:hover { background: #c0392b; transform: scale(1.05); }
         
-        /* --- Opciones de Respuesta --- */
-        .options-group {
-            margin-top: 20px;
-            display: flex;
-            flex-direction: column;
-        }
+        /* Layout del Examen */
+        .exam-container { max-width: 850px; margin: 0 auto 50px auto; padding: 0 15px; }
+        .exam-header-info { max-width: 850px; margin: 30px auto 40px auto; text-align: center; padding: 20px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .exam-title-main { color: #3498db; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px; font-size: 2.2em; }
+        .exam-description { color: #555; font-style: italic; font-size: 1.1em; margin-bottom: 20px; }
+        .exam-subject-header { margin-top: 10px; font-size: 1em; color: #7f8c8d; }
+        .security-status-active { color: #2ecc71; font-weight: bold; background: #f0fff4; padding: 3px 8px; border-radius: 5px; }
         
-        .option-label {
-            display: flex; /* Habilitar Flexbox */
-            align-items: center; /* Alinear verticalmente el radio button con el texto */
-            margin: 8px 0;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            cursor: pointer;
-            background-color: #fcfcfc;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
+        /* Mapa de Preguntas */
+        .question-map-container { background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .question-map-container h3 { text-align: center; color: #34495e; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .question-map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; transition: opacity 0.3s ease; }
+        .question-map-btn { display: flex; justify-content: center; align-items: center; height: 45px; background: #ecf0f1; color: #34495e; text-decoration: none; font-weight: bold; font-size: 0.9em; border-radius: 8px; border: 2px solid #bdc3c7; transition: all 0.2s ease; }
+        .question-map-btn:hover { transform: translateY(-2px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-color: #3498db; }
+        .question-map-btn.answered { background: #2ecc71; color: white; border-color: #27ae60; }
+        .question-map-btn.flagged { background: #f1c40f; color: #333; border-color: #f39c12; }
+        .map-legend { display: flex; justify-content: center; gap: 20px; margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.9em; color: #555; }
+        .legend-item { display: inline-block; width: 15px; height: 15px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+        .legend-unanswered { background: #ecf0f1; border: 2px solid #bdc3c7; }
+        .legend-answered { background: #2ecc71; }
+        .legend-flagged { background: #f1c40f; }
         
-        .option-label:hover {
-            background-color: #f0f0f0;
-            border-color: #c5c5c5;
-        }
+        /* Fases del Mapa */
+        .question-map-grid.fase-1 .question-map-btn { pointer-events: none; opacity: 0.6; }
+        .question-map-grid.fase-2 .question-map-btn { pointer-events: none; opacity: 0.4; cursor: not-allowed; }
+        .question-map-grid.fase-2 .question-map-btn.flagged { pointer-events: auto !important; opacity: 1 !important; cursor: pointer !important; border-color: #e67e22; box-shadow: 0 0 10px rgba(241, 196, 15, 0.7); }
+        #review-mode-info { background: #eaf6ff; border-left: 5px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 5px; text-align: center; font-size: 1.1em; color: #34495e; }
         
-        .option-label input[type="radio"] {
-            margin-right: 15px;
-            transform: scale(1.2); 
-        }
+        /* Tarjeta de Pregunta */
+        .question-card { background: #ffffff; padding: 30px 35px; margin-bottom: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.07); border-left: 5px solid #3498db; position: relative; transition: all 0.3s ease; }
+        .question-card.flagged { border-left-color: #f1c40f; background: #fffff0; }
+        .question-meta { font-size: 1em; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #ddd; color: #555; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+        .question-meta strong { color: #34495e; }
         
-        /* CLAVE 2: Envolver el texto para centrarlo y usar flexbox */
-        .option-text-wrapper {
-            flex-grow: 1; /* Ocupa todo el ancho restante */
-            text-align: center !important; /* ¡FORZADO: Centra el texto! */
-            padding-right: 25px; /* Compensar el radio button a la izquierda para un centrado visual */
-        }
+        /* Botones de Pregunta */
+        .flag-question-btn { background: #f0f0f0; color: #555; padding: 8px 12px; font-size: 0.9em; border-radius: 8px; border: 1px solid #ddd; flex-shrink: 0; cursor: pointer; }
+        .flag-question-btn:hover { background: #e67e22; color: white; border-color: #d35400; }
+        .question-card.flagged .flag-question-btn { background: #f1c40f; color: #333; border-color: #f39c12; }
+        .question-text { font-size: 1.3em; font-weight: 600; margin-top: 20px; margin-bottom: 25px; color: #2c3e50; line-height: 1.6; }
+        .question-text.question-centered { text-align: center; }
+        .question-image { max-width: 100%; height: auto; margin: 15px auto 20px auto; display: block; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .subject-tag { display: inline-block; background: #eaf6ff; color: #3498db; padding: 4px 10px; border-radius: 20px; font-size: 0.9em; font-weight: 700; }
+        .options-group { margin-top: 20px; display: flex; flex-direction: column; }
         
-        /* Resaltar la opción seleccionada */
-        .option-label input[type="radio"]:checked + strong {
-            color: #2ecc71; /* Verde */
-        }
-        .option-label input[type="radio"]:checked {
-            accent-color: #2ecc71;
-        }
-
-        /* --- Botón de Envío --- */
-        .submit-btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin-top: 30px;
-            background: #2ecc71;
-            color: white;
-            font-size: 1.1em;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-        .submit-btn:hover {
-            background: #27ae60;
-        }
+        /* Opciones Radio */
+        form#exam-form .option-label { display: grid !important; grid-template-columns: auto 1fr; gap: 15px; align-items: center; margin: 10px 0; padding: 15px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; background-color: #ffffff; transition: all 0.3s ease; }
+        form#exam-form .option-label input[type="radio"] { transform: scale(1.3); accent-color: #3498db; margin-right: 0 !important; }
+        form#exam-form .option-label .option-text-wrapper { text-align: left !important; font-size: 1.05em; color: #333; margin: 0 !important; }
+        .option-label:hover { border-color: #3498db; background: #f0f8ff; }
+        .option-label input[type="radio"]:checked + .option-text-wrapper { font-weight: bold; color: #3498db; }
         
-        /* --- Botón de Navegación --- */
-        .back-nav-btn {
-            display: inline-block;
-            margin-top: 30px;
-            background: #7f8c8d;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
-        .back-nav-btn:hover {
-            background: #5c6a74;
-        }
-
-        /* 🔑 ESTILOS DEL PANEL DE CHAT FLOTANTE 🔑 */
-        .chat-panel-header {
-            background: #3498db;
-            color: white;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 1.1em;
-        }
-        .close-chat {
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1.2em;
-            transition: color 0.2s;
-        }
-        .close-chat:hover {
-            color: #f8d7da;
-        }
-
-        .chat-messages {
-            flex-grow: 1;
-            padding: 10px;
-            overflow-y: auto;
-            background: #fcfcfc;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            font-size: 0.9em;
-        }
-        .chat-message {
-            padding: 8px 12px;
-            border-radius: 15px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-        .admin-chat-message {
-            align-self: flex-start;
-            background-color: #e6f3ff;
-            color: #34495e;
-        }
-        .student-chat-message {
-            align-self: flex-end;
-            background-color: #dcf8c6;
-            color: #333;
-        }
-        .student-chat-form {
-            display: flex;
-            padding: 10px;
-            border-top: 1px solid #eee;
-        }
-        #student-message-input {
-            flex-grow: 1;
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            margin-right: 5px;
-        }
-        .chat-send-btn {
-            background: #2ecc71;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-        .chat-send-btn:hover {
-            background: #27ae60;
-        }
+        /* Navegación Inferior */
+        .question-nav-buttons { margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ddd; display: flex; justify-content: flex-end; gap: 10px; }
+        .question-nav-buttons .button { padding: 12px 20px; font-size: 1em; font-weight: bold; border-radius: 8px; cursor: pointer; border: none; transition: all 0.2s ease; }
+        .flag-and-next-btn { background: #f39c12; color: white; }
+        .flag-and-next-btn:hover { background: #e67e22; }
+        .next-question-btn { background: #3498db; color: white; }
+        .next-question-btn:hover { background: #2980b9; }
+        .review-mode-btn { background: #2ecc71; color: white; }
+        .review-mode-btn:hover { background: #27ae60; }
+        .finish-directly-btn { background: #e74c3c; color: white; }
+        .finish-directly-btn:hover { background: #c0392b; }
+        .submit-btn { display: block; width: 100%; padding: 18px; margin-top: 30px; background: linear-gradient(90deg, #34d399 0%, #2ecc71 100%); color: white; font-size: 1.2em; border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); cursor: pointer; transition: all 0.3s ease; }
+        .submit-btn:hover { background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4); }
         
-        /* --- MEDIA QUERY (Ajustes finos para móvil) --- */
+        /* Chat */
+        .chat-panel-header { background: #3498db; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 1.1em; }
+        .close-chat { cursor: pointer; font-weight: bold; font-size: 1.2em; transition: color 0.2s; }
+        .close-chat:hover { color: #f8d7da; }
+        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; background: #fcfcfc; display: flex; flex-direction: column; gap: 8px; font-size: 0.9em; }
+        .chat-message { padding: 8px 12px; border-radius: 15px; max-width: 80%; word-wrap: break-word; }
+        .admin-chat-message { align-self: flex-start; background-color: #e6f3ff; color: #34495e; }
+        .student-chat-message { align-self: flex-end; background-color: #dcf8c6; color: #333; }
+        .student-chat-form { display: flex; padding: 10px; border-top: 1px solid #eee; }
+        #student-message-input { flex-grow: 1; padding: 8px; border-radius: 5px; border: 1px solid #ddd; margin-right: 5px; }
+        .chat-send-btn { background: #2ecc71; color: white; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .chat-send-btn:hover { background: #27ae60; }
+        .student-chat-panel { position: fixed; bottom: 20px; right: 20px; width: 300px; height: 350px; background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 9000; display: none; flex-direction: column; overflow: hidden; border: 1px solid #ddd; transition: opacity 0.5s ease-out; }
+        
+        /* Responsive */
         @media (max-width: 600px) {
-            
-            .header-controls-group {
-                top: 5px;
-                right: 50%;
-                transform: translateX(50%);
-                width: 95%;
-                gap: 5px;
-                justify-content: space-between;
-            }
-
-            .report-error-btn, .fixed-timer-box {
-                flex-grow: 1;
-                font-size: 0.8em;
-                padding: 8px;
-                text-align: center;
-            }
-            
-            .fixed-timer-box {
-                min-width: 120px;
-                font-size: 0.9em;
-            }
-            .countdown-display {
-                font-size: 1.5em;
-            }
-
-            .exam-header-info {
-                margin-top: 60px; 
-            }
-
-            .student-chat-panel {
-                width: 95%;
-                height: 250px;
-                right: 2.5%;
-                bottom: 10px;
-            }
-        }
-        
-        /* 🔑 CSS para el panel de chat flotante 🔑 */
-        .student-chat-panel {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 300px;
-            height: 350px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 9000;
-            display: none; /* 🔑 CLAVE: Oculto por defecto para evitar persistencia 🔑 */
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid #ddd;
-            transition: opacity 0.5s ease-out;
+            .header-controls-group { top: 5px; right: 50%; transform: translateX(50%); width: 95%; gap: 5px; justify-content: space-between; }
+            .report-error-btn, .fixed-timer-box { flex-grow: 1; font-size: 0.8em; padding: 8px; text-align: center; }
+            .fixed-timer-box { min-width: 120px; font-size: 0.9em; }
+            .countdown-display { font-size: 1.5em; }
+            .exam-header-info { margin-top: 60px; }
+            .question-card { padding: 20px 25px; }
+            .student-chat-panel { width: 95%; height: 250px; right: 2.5%; bottom: 10px; }
+            .question-nav-buttons { flex-direction: column; }
+            .question-nav-buttons .button { width: 100%; box-sizing: border-box; }
         }
     </style>
 {% endblock %}

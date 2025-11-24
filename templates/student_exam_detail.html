@@ -3,10 +3,14 @@
 {% block title %}Revisión de Examen: {{ exam.title }}{% endblock %}
 
 {% block content %}
-    <!-- 🔑 CORRECCIÓN: El título ahora usa 'exam.title' en lugar de 'report' 🔑 -->
+    
     <div class="header-exam-review-title">
         <h1>🔍 Revisión de Examen: {{ exam.title }}</h1>
-        <p>Aquí puedes ver tus respuestas, la retroalimentación y la respuesta correcta.</p>
+        {% if result.submission_type == 'auto' %}
+            <p id="exam-submitted-message" class="auto">Tu tiempo se agotó y el examen fue enviado automáticamente.</p>
+        {% else %}
+            <p id="exam-submitted-message" class="manual">Ya has enviado tu examen. Estas son tus respuestas.</p>
+        {% endif %}
     </div>
 
     <div class="container review-container">
@@ -16,10 +20,10 @@
         {% if exam.questions %}
             {% for question in exam.questions %}
                 {% set answer = answers_dict.get(question.id) %}
-                <div class="question-card">
+                
+                <div class="question-card {% if answer %}answered{% else %}unanswered{% endif %}">
                     <h3 class="question-title">Pregunta {{ loop.index }}:</h3>
                     
-                    <!-- Información de la Pregunta -->
                     <p class="question-text">{{ question.text }}</p>
                     <p class="question-subject">Materia: <strong>{{ question.subject or 'General' }}</strong></p>
 
@@ -30,50 +34,78 @@
                              class="question-image">
                     {% endif %}
                     
-                    <!-- Opciones y Respuesta Correcta -->
                     <div class="options-and-feedback">
                         <div class="options-group">
-                            <h4>Opciones y Respuestas:</h4>
+                            <h4>Opciones:</h4>
                             {% for letter in ['A', 'B', 'C', 'D'] %}
                                 {% set option_text = question['option_' + letter.lower()] %}
                                 {% if option_text %}
-                                    <div class="option-item 
-                                        {% if letter == question.correct_option %}correct-option-bg{% endif %}
-                                        {% if answer and letter == answer.response and letter != question.correct_option %}wrong-response-bg{% endif %}
-                                        {% if answer and letter == answer.response and letter == question.correct_option %}correct-response-bg{% endif %}
-                                        ">
-                                        <span class="option-letter">{{ letter }})</span>
-                                        <span class="option-text">{{ option_text }}</span>
-                                        {% if letter == question.correct_option %}
-                                            <span class="correct-mark"> (Correcta)</span>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
+                                    
+                                    {% if exam.answers_released %}
+                                        
+                                        {% set is_correct = (letter == question.correct_option) %}
+                                        {% set is_student_choice = (answer and letter == answer.response) %}
+                                        
+                                        <div class="option-item 
+                                            {% if is_correct %}correct-option-bg{% endif %}
+                                            {% if is_student_choice and not is_correct %}wrong-response-bg{% endif %}
+                                            ">
+                                            <span class="option-letter">{{ letter }})</span>
+                                            <span class="option-text">{{ option_text }}</span>
+                                            
+                                            {% if is_correct %}
+                                                <span class="correct-mark">(Correcta)</span>
+                                            {% endif %}
+                                        </div>
+
+                                    {% else %}
+
+                                        <div class="option-item 
+                                            {% if answer and letter == answer.response %}student-choice-bg{% endif %}
+                                            ">
+                                            <span class="option-letter">{{ letter }})</span>
+                                            <span class="option-text">{{ option_text }}</span>
+                                        </div>
+
+                                    {% endif %}
+                                    
+                                    {% endif %}
                             {% endfor %}
                         </div>
 
-                        <!-- Calificación y Feedback del Alumno -->
                         <div class="student-review-info">
                             <h4>Tu Respuesta:</h4>
                             <p class="response-display">
-                                <strong>{{ answer.response or '--- Sin Responder ---' }}</strong>
+                                <strong>{{ (answer.response if answer else None) or '--- Sin Responder ---' }}</strong>
                             </p>
 
                             <h4>Resultado:</h4>
-                            <p class="grade-display">
-                                {% if answer.grade == 1.0 %}
-                                    <span class="grade-correct">✅ Correcto (1.0)</span>
-                                {% elif answer.grade == 0.0 %}
-                                    <span class="grade-incorrect">❌ Incorrecto (0.0)</span>
-                                {% else %}
-                                    <span class="grade-manual">⚠️ Calificación Pendiente</span>
-                                {% endif %}
-                            </p>
                             
-                            {% if answer.feedback %}
-                                <p class="feedback-box"><strong>Feedback:</strong> {{ answer.feedback }}</p>
+                            {% if exam.answers_released %}
+                                <p class="grade-display">
+                                    {% if answer and answer.grade == 1.0 %}
+                                        <span class="grade-correct">✅ Correcto</span>
+                                    {% elif answer %}
+                                        <span class="grade-incorrect">❌ Incorrecto</span>
+                                    {% else %}
+                                        <span class="grade-manual">⚠️ Sin Respuesta</span>
+                                    {% endif %}
+                                </p>
+                                
+                                {% if answer and answer.feedback %}
+                                    <div class="feedback-box">
+                                        <strong>Retroalimentación:</strong><br>
+                                        {{ answer.feedback }}
+                                    </div>
+                                {% endif %}
+
+                            {% else %}
+                                <p class="grade-display">
+                                     <span class="grade-manual">⌛ Las respuestas se liberarán pronto.</span>
+                                </p>
                             {% endif %}
-                        </div>
+
+                            </div>
                     </div>
                 </div>
             {% endfor %}
@@ -97,6 +129,23 @@
         }
         .header-exam-review-title h1, .header-exam-review-title p {
             margin: 0;
+        }
+        /* --- Estilos para el mensaje de envío --- */
+        #exam-submitted-message {
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        #exam-submitted-message.manual {
+            background: rgba(46, 204, 113, 0.2); /* Verde claro */
+            color: #fff;
+        }
+        #exam-submitted-message.auto {
+            background: rgba(241, 196, 15, 0.2); /* Amarillo claro */
+            color: #fff;
         }
 
         /* --- Contenedor Principal (Centrado) --- */
@@ -124,7 +173,14 @@
             margin-bottom: 25px;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-left: 5px solid #3498db;
+            border-left: 5px solid #bdc3c7; /* Gris por defecto */
+        }
+        
+        .question-card.answered {
+            border-left-color: #3498db;
+        }
+        .question-card.unanswered {
+            border-left-color: #e74c3c; /* Roja si no la respondió */
         }
         
         .question-title {
@@ -143,6 +199,16 @@
         .question-subject {
             font-size: 0.9em;
             color: #7f8c8d;
+        }
+        .question-image { 
+            max-width: 100%; 
+            height: auto; 
+            border: 5px solid #ecf0f1; 
+            margin-top: 10px;
+            border-radius: 8px;
+        }
+        .image-label {
+            margin-bottom: 5px;
         }
 
         /* --- Grupo de Opciones y Feedback (FLEX) --- */
@@ -163,8 +229,8 @@
             border: 1px solid #f0f0f0;
         }
         .student-review-info {
-            background: #fdf3c7; /* Amarillo suave para la respuesta */
-            border: 1px solid #f1c40f;
+            background: #fdfae5; /* Amarillo muy suave para la respuesta */
+            border: 1px solid #f39c12;
         }
         
         .student-review-info h4 {
@@ -185,6 +251,7 @@
             align-items: flex-start;
             font-size: 0.95em;
             position: relative;
+            border: 1px solid transparent; /* Borde base */
         }
         .option-letter {
             font-weight: bold;
@@ -192,26 +259,32 @@
             flex-shrink: 0;
         }
         
-        /* --- Colores de Fondo de las Opciones --- */
-        .correct-option-bg {
-            background: #d4edda; /* Verde claro */
-            border: 1px solid #2ecc71;
-        }
-        .correct-mark {
+        /* --- 🔥 ESTILOS PARA LOS DOS MODOS 🔥 --- */
+        
+        /* 1. MODO "CIEGO" (Solo resalta la elección del alumno) */
+        .student-choice-bg {
+            background: #eaf6ff; /* Azul claro */
+            border-color: #3498db;
             font-weight: bold;
-            color: #2ecc71;
-            margin-left: 5px;
+            color: #2980b9;
         }
-        .correct-response-bg {
-            background: #2ecc71; /* Verde fuerte */
-            color: white;
-            border: 1px solid #27ae60;
+
+        /* 2. MODO "LIBERADO" (Muestra verdes y rojos) */
+        .correct-option-bg {
+            background: #d4edda; /* Verde */
+            border-color: #2ecc71;
             font-weight: bold;
         }
         .wrong-response-bg {
-            background: #f8d7da; /* Rojo claro */
-            border: 1px solid #e74c3c;
+            background: #f8d7da; /* Rojo */
+            border-color: #e74c3c;
+            text-decoration: line-through;
+        }
+        .correct-mark {
             font-weight: bold;
+            color: #27ae60;
+            margin-left: auto;
+            font-size: 0.9em;
         }
         
         /* --- Visualización de Calificación --- */
@@ -223,9 +296,18 @@
             margin-top: 15px;
             font-weight: bold;
         }
-        .grade-correct { color: #2ecc71; font-size: 1.1em; }
-        .grade-incorrect { color: #e74c3c; font-size: 1.1em; }
-        .grade-manual { color: #f1c40f; font-size: 1.1em; }
+        .grade-correct { 
+            color: #27ae60; /* Verde */
+            font-size: 1.1em;
+        }
+        .grade-incorrect { 
+            color: #e74c3c; /* Rojo */
+            font-size: 1.1em;
+        }
+        .grade-manual { 
+            color: #e67e22; /* Naranja */
+            font-size: 1.1em; 
+        }
 
         .feedback-box {
             border-top: 1px dashed #f1c40f;
@@ -237,6 +319,7 @@
             padding: 10px;
             border-radius: 5px;
         }
+        /* --- 🔥 FIN DE ESTILOS DE MODO 🔥 --- */
 
         .no-items-message {
             padding: 15px;

@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <title>{{ page_title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -26,6 +29,9 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('verify_2fa') }}" class="space-y-6">
+            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <div>
                 <label for="totp_code" class="block text-sm font-medium text-gray-700 sr-only">Código 2FA</label>
                 <input type="text" name="totp_code" id="totp_code" required 

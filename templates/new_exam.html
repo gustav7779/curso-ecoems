@@ -1,12 +1,18 @@
 {% extends "base.html" %}
+
 {% block title %}Nuevo Examen - Curso ECOMS{% endblock %}
+
 {% block content %}
     <div class="container new-exam-container">
         <div class="card form-card">
             <h2 class="card-title">📝 Crear Nuevo Examen</h2>
-            <p class="exam-meta">Define un título y una descripción para el nuevo examen. Podrás añadir las preguntas después de crearlo.</p>
+            <p class="exam-meta">Define un título, descripción y asigna a los alumnos. Podrás añadir las preguntas después de crearlo.</p>
 
             <form method="POST" class="exam-form">
+                
+                <!-- 🔥 TOKEN CSRF 🔥 -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="form-group">
                     <label for="title">Título del Examen:</label>
                     <input type="text" id="title" name="title" placeholder="Ej: Simulación Final 2025" required>
@@ -17,7 +23,7 @@
                     <textarea id="description" name="description" rows="4" placeholder="Breve resumen del contenido o reglas del examen."></textarea>
                 </div>
                 
-                <!-- 🔑 NUEVOS CAMPOS DE PROGRAMACIÓN 🔑 -->
+                <!-- 🔑 CAMPOS DE PROGRAMACIÓN DE TIEMPO 🔑 -->
                 <div class="form-group">
                     <label for="start_datetime">Fecha y Hora de **Inicio** (Opcional - UTC):</label>
                     <p class="exam-meta" style="margin-top: -5px; font-size: 0.85em;">Si se deja vacío, estará disponible inmediatamente.</p>
@@ -30,6 +36,32 @@
                     <input type="datetime-local" id="end_datetime" name="end_datetime" class="datetime-input">
                 </div>
                 
+                <!-- 🔥 SECCIÓN DE ASIGNACIÓN DE ALUMNOS (AGREGADO) 🔥 -->
+                <div class="form-group" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: #34495e;">
+                        👥 Asignar a Alumnos:
+                        <br>
+                        <small style="color: #666; font-weight: normal; font-size: 0.9em;">(Si no seleccionas a nadie, el examen será visible para TODOS)</small>
+                    </label>
+                    
+                    <div style="max-height: 200px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding-right: 5px;">
+                        {% if students %}
+                            {% for student in students %}
+                                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: white; padding: 8px; border-radius: 5px; border: 1px solid #eee;">
+                                    <input type="checkbox" 
+                                           name="assigned_students" 
+                                           value="{{ student.id }}"
+                                           {% if exam and student in exam.assigned_students %}checked{% endif %}>
+                                    <span style="font-size: 0.95em;">{{ student.username }}</span>
+                                </label>
+                            {% endfor %}
+                        {% else %}
+                            <p style="color: #999; font-style: italic;">No hay alumnos registrados.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- FIN SECCIÓN ALUMNOS -->
+
                 <button type="submit" class="button submit-button create-btn">Crear Examen</button>
             </form>
         </div>
@@ -84,7 +116,7 @@
         
         .exam-form input[type="text"], 
         .exam-form textarea,
-        .exam-form input[type="datetime-local"] { /* Añadido datetime-local */
+        .exam-form input[type="datetime-local"] { 
             width: 100%; 
             padding: 12px; 
             border: 1px solid #ccc; 
@@ -105,7 +137,7 @@
             display: block;
             width: 100%;
             padding: 12px; 
-            margin-top: 20px;
+            margin-top: 25px;
             background: #3498db; 
             color: white;
             border: none;
@@ -126,6 +158,21 @@
             background: #7f8c8d; 
         }
 
+        /* --- Estilo Scrollbar para lista de alumnos --- */
+        .form-group div::-webkit-scrollbar {
+            width: 6px;
+        }
+        .form-group div::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .form-group div::-webkit-scrollbar-thumb {
+            background: #ccc; 
+            border-radius: 3px;
+        }
+        .form-group div::-webkit-scrollbar-thumb:hover {
+            background: #aaa; 
+        }
+
         /* --- MEDIA QUERY (Ajustes finos para móvil) --- */
         @media (max-width: 600px) {
             .new-exam-container {
@@ -134,6 +181,10 @@
             }
             .form-card {
                 padding: 15px;
+            }
+            /* Hacer que los checkboxes se vean en una sola columna en móviles */
+            .form-group div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
             }
         }
     </style>

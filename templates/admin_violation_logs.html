@@ -1,26 +1,14 @@
 {% extends "base.html" %}
 
-{# 🔑 Diccionario de Traducción de Violaciones (Versión Completa) 🔑 #}
-{% set VIOLATION_TRANSLATIONS = {
-    'WINDOW_BLUR': 'Cambio de Pestaña/Ventana',
-    'TAB_SWITCH': 'Cambio de Pestaña/Ventana',
-    'FULLSCREEN_EXIT': 'Salida de Pantalla Completa',
-    'PASTE': 'Intento de Pegar Texto',
-    'COPY_PASTE': 'Intento de Copiar/Pegar',
-    'DEVTOOLS_OPEN': 'Apertura de Consola DevTools',
-    'UNKNOWN_VIOLATION': 'VIOLACIÓN DESCONOCIDA'
-} %}
-
-{% block title %}Logs de Violación: {{ student.username }}{% endblock %}
+{% block title %}Logs de {{ student.username }}: {{ exam.title }}{% endblock %}
 
 {% block content %}
-<div class="container log-container">
-    <header class="log-header">
-        <h1 class="log-title">
-            <span class="emoji-icon">📜</span> Logs de Seguridad
-        </h1>
-        <h2 class="log-info-header">
-            Alumno: <strong>{{ student.username | capitalize }}</strong> | Examen: <strong>{{ exam.title }}</strong>
+<div class="container logs-container monitor-container">
+    
+    <header class="page-header monitor-header">
+        <h1 class="header-title">📜 Logs de Seguridad</h1>
+        <h2 class="exam-info-header">
+            Alumno: <strong>{{ student.username }}</strong> | Examen: <strong>{{ exam.title }}</strong>
         </h2>
     </header>
 
@@ -28,81 +16,170 @@
         ← Volver al Monitoreo del Examen
     </a>
 
-    <div class="card log-list-card">
-        <h3>Historial de Eventos de Seguridad ({{ logs | length }} Eventos)</h3>
+    <div class="card logs-card">
+        <h3 class="card-subtitle">Historial de Eventos de Seguridad ({{ logs | length }} Eventos)</h3>
         
-        <p class="description-text">
-            Historial de eventos de seguridad (cambio de pestaña/ventana, salida de pantalla completa, etc.) detectados durante el examen. La hora se muestra en la zona horaria de **{{ config['BABEL_DEFAULT_TIMEZONE'] }}**.
+        <p class="timezone-info">
+            Historial detallado de anomalías (cambio de pestaña, IA, bloqueos).
+            La hora se muestra en la zona horaria de <strong>America/Mexico_City</strong>.
         </p>
 
+        {% if logs %}
         <div class="table-responsive">
-            <table class="log-table" border="1" cellpadding="10" cellspacing="0">
+            <table class="logs-table monitor-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>TIPO DE VIOLACIÓN</th>
-                        {# Usamos la configuración de Babel definida en app.py #}
-                        <th>FECHA Y HORA ({{ config['BABEL_DEFAULT_TIMEZONE'] }})</th> 
+                        <th>ID Log</th>
+                        <th>Tipo de Violación</th>
+                        <th>Evidencia / Detalles</th>
+                        <th>Fecha y Hora (America/Mexico_City)</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
-                    <tr>
-                        <td data-label="ID">{{ log.id }}</td>
+                    <tr class="row-log {% if log.violation_type in ['HERRAMIENTAS_DEV', 'COPIAR_PEGAR', 'INTENTO_IMPRESION', 'CLIC_DERECHO', 'AI_VOICE_DETECTED', 'AI_NO_FACE', 'AI_MULTIPLE_FACES', 'AI_GAZE_DESVIATED', 'EXAM_CANCELED_AUTO_BLOCK', 'AI_PROHIBITED_OBJECT_PHONE'] %}violation-grave{% else %}violation-normal{% endif %}">
+                        
+                        <td data-label="ID Log"><strong>#{{ log.id }}</strong></td>
+                        
                         <td data-label="Tipo de Violación">
-                            {# Forzamos a mayúsculas para buscar en el diccionario #}
-                            {% set violation_code = log.violation_type | upper %}
-                            <span class="status-tag tag-{{ violation_code | lower | replace('_', '-') }}">
-                                {{ VIOLATION_TRANSLATIONS.get(violation_code, violation_code | replace('_', ' ')) }}
-                            </span>
+                            {% if log.violation_type == 'AI_PROHIBITED_OBJECT_PHONE' %}
+                                <span class="violation-badge badge-phone">
+                                    <i class="fas fa-mobile-alt"></i> Uso de Celular
+                                </span>
+                            {% elif log.violation_type == 'AI_VOICE_DETECTED' %}
+                                <span class="violation-badge badge-noise">
+                                    <i class="fas fa-volume-up"></i> Ruido Fuerte
+                                </span>
+                            {% elif log.violation_type == 'AI_NO_FACE' %}
+                                <span class="violation-badge badge-face">
+                                    <i class="fas fa-user-slash"></i> Fuera de Rango
+                                </span>
+                            {% elif log.violation_type == 'AI_MULTIPLE_FACES' %}
+                                <span class="violation-badge badge-multiple">
+                                    <i class="fas fa-users"></i> Múltiples Personas
+                                </span>
+                            {% elif log.violation_type == 'AI_GAZE_DESVIATED' %}
+                                <span class="violation-badge badge-gaze">
+                                    <i class="fas fa-eye"></i> Mirada Desviada
+                                </span>
+                            {% elif log.violation_type == 'TAB_CHANGE' %}
+                                <span class="violation-badge badge-tab">
+                                    <i class="fas fa-exchange-alt"></i> Cambio de Pestaña
+                                </span>
+                            {% elif log.violation_type == 'WINDOW_BLUR' %}
+                                <span class="violation-badge badge-window">
+                                    <i class="fas fa-window-restore"></i> Cambio de Ventana
+                                </span>
+                            {% elif log.violation_type == 'EXAM_CANCELED_AUTO_BLOCK' %}
+                                <span class="violation-badge badge-blocked">
+                                    <i class="fas fa-ban"></i> BLOQUEO AUTOMÁTICO
+                                </span>
+                            {% else %}
+                                <span class="violation-badge badge-default">
+                                    <i class="fas fa-exclamation-circle"></i> {{ log.violation_type }}
+                                </span>
+                            {% endif %}
                         </td>
-                        <td data-label="Timestamp">
-                            {# 🔑 CORRECCIÓN CLAVE: format_datetime convertirá automáticamente el objeto aware (UTC) a la TZ de México 🔑 #}
-                            {{ format_datetime(log.timestamp, 'full') }} 
+                        
+                        <td data-label="Detalles">
+                            {% if log.details and log.details.startswith('data:image/jpeg;base64,') %}
+                                <button onclick="viewCapture('{{ log.details }}')" 
+                                    class="button action-btn view-capture-btn">
+                                    <i class="fas fa-camera"></i> Ver Captura
+                                </button>
+                            {% else %}
+                                <span class="log-details">{{ log.details or 'Sin detalles adicionales' }}</span>
+                            {% endif %}
                         </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="3" class="text-center no-logs-msg">
-                            ✅ No se encontraron logs de violación para este alumno en este examen.
+                        
+                        <td data-label="Fecha y Hora">
+                            <span class="time-text">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                            <small class="date-text">{{ log.timestamp.strftime('%d/%m/%Y') }}</small>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <p class="no-items-message">¡Excelente! Este alumno no tiene ningún registro de violación de seguridad para este examen.</p>
+        {% endif %}
     </div>
 </div>
 
+<div id="screenshot-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content screenshot-modal-content">
+        <h3 class="modal-title" style="color: #34495e;">Captura de Evidencia</h3>
+        <img id="screenshot-image" src="" alt="Evidencia del Reporte">
+        <button onclick="closeScreenshotModal()" class="button close-modal-btn" style="margin-top: 15px; background: #7f8c8d;">Cerrar</button>
+    </div>
+</div>
+
+<script>
+    // 🔥 FUNCIONES JS COMBINADAS
+    function viewCapture(base64Data) {
+        const modal = document.getElementById('screenshot-modal');
+        const img = document.getElementById('screenshot-image');
+        
+        img.src = base64Data;
+        modal.style.display = 'flex';
+    }
+    
+    function closeScreenshotModal() {
+        const modal = document.getElementById('screenshot-modal');
+        modal.style.display = 'none';
+        document.getElementById('screenshot-image').src = ''; // Limpiar la imagen
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('screenshot-modal');
+        
+        // 🔥 ESCUCHA CLICKS EN EL FONDO GRIS (Funcionalidad del Código 1)
+        modal.addEventListener('click', function(e) {
+            // Cierra si se hace click directamente en el overlay, no en el contenido interno
+            if (e.target === modal) {
+                closeScreenshotModal();
+            }
+        });
+    });
+</script>
+
 <style>
-    /* Estilos generales */
-    .log-container {
-        max-width: 1000px;
+    /* Aseguramos que se cargue la librería de íconos para la interfaz */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+    /* ==========================================================================
+       ESTILOS DEL CÓDIGO 1 (Monitor y Estructura General)
+       ========================================================================== */
+    .monitor-container {
+        max-width: 1600px;
         margin: 30px auto;
         padding: 20px;
     }
-    .log-header {
+    .monitor-header {
         text-align: center;
         border-bottom: 2px solid #eee;
         padding-bottom: 15px;
         margin-bottom: 20px;
     }
-    .log-title { 
-        color: #c0392b; 
+    .header-title { 
+        color: #e74c3c; 
         font-size: 2.5em;
         margin-bottom: 5px;
     }
-    .log-info-header { 
-        color: #2c3e50; 
-        font-size: 1.2em;
+    .exam-info-header { 
+        color: #3498db; 
+        font-size: 1.4em;
         font-weight: 400;
     }
-    .log-list-card {
+
+    .student-list-card {
         padding: 0;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         border-radius: 10px;
         overflow: hidden;
     }
+
     .card h3 {
         padding: 20px;
         background-color: #f5f5f5;
@@ -111,99 +188,262 @@
         font-size: 1.2em;
         color: #34495e;
     }
-    .description-text {
-        padding: 0 20px 20px;
-        color: #7f8c8d;
-        font-size: 0.9em;
-    }
+
     .table-responsive {
         overflow-x: auto;
         width: 100%;
     }
-    .log-table {
+
+    /* Estilos de Tabla Base (Monitor) */
+    .monitor-table {
         width: 100%;
         border-collapse: collapse;
         background: white;
     }
-    .log-table th {
+    .monitor-table th {
         background-color: #34495e;
         color: white;
-        text-align: left;
-        padding: 12px 15px;
+        text-align: center;
+        padding: 12px;
         text-transform: uppercase;
         font-size: 0.9em;
     }
-    .log-table td {
-        padding: 10px 15px;
+    .monitor-table td {
+        padding: 10px;
         border: 1px solid #eee;
-        text-align: left;
+        text-align: center;
         vertical-align: middle;
         font-size: 1em;
     }
-    .log-table tr:nth-child(even) { background-color: #f9f9f9; }
-    .log-table tr:hover { background-color: #f0f0f0; }
+    .monitor-table tr:nth-child(even) { background-color: #f9f9f9; }
 
-    /* Etiquetas de Violación */
+    /* Etiquetas de Estado (Del Código 1) */
     .status-tag {
-        padding: 4px 10px;
-        border-radius: 5px;
+        padding: 6px 12px;
+        border-radius: 20px;
         font-weight: bold;
         font-size: 0.85em;
         display: inline-block;
-        color: white;
-        text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    /* Estilos basados en el código de violación en minúsculas y guiones */
-    .tag-window-blur, .tag-tab-switch { background: #f39c12; color: #fff; } /* Naranja/Advertencia */
-    .tag-fullscreen-exit { background: #e74c3c; color: #fff; } /* Rojo/Peligro */
-    .tag-paste, .tag-copy-paste { background: #3498db; color: #fff; } /* Azul/Acción */
-    .tag-devtools-open { background: #8e44ad; color: #fff; } /* Morado/Inusual */
-    .tag-unknown-violation { background: #7f8c8d; color: #fff; } /* Gris/Desconocido */
+    .status-no-ha-iniciado { background: #e0e0e0; color: #555; }
+    .status-examen-terminado { background: #d4edda; color: #1a7d3f; }
+    .status-haciendo-examen { background: #fff3cd; color: #956504; }
+    .status-exam-cancelado, .status-cancelado-bloqueado { background: #f8d7da; color: #721c24; } 
 
-    .no-logs-msg {
-        text-align: center !important;
-        font-style: italic;
-        color: #7f8c8d;
-        padding: 20px;
-    }
-    .back-nav-btn {
-        background: #7f8c8d;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 5px;
+    /* Botones */
+    .chat-btn, .logs-btn {
+        background: #3498db;
+        padding: 8px 12px;
+        font-size: 0.9em;
+        white-space: nowrap;
         text-decoration: none;
-        font-weight: bold;
-        margin-bottom: 20px;
-        display: inline-block;
+        color: white;
+        border-radius: 6px;
         transition: background 0.2s;
+        display: inline-block;
+    }
+    .chat-btn:hover, .logs-btn:hover { background: #2980b9; }
+    .logs-btn { background: #9b59b6; }
+    .logs-btn:hover { background: #8e44ad; }
+    
+    .cancel-exam-btn {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        font-size: 0.9em;
+        white-space: nowrap;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-weight: bold;
+    }
+    .cancel-exam-btn:hover { background-color: #c0392b; }
+
+    /* Estilos de Tiempo y Control (Conservados del Código 1) */
+    .time-controls, .custom-time-group {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+    }
+    .time-btn {
+        color: white;
+        border: none;
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: background 0.2s;
+        font-weight: bold;
+    }
+    .quick-add-btn { background: #2ecc71; }
+    .quick-sub-btn { background: #3498db; order: 4; }
+    .custom-btn { background: #f39c12; order: 3; }
+    .confirm-btn { background: #3498db; }
+    .custom-time-input {
+        width: 80px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    /* MODAL OVERLAY */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        animation: fadeIn 0.3s ease-out;
+    }
+    .screenshot-modal-content {
+        max-width: 1000px !important;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 15px;
+    }
+    .screenshot-modal-content img {
+        max-width: 100%;
+        height: auto;
+    }
+    .modal-title {
+        color: #e74c3c;
+        border-bottom: 2px solid #e74c3c;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .close-modal-btn {
+        background-color: #95a5a6;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        flex-grow: 1;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ==========================================================================
+       ESTILOS DEL CÓDIGO 2 (Logs, Badges y Detalles Visuales)
+       ========================================================================== */
+    
+    .logs-container { max-width: 1200px; margin: 20px auto; }
+    
+    .back-nav-btn {
+        background: #7f8c8d; padding: 10px 15px; margin-bottom: 20px; transition: background 0.3s;
+        text-decoration: none; color: white; border-radius: 5px; display: inline-block;
     }
     .back-nav-btn:hover { background: #5c6a74; }
 
-    /* Responsive Table */
-    @media (max-width: 600px) {
-        .log-table thead { display: none; }
-        .log-table, .log-table tbody, .log-table tr, .log-table td {
-            display: block;
-            width: 100%;
+    .logs-card {
+        padding: 0;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        background: white;
+    }
+    .card-subtitle {
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+        margin: 0;
+        font-size: 1.2em;
+        color: #34495e;
+    }
+    .timezone-info { padding: 15px 20px; background: #eaf6ff; border-bottom: 1px solid #eee; color: #34495e; font-size: 0.95em; }
+
+    /* Merge de estilos de tabla */
+    .logs-table { width: 100%; border-collapse: collapse; }
+    .logs-table th {
+        background-color: #34495e; color: white; text-align: left; padding: 15px; font-size: 0.95em; text-transform: uppercase;
+    }
+    .logs-table td { padding: 15px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    .row-log:hover { background-color: #fafafa; }
+
+    /* 🔥 ESTILO PARA FILA GRAVE (Combinado del Código 1) */
+    .violation-grave {
+        background-color: #fff5f5 !important; /* Fondo rojizo suave */
+        border-left: 5px solid #e74c3c;
+    }
+    .violation-normal {
+        border-left: 5px solid #3498db;
+    }
+
+    /* 🔥🔥 ESTILOS DE BADGES PERSONALIZADOS (Del Código 2) 🔥🔥 */
+    .violation-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.9em;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        white-space: nowrap;
+    }
+    
+    /* Colores específicos para cada tipo */
+    .badge-phone { background-color: #6f42c1; color: white; } /* Morado */
+    .badge-noise { background-color: #fd7e14; color: white; } /* Naranja */
+    .badge-face { background-color: #ffc107; color: #333; } /* Amarillo */
+    .badge-multiple { background-color: #d63384; color: white; } /* Rosa fuerte */
+    .badge-gaze { background-color: #20c997; color: white; } /* Verde agua */
+    .badge-tab { background-color: #0d6efd; color: white; } /* Azul */
+    .badge-window { background-color: #17a2b8; color: white; } /* Cian */
+    .badge-blocked { background-color: #dc3545; color: white; border: 2px solid #8b0000; } /* Rojo oscuro */
+    .badge-default { background-color: #6c757d; color: white; } /* Gris */
+
+    .log-details { font-family: monospace; font-size: 0.9em; color: #555; display: block; max-width: 400px; }
+    .time-text { font-weight: bold; color: #333; display: block; }
+    .date-text { color: #888; font-size: 0.85em; }
+
+    .view-capture-btn {
+        background: #3498db; color: white; padding: 6px 12px; font-size: 0.85em; border-radius: 4px; text-decoration: none; border: none; cursor: pointer;
+    }
+    .view-capture-btn:hover { background: #2980b9; }
+
+    .no-items-message { padding: 30px; text-align: center; font-size: 1.1em; color: #27ae60; background: #d4edda; }
+
+    /* RESPONSIVE (Combinado) */
+    @media (max-width: 768px) {
+        .monitor-container, .logs-container { padding: 10px; }
+        
+        .logs-table, .logs-table tbody, .logs-table tr, .logs-table td,
+        .monitor-table, .monitor-table tbody, .monitor-table tr, .monitor-table td { 
+            display: block; width: 100%; 
         }
-        .log-table tr { 
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+        
+        .logs-table thead, .monitor-table thead { display: none; }
+        
+        .logs-table tr, .monitor-table tr { 
+            margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
         }
-        .log-table td {
-            text-align: right;
-            padding-left: 50%;
-            position: relative;
+        
+        .logs-table td, .monitor-table td { 
+            text-align: right; padding-left: 50%; position: relative; border-bottom: 1px solid #eee;
         }
-        .log-table td:before {
-            content: attr(data-label);
-            position: absolute;
-            left: 10px;
-            width: 45%;
-            font-weight: bold;
-            text-align: left;
-            color: #555;
+        
+        .logs-table td:before, .monitor-table td:before { 
+            content: attr(data-label); position: absolute; left: 15px; width: 40%; font-weight: bold; text-align: left; color: #555; 
         }
     }
 </style>

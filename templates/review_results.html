@@ -1,110 +1,276 @@
 {% extends "base.html" %}
 
-{% block title %}Resultados de {{ exam.title }}{% endblock %}
+{% block title %}Resultados de: {{ exam.title }}{% endblock %}
 
 {% block content %}
-    <header style="background: #2c3e50; color: white; padding: 15px; text-align: center;">
-        <h1>📊 Resultados del Examen: {{ exam.title }}</h1>
-        <p>Revisa el desempeño de los alumnos y el detalle de sus respuestas.</p>
+<div class="container review-container">
+    <header class="page-header">
+        <h1>📊 Resultados de Alumnos</h1>
+        <h2 class="exam-title-header">Examen: {{ exam.title }}</h2>
     </header>
 
-    <div class="container" style="max-width: 900px; margin-top: 20px;">
-        <a href="{{ url_for('admin_panel') }}" class="btn" style="margin-bottom: 20px;">⬅ Volver al Panel Admin</a>
+    <a href="{{ url_for('admin_panel') }}" class="btn back-nav-btn">⬅ Volver al Panel Admin</a>
 
+    <div class="card release-answers-box">
+        <h3 class="card-subtitle" style="margin-top: 0; color: #9b59b6;">Control de Publicación de Respuestas</h3>
+        {% if exam.answers_released %}
+            <div class="release-status status-released">
+                <i class="fas fa-check-circle"></i>
+                <span>Las respuestas para este examen <strong>YA HAN SIDO LIBERADAS</strong>. Los alumnos pueden ver la corrección completa.</span>
+            </div>
+        {% else %}
+            <div class="release-status status-pending">
+                <i class="fas fa-eye-slash"></i>
+                <span>Las respuestas están <strong>OCULTAS</strong>. Los alumnos solo ven su puntaje (revisión "ciega").</span>
+            </div>
+            <p style="font-size: 0.9em; color: #555; margin-top: 15px;">
+                Al liberar las respuestas, todos los alumnos que presentaron este examen podrán ver la revisión detallada con las respuestas correctas marcadas en verde/rojo. <strong>Esta acción es permanente.</strong>
+            </p>
+            <form method="POST" action="{{ url_for('release_answers', exam_id=exam.id) }}" class="inline-form"
+                    onsubmit="return confirm('¿SEGURO que quieres liberar las respuestas de \'{{ exam.title }}\'? Todos los alumnos podrán ver la corrección. Esta acción no se puede deshacer.');">
+                
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <button type="submit" class="button action-btn release-btn">
+                    <i class="fas fa-lock-open"></i> Liberar Respuestas a Alumnos
+                </button>
+            </form>
+        {% endif %}
+    </div>
+    <div class="card student-list-card">
+        <h3 class="card-subtitle">Calificaciones ({{ results | length }} Alumnos)</h3>
+        
         {% if results %}
-            <table class="results-table" border="1" cellpadding="10" cellspacing="0">
+        <div class="table-responsive">
+            <table class="results-table">
                 <thead>
                     <tr>
                         <th>Alumno</th>
-                        <th>Fecha</th>
-                        <th>Calificación Final</th>
-                        <th>Acción</th>
+                        <th>Puntaje (Correctas / Total)</th>
+                        <th>Tipo de Envío</th>
+                        <th>Fecha de Presentación</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for username, score, date_taken, user_id in results %}
-                    <tr>
-                        <td><strong>{{ username }}</strong></td>
-                        <td>{{ date_taken | datetimeformat('dd/MM/yyyy HH:mm') }}</td>
-                        <td>
-                            <span style="font-weight: bold; color: {% if score >= (exam.questions | length / 2) %}green{% else %}red{% endif %};">
-                                {{ "%.2f"|format(score) }} / {{ exam.questions | length }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{{ url_for('review_student_exam', exam_id=exam.id, user_id=user_id) }}" class="button review-btn">
-                                Ver Respuestas
-                            </a>
-                            
-                            {% if current_user.role == 'admin' %}
-                            <form method="POST" action="{{ url_for('reset_exam_attempt', exam_id=exam.id, user_id=user_id) }}" 
-                                    style="display: inline; margin-left: 10px;"
-                                    onsubmit="return confirm('¿Estás seguro de que quieres REINICIAR el intento de examen de {{ username }}? Esta acción es irreversible y elimina sus respuestas.');">
-                                
-                                <input type="submit" value="Reiniciar Intento" class="button reset-btn">
-                            </form>
+                    {% for result in results %}
+                    <tr class="{% if result.score == -1.0 %}cancelled-row{% endif %}">
+                        
+                        <td data-label="Alumno"><strong>{{ result.username | capitalize }}</strong></td>
+                        
+                        <td data-label="Puntaje">
+                            {% if result.score == -1.0 %}
+                                <span class="score-cancelled">CANCELADO</span>
+                            {% else %}
+                                <span class="score-normal">
+                                    {{ result.score | int }} / {{ exam.questions | length }}
+                                </span>
                             {% endif %}
+                        </td>
+                        
+                        <td data-label="Tipo de Envío">
+                            {% if result.score == -1.0 %}
+                                <span class="submission-tag tag-cancelled">Cancelado</span>
+                            {% elif result.submission_type == 'auto' %}
+                                <span class="submission-tag tag-auto">Automático (Tiempo)</span>
+                            {% else %}
+                                <span class="submission-tag tag-manual">Manual</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td data-label="Fecha">{{ result.date_taken.strftime('%d/%m/%Y %H:%M') }}</td>
+                        
+                        <td data-label="Acciones" class="action-cell">
+                            {% if result.score == -1.0 %}
+                                <span class="no-action">N/A</span>
+                            {% else %}
+                                <a href="{{ url_for('review_student_exam', exam_id=exam.id, user_id=result.user_id) }}" class="button action-btn review-btn">
+                                    🔍 Revisar
+                                </a>
+                            {% endif %}
+                            
+                            <form method="POST" action="{{ url_for('reset_exam_attempt', exam_id=exam.id, user_id=result.user_id) }}" class="inline-form"
+                                    onsubmit="return confirm('¿SEGURO que quieres REINICIAR el intento de {{ result.username }}? Se borrarán todas sus respuestas y su calificación.');">
+                                
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                <button type="submit" class="button action-btn reset-btn">
+                                    🔄 Reiniciar
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
         {% else %}
-            <p>Aún ningún alumno ha presentado este examen.</p>
+        <p class="no-items-message">Aún ningún alumno ha presentado este examen.</p>
         {% endif %}
     </div>
+</div>
 
-    <style>
-        /* Estilos de la tabla existentes */
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .results-table th {
-            background-color: #3498db;
-            color: white;
-            text-align: center;
-        }
-        .results-table th, .results-table td {
-            padding: 12px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-        .results-table tr:nth-child(even) { background-color: #f9f9f9; } 
-        
-        .review-btn { 
-            background: #2ecc71; 
-            padding: 6px 10px; 
-            margin: 0;
-            text-decoration: none;
-            color: white;
-            border-radius: 5px;
-        }
-        .review-btn:hover { background: #27ae60; }
+<style>
+    /* --- Estilos para la página de Resultados (Admin) --- */
+    .review-container {
+        max-width: 1200px;
+        margin: 20px auto;
+    }
+    .page-header {
+        text-align: center;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .exam-title-header {
+        color: #3498db;
+        font-size: 1.5em;
+    }
+    .back-nav-btn {
+        background: #7f8c8d;
+        padding: 10px 15px;
+        margin-bottom: 20px;
+        transition: background 0.3s;
+    }
+    .back-nav-btn:hover { background: #5c6a74; }
 
-        /* NUEVOS ESTILOS PARA EL BOTÓN DE REINICIO */
-        .reset-btn { 
-            background: #e74c3c; /* Rojo para la acción peligrosa */
-            border: none;
-            cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 5px;
-            color: white;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            font-weight: bold;
-            display: inline-block;
-            line-height: 1;
-        }
-        .reset-btn:hover { background: #c0392b; }
-        
-        /* Estilo general para botones */
-        .button {
-            text-decoration: none;
-            color: white;
-            border-radius: 5px;
-        }
-    </style>
+    /* --- 🔥🔥 NUEVOS ESTILOS PARA EL CUADRO DE "LIBERAR" 🔥🔥 --- */
+    .release-answers-box {
+        background: #fdfae5;
+        border: 1px dashed #f39c12;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    .release-status {
+        display: flex;
+        align-items: center;
+        font-size: 1.1em;
+        font-weight: bold;
+        padding: 15px;
+        border-radius: 8px;
+    }
+    .release-status i {
+        font-size: 1.5em;
+        margin-right: 15px;
+    }
+    .status-released {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    .status-pending {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    .release-btn {
+        background: #9b59b6; /* Morado */
+        font-size: 1em !important;
+        padding: 10px 15px !important;
+        margin-top: 15px;
+        width: 100%;
+        display: block; /* Asegura que ocupe todo el ancho */
+        box-sizing: border-box; /* Para que el padding no lo rompa */
+    }
+    .release-btn:hover {
+        background: #8e44ad;
+    }
+    /* --- 🔥🔥 FIN DE NUEVOS ESTILOS 🔥🔥 --- */
+
+
+    .student-list-card {
+        padding: 0;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .card-subtitle {
+        padding: 20px;
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #eee;
+        margin: 0;
+        font-size: 1.2em;
+        color: #34495e;
+    }
+
+    .table-responsive { overflow-x: auto; width: 100%; }
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .results-table th {
+        background-color: #34495e;
+        color: white;
+        text-align: left;
+        padding: 12px 15px;
+        font-size: 0.9em;
+    }
+    .results-table td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+        vertical-align: middle;
+    }
+    .results-table tr:nth-child(even) { background-color: #f9f9f9; }
+    
+    /* 🔥 Estilos para Puntaje y Tipo de Envío */
+    .score-normal {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #3498db;
+    }
+    .score-cancelled {
+        font-weight: bold;
+        color: #e74c3c;
+    }
+    .submission-tag {
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.85em;
+        font-weight: bold;
+        color: white;
+    }
+    .tag-manual { background: #2ecc71; }
+    .tag-auto { background: #f39c12; }
+    .tag-cancelled { background: #e74c3c; }
+
+    .action-cell {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .action-btn {
+        padding: 8px 12px;
+        font-size: 0.9em;
+        text-decoration: none;
+        color: white;
+        border-radius: 6px;
+        transition: background 0.2s;
+        display: inline-block;
+        border: none;
+        cursor: pointer;
+    }
+    .review-btn { background: #3498db; }
+    .review-btn:hover { background: #2980b9; }
+    .reset-btn { background: #e67e22; }
+    .reset-btn:hover { background: #d35400; }
+    
+    .no-items-message {
+        padding: 20px;
+        text-align: center;
+        font-size: 1.1em;
+        color: #777;
+    }
+
+    /* Fila cancelada */
+    .cancelled-row {
+        background-color: #fbecec !important; /* Rosa pálido */
+        text-decoration: line-through;
+        color: #999;
+    }
+    .cancelled-row .no-action {
+        text-decoration: none;
+    }
+</style>
 {% endblock %}

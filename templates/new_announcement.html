@@ -3,6 +3,9 @@
 {% block title %}Publicar Nuevo Anuncio{% endblock %}
 
 {% block content %}
+    <!-- 1. Importar librería CKEditor -->
+    <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+
     <div class="container new-announcement-container">
         <div class="card form-card">
             <h2 class="card-title">📢 Nuevo Anuncio</h2>
@@ -10,27 +13,39 @@
 
             <form method="POST" class="announcement-form">
                 
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="form-group">
                     <label for="title">Título del Anuncio:</label>
                     <input type="text" id="title" name="title" placeholder="Ej: Fechas de inscripción al examen final" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="content">Contenido del Anuncio:</label>
-                    <textarea id="content" name="content" rows="8" placeholder="Escribe aquí el cuerpo del anuncio..." required></textarea>
+                    <label for="editor1">Contenido del Anuncio:</label>
+                    <!-- Se usa el ID editor1 para que el script lo detecte -->
+                    <textarea id="editor1" name="content" rows="10" placeholder="Escribe aquí el cuerpo del anuncio..." required></textarea>
                 </div>
 
-                <button type="submit" class="button submit-button publish-btn">Publicar Anuncio</button>
+                <button type="submit" class="button submit-button publish-btn">Publicar Anuncio 🚀</button>
             </form>
         </div>
 
         <a href="{{ url_for('admin_panel') }}" class="btn back-btn">⬅ Volver al Panel</a>
     </div>
 
+    <!-- 2. Script para inicializar CKEditor -->
+    <script>
+        // Reemplaza el textarea con CKEditor
+        CKEDITOR.replace('editor1', {
+            language: 'es', // Idioma español
+            height: 300     // Altura del editor
+        });
+    </script>
+
     <style>
         /* --- Contenedor y Tarjeta Base --- */
         .new-announcement-container {
-            max-width: 700px;
+            max-width: 800px; /* Un poco más ancho para acomodar el editor */
             margin: 30px auto;
         }
 
@@ -56,9 +71,9 @@
             padding-bottom: 15px;
         }
 
-        /* --- Estructura del Formulario (Responsive) --- */
+        /* --- Estructura del Formulario --- */
         .form-group { 
-            margin-bottom: 20px; /* Más espacio entre grupos */
+            margin-bottom: 20px;
         }
 
         .form-group label { 
@@ -68,18 +83,16 @@
             color: #333;
         }
         
-        .announcement-form input[type="text"], 
-        .announcement-form textarea {
-            width: 100%; /* CLAVE: Ocupa el 100% del contenedor */
+        .announcement-form input[type="text"] {
+            width: 100%; 
             padding: 12px; 
             border: 1px solid #ccc; 
             border-radius: 6px; 
-            box-sizing: border-box; /* Fundamental para que el padding funcione correctamente */
+            box-sizing: border-box; 
             transition: border-color 0.3s;
         }
         
-        .announcement-form input[type="text"]:focus, 
-        .announcement-form textarea:focus {
+        .announcement-form input[type="text"]:focus {
             border-color: #3498db;
             outline: none;
         }
@@ -89,7 +102,7 @@
             display: block;
             width: 100%;
             padding: 12px; 
-            margin-top: 10px;
+            margin-top: 20px;
             background: #2ecc71; /* Verde primario */
             color: white;
             border: none;
@@ -107,10 +120,17 @@
         .back-btn {
             margin-top: 20px;
             display: inline-block;
-            background: #7f8c8d; /* Color neutro para volver */
+            background: #7f8c8d;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: white;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            background: #95a5a6;
         }
 
-        /* --- MEDIA QUERY (Ajustes finos para móvil) --- */
+        /* --- MEDIA QUERY --- */
         @media (max-width: 600px) {
             .new-announcement-container {
                 width: 100%;
@@ -121,4 +141,4 @@
             }
         }
     </style>
-{% endblock %}
+{% endblock %}a
