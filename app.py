@@ -67,10 +67,8 @@ if not database_url:
 
 print(f"🔌 CONECTANDO A: {database_url}") # Esto nos servirá para depurar si falla
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://ueeq6njlb46im8:p19c3a3e50ba55d594a397225ff9dd56288ae26a932335a0a5d18645f3fb27b80@c85cgnr0vdhse3.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/dablvf5cje245k"
-
-# Clave secreta
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'clave_secreta_local_123')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://ueeq6njlb46im8:p19c3a3e50ba55d594a397225ff9dd56288ae26a932335a0a5d18645f3fb27b80@c85cgnr0vdhse3.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/dablvf5cje245k'
+app.config['SECRET_KEY'] = 'clave_secreta_emergencia_2025'
 # Aumentamos el límite a 500 MB para soportar la grabación de video/sesión
 # Límite de 100 MB (100 * 1024 * 1024)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
