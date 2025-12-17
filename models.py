@@ -33,6 +33,10 @@ class Question(db.Model):
     text = db.Column(db.String(500), nullable=False)
     exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
     answers = db.relationship('Answer', backref='question', lazy=True)
+    image_a = db.Column(db.String(200), nullable=True)
+    image_b = db.Column(db.String(200), nullable=True)
+    image_c = db.Column(db.String(200), nullable=True)
+    image_d = db.Column(db.String(200), nullable=True)
 
 
 # Modelo de respuestas

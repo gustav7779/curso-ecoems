@@ -11,25 +11,35 @@
         </header>
 
         <div class="card add-form-card">
-            <h3 class="card-subtitle">➕ Agregar Nueva Pregunta</h3>
-            
-            <form method="POST" enctype="multipart/form-data" class="question-form">
+            <form method="POST" enctype="multipart/form-data" class="question-form"
+                  action="{{ url_for('edit_question', question_id=question.id) if question else url_for('add_question', exam_id=exam.id) }}">
                 
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+                <h3 class="card-subtitle">
+                    {{ '✏️ Editando Pregunta' if question else '➕ Agregar Nueva Pregunta' }}
+                </h3>
+
                 <div class="form-group">
                     <label for="subject">Materia/Categoría:</label>
-                    <input type="text" id="subject" name="subject" placeholder="Ej: Habilidad Matemática" required>
+                    <input type="text" id="subject" name="subject" placeholder="Ej: Habilidad Matemática" 
+                           value="{{ question.subject if question else '' }}" required>
                 </div>
 
                 <div class="form-group">
                     <label for="text">Texto de la Pregunta:</label>
-                    <textarea id="text" name="text" rows="4" required></textarea>
+                    <textarea id="text" name="text" rows="4" required>{{ question.text if question else '' }}</textarea>
                 </div>
 
                 <div class="form-group image-upload-group">
-                    <label for="image_file">Imagen (Opcional):</label>
+                    <label for="image_file">Imagen Principal (Opcional):</label>
                     <div class="file-input-wrapper">
+                        {% if question and question.image_filename %}
+                            <small style="color: #e67e22; margin-bottom: 5px;">
+                                <i class="fas fa-image"></i> Imagen actual: {{ question.image_filename }}
+                                (Sube otra para reemplazarla)
+                            </small>
+                        {% endif %}
                         <input type="file" id="image_file" name="image_file" accept="image/*" class="file-input">
                         <small class="help-text">Formatos: JPG, PNG. Máx 2MB.</small>
                     </div>
@@ -37,40 +47,64 @@
 
                 <h4 class="options-header">Opciones de Respuesta:</h4>
                 
-                <div class="form-group">
-                    <label for="option_a">A)</label>
-                    <input type="text" id="option_a" name="option_a" placeholder="Opción A" required>
+                <div class="option-group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+                    <label>Inciso A:</label>
+                    <input type="text" name="option_a" class="form-control" placeholder="Texto de la respuesta A"
+                           value="{{ question.option_a if question else '' }}" required style="width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    
+                    <label style="margin-top: 5px; font-size: 0.9em; color: #666; display: block;">📸 Imagen para Inciso A (Opcional):</label>
+                    <input type="file" name="image_a" class="form-control-file" accept="image/*">
                 </div>
 
-                <div class="form-group">     
-                    <label for="option_b">B)</label>
-                    <input type="text" id="option_b" name="option_b" placeholder="Opción B" required>
+                <div class="option-group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+                    <label>Inciso B:</label>
+                    <input type="text" name="option_b" class="form-control" placeholder="Texto de la respuesta B"
+                           value="{{ question.option_b if question else '' }}" required style="width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    
+                    <label style="margin-top: 5px; font-size: 0.9em; color: #666; display: block;">📸 Imagen para Inciso B (Opcional):</label>
+                    <input type="file" name="image_b" class="form-control-file" accept="image/*">
                 </div>
 
-                <div class="form-group">
-                    <label for="option_c">C)</label>
-                    <input type="text" id="option_c" name="option_c" placeholder="Opción C">
+                <div class="option-group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+                    <label>Inciso C:</label>
+                    <input type="text" name="option_c" class="form-control" placeholder="Texto de la respuesta C"
+                           value="{{ question.option_c if question else '' }}" style="width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    
+                    <label style="margin-top: 5px; font-size: 0.9em; color: #666; display: block;">📸 Imagen para Inciso C (Opcional):</label>
+                    <input type="file" name="image_c" class="form-control-file" accept="image/*">
                 </div>
 
-                <div class="form-group">
-                    <label for="option_d">D)</label>
-                    <input type="text" id="option_d" name="option_d" placeholder="Opción D">
+                <div class="option-group" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px;">
+                    <label>Inciso D:</label>
+                    <input type="text" name="option_d" class="form-control" placeholder="Texto de la respuesta D"
+                           value="{{ question.option_d if question else '' }}" style="width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    
+                    <label style="margin-top: 5px; font-size: 0.9em; color: #666; display: block;">📸 Imagen para Inciso D (Opcional):</label>
+                    <input type="file" name="image_d" class="form-control-file" accept="image/*">
                 </div>
 
                 <div class="form-group">
                     <label for="correct_option">Respuesta Correcta:</label>
                     <select id="correct_option" name="correct_option" required>
                         <option value="">-- Seleccionar --</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
+                        <option value="A" {% if question and question.correct_option == 'A' %}selected{% endif %}>A</option>
+                        <option value="B" {% if question and question.correct_option == 'B' %}selected{% endif %}>B</option>
+                        <option value="C" {% if question and question.correct_option == 'C' %}selected{% endif %}>C</option>
+                        <option value="D" {% if question and question.correct_option == 'D' %}selected{% endif %}>D</option>
                     </select>
                 </div>
 
-                <button type="submit" class="submit-btn-custom">Guardar Pregunta</button>
+                <button type="submit" class="submit-btn-custom">
+                    {{ '💾 Actualizar Pregunta' if question else '💾 Guardar Pregunta' }}
+                </button>
+                
+                {% if question %}
+                    <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button" style="display:block; text-align:center; margin-top:10px; color:#7f8c8d; text-decoration:underline;">
+                        Cancelar Edición (Volver a Agregar)
+                    </a>
+                {% endif %}
             </form>
-        </div>
+            </div>
 
         <div class="right-column-container">
 
@@ -205,6 +239,7 @@
         }
         .form-group {
             display: flex;
+            flex-direction: row;
             align-items: center;
             margin-bottom: 10px;
         }

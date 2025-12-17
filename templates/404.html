@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="error-page-container">
+    <div class="error-card">
+        <div class="illustration-box">
+            <div class="floating-emoji">👨‍🚀</div>
+            <div class="shadow"></div>
+        </div>
+        
+        <h1 class="error-code">404</h1>
+        <h2 class="error-title">¡Ups! Te perdiste en el espacio.</h2>
+        <p class="error-message">
+            Parece que la página que buscas ha orbitado hacia otro lugar o nunca existió.
+        </p>
+        
+        <a href="{{ url_for('dashboard') }}" class="btn-home">
+            🏠 Regresar a la Tierra (Inicio)
+        </a>
+    </div>
+</div>
+
+<style>
+    /* Contenedor principal: Centra todo vertical y horizontalmente */
+    .error-page-container {
+        min-height: 80vh; /* Ocupa casi toda la pantalla */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Tarjeta estilo "Glassmorphism" (fondo blanco suave) */
+    .error-card {
+        background: white;
+        padding: 50px 40px;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        text-align: center;
+        max-width: 500px;
+        width: 100%;
+        transition: transform 0.3s ease;
+    }
+
+    .error-card:hover {
+        transform: translateY(-5px);
+    }
+
+    /* Animación del astronauta */
+    .illustration-box {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .floating-emoji {
+        font-size: 5em;
+        animation: float 3s ease-in-out infinite;
+        display: inline-block;
+    }
+
+    .shadow {
+        width: 50px;
+        height: 10px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 50%;
+        margin: 0 auto;
+        animation: shrink 3s ease-in-out infinite;
+    }
+
+    /* Tipografía */
+    .error-code {
+        font-size: 6em;
+        font-weight: 800;
+        margin: 0;
+        background: -webkit-linear-gradient(45deg, #3498db, #8e44ad);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+    }
+
+    .error-title {
+        color: #2c3e50;
+        font-size: 1.5em;
+        margin-top: 10px;
+        font-weight: 600;
+    }
+
+    .error-message {
+        color: #7f8c8d;
+        margin: 15px 0 30px 0;
+        line-height: 1.6;
+        font-size: 1.1em;
+    }
+
+    /* Botón moderno */
+    .btn-home {
+        display: inline-block;
+        padding: 12px 30px;
+        background: linear-gradient(to right, #3498db, #2980b9);
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: bold;
+        box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        transition: all 0.3s ease;
+    }
+
+    .btn-home:hover {
+        background: linear-gradient(to right, #2980b9, #3498db);
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
+        color: white; /* Asegura que el texto siga blanco */
+    }
+
+    /* Definición de las animaciones */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+        100% { transform: translateY(0px); }
+    }
+
+    @keyframes shrink {
+        0% { transform: scale(1); opacity: 0.1; }
+        50% { transform: scale(0.8); opacity: 0.05; }
+        100% { transform: scale(1); opacity: 0.1; }
+    }
+
+    /* Responsive para móviles */
+    @media (max-width: 480px) {
+        .error-code { font-size: 4em; }
+        .error-title { font-size: 1.2em; }
+        .floating-emoji { font-size: 4em; }
+    }
+</style>
+{% endblock %}

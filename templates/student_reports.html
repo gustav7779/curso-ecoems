@@ -11,65 +11,62 @@
     <div class="container reports-list-container">
         <div class="top-controls">
             <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn">⬅ Volver al Dashboard</a>
-            
-            <a href="{{ url_for('new_report') }}" class="button new-report-btn major-action-btn">
-                Enviar Nuevo Reporte
-            </a>
+            <a href="{{ url_for('new_report') }}" class="button new-report-btn major-action-btn">Enviar Nuevo Reporte</a>
         </div>
 
         {% if reports %}
             {% for report in reports %}
-            <div class="report-card">
+            <div class="report-card" data-report-id="{{ report.id }}">
                 <div class="report-header">
                     <h2>Reporte #{{ report.id }}: {{ report.title }}</h2>
-                    <div class="status-badge 
+                    <div id="status-badge-{{ report.id }}" class="status-badge 
                         {% if report.status == 'Cerrado' %}status-closed{% elif report.status == 'En Proceso' %}status-pending{% else %}status-open{% endif %}">
                         {{ report.status }}
                     </div>
                 </div>
                 
-                <p class="report-meta"><strong>Enviado el:</strong> {{ report.date_submitted | datetimeformat('dd/MM/yyyy HH:mm') }}</p>
+                <p class="report-meta"><strong>Enviado el:</strong> {{ report.date_submitted | to_mexico_time }}</p>
                 
                 <div class="problem-description">
                     <p><strong>Problema reportado:</strong></p>
                     <p class="description-text">{{ report.description }}</p>
                 </div>
 
-                {% if report.admin_response %}
-                    <hr class="thread-separator">
-                    <div class="admin-response-box">
-                        <h4 class="response-title">
-                            {% if report.status == 'Cerrado' %}
-                                ✅ Respuesta Final (Cerrado)
-                            {% else %}
-                                💬 Historial de Comunicación
-                            {% endif %}
-                        </h4>
-                        <div class="response-thread">
+                <div id="chat-container-{{ report.id }}" class="admin-response-box" 
+                     style="{% if not report.admin_response %}display:none;{% endif %} max-height: 300px; overflow-y: auto;">
+                    <h4>💬 Historial:</h4>
+                    <div id="history-content-{{ report.id }}">
+                        {% if report.admin_response %}
                             {{ report.admin_response | replace('\n', '<br>') | safe }}
-                        </div>
+                        {% endif %}
                     </div>
-                {% else %}
-                    <p class="pending-message">Esperando respuesta del administrador...</p>
-                {% endif %}
-                
+                    <div id="live-messages-{{ report.id }}"></div>
+                </div>
+
+                <p id="pending-msg-{{ report.id }}" style="{% if report.admin_response %}display:none;{% endif %} color: orange; font-weight: bold; text-align: center; border: 1px dashed orange; padding: 5px;">
+                    Esperando respuesta del administrador...
+                </p>
+
                 <div class="report-actions">
                     {% if report.image_filename %}
-                        <a href="{{ url_for('static', filename='images/' + report.image_filename) }}" target="_blank" class="button image-link">🖼️ Ver imagen de evidencia</a>
+                        <a href="{{ url_for('static', filename='images/' + report.image_filename) }}" target="_blank" class="button image-link">🖼️ Ver imagen</a>
                     {% endif %}
                     
                     {% if report.status != 'Cerrado' %}
-                        <form method="POST" action="{{ url_for('reply_to_report', report_id=report.id) }}" class="reply-form">
-                            
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                            <hr class="thread-separator">
+                        
+                        <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
                             <div class="form-group">
-                                <label for="student_response_{{ report.id }}">Responder al Administrador:</label>
-                                <textarea id="student_response_{{ report.id }}" name="student_response" rows="2" required placeholder="Escribe tu mensaje..."></textarea>
+                                <label>Responder (Instantáneo):</label>
+                                <textarea id="student_response_{{ report.id }}" rows="2" style="width:100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Escribe tu mensaje..."></textarea>
                             </div>
-                            <button type="submit" class="button reply-btn">✉️ Responder</button>
-                        </form>
+                            
+                            <button type="button" 
+                                    onclick="enviarMensajeAlumno({{ report.id }})" 
+                                    class="button reply-btn">
+                                ✉️ Enviar Mensaje
+                            </button>
+                        </div>
+
                     {% else %}
                         <p class="closed-final-message">✅ Reporte Cerrado.</p>
                     {% endif %}
@@ -77,230 +74,147 @@
             </div> 
             {% endfor %}
         {% else %}
-            <p class="no-items-message">Aún no has enviado ningún reporte. Si tienes algún problema, ¡envíanos uno!</p>
+            <p class="no-items-message">Aún no has enviado ningún reporte.</p>
         {% endif %}
     </div>
 
     <style>
-        /* --- Título de la Página (Header Falso) --- */
-        .header-reports-title {
-            background: #3498db; 
-            color: white; 
-            padding: 25px;
-            text-align: center; 
-            border-radius: 0 0 10px 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        .header-reports-title h1, .header-reports-title p {
-            margin: 0;
-        }
-
-        .reports-list-container {
-            max-width: 1000px;
-        }
-
-        /* --- Controles Superiores --- */
-        .top-controls {
-            display: flex;
-            justify-content: flex-start;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .back-nav-btn {
-            background: #7f8c8d; 
-            padding: 10px 15px;
-            margin: 0;
-            text-decoration: none; /* Asegurado */
-            border-radius: 5px; /* Asegurado */
-            color: white; /* Asegurado */
-        }
-        .back-nav-btn:hover {
-            background: #5c6a74;
-            transform: translateX(-3px);
-        }
-        
-        /* 🔑 NUEVO ESTILO: Botón principal grande de reporte 🔑 */
-        .major-action-btn {
-            background: #e74c3c !important; /* Rojo vivo */
-            padding: 12px 25px;
-            margin: 0;
-            font-weight: bold;
-            border-radius: 8px;
-            transition: background 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
-            text-decoration: none; /* Asegurado */
-            color: white; /* Asegurado */
-        }
-        .major-action-btn:hover {
-            background: #c0392b !important;
-            box-shadow: 0 6px 10px rgba(231, 76, 60, 0.6);
-        }
-
-        /* --- Tarjeta de Reporte Individual --- */
-        .report-card {
-            background: #fff;
-            padding: 25px;
-            margin-bottom: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-left: 5px solid #3498db;
-        }
-        
-        .report-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-        .report-header h2 {
-            margin: 0;
-            font-size: 1.4em;
-            color: #2c3e50;
-        }
-
-        .report-meta {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            margin-bottom: 15px;
-        }
-        
-        /* --- Badge de Estado --- */
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-weight: bold;
-            color: white;
-            font-size: 0.85em;
-        }
-        .status-open { background-color: #f39c12; }
-        .status-closed { background-color: #2ecc71; }
-        .status-pending { background-color: #3498db; }
-
-        /* --- Descripción del Problema --- */
-        .problem-description {
-            margin-top: 15px;
-            border-left: 3px solid #ccc;
-            padding-left: 15px;
-            font-size: 0.95em;
-            color: #555;
-            padding-top: 5px;
-        }
-        .description-text {
-            white-space: pre-wrap;
-        }
-
-        /* --- Hilo de Respuesta del Admin --- */
-        .thread-separator {
-            border: 0;
-            border-top: 1px dashed #ccc;
-            margin: 20px 0;
-        }
-        .admin-response-box {
-            padding: 15px;
-            background: #ecf0f1;
-            border-left: 4px solid #2ecc71;
-            border-radius: 4px;
-        }
-        .response-title {
-            margin-top: 0; 
-            color: #1a7d3f;
-            font-size: 1.1em;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-        .response-thread {
-            white-space: pre-wrap; 
-            font-size: 0.95em;
-            color: #333;
-        }
-        .pending-message {
-            color: #f39c12;
-            font-style: italic;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        .closed-final-message {
-            color: #2ecc71;
-            font-weight: bold;
-            font-size: 1.1em;
-            margin-top: 15px;
-        }
-        
-        .image-link {
-            font-size: 0.9em;
-            color: #3498db;
-            text-decoration: underline;
-            display: inline-block;
-            margin-top: 5px;
-        }
-
-        /* --- Formulario de Respuesta Rápida --- */
-        .reply-form {
-            padding: 15px 0;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-        .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-        .reply-btn {
-            background: #3498db; 
-            padding: 8px 15px;
-            font-size: 0.95em;
-            font-weight: bold;
-            text-decoration: none; /* Asegurado */
-            color: white; /* Asegurado */
-            border-radius: 5px; /* Asegurado */
-            border: none; /* Asegurado */
-            cursor: pointer; /* Asegurado */
-        }
-        
-        /* --- MEDIA QUERY (Móvil) --- */
-        @media (max-width: 600px) {
-            .reports-list-container {
-                width: 100%;
-                padding: 0 10px;
-            }
-            .report-card {
-                padding: 15px;
-            }
-            .report-header {
-                flex-direction: column;
-                align-items: flex-start;
-                padding-bottom: 5px;
-            }
-            .report-header h2 {
-                font-size: 1.3em;
-                margin-bottom: 8px;
-            }
-            .report-meta {
-                margin-top: 5px;
-            }
-            
-            .top-controls {
-                justify-content: space-between;
-            }
-            
-            .back-nav-btn, .new-report-btn {
-                width: 48%;
-                text-align: center;
-                box-sizing: border-box;
-            }
-        }
+        .header-reports-title { background: #3498db; color: white; padding: 30px; text-align: center; border-radius: 0 0 12px 12px; margin-bottom: 40px; }
+        .header-reports-title h1 { font-size: 2.2em; margin: 0 0 5px 0; }
+        .reports-list-container { max-width: 900px; margin: 0 auto; padding: 0 15px; }
+        .top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .major-action-btn { background: #2ecc71; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; }
+        .report-card { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
+        .report-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 10px; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; color: white; min-width: 90px; text-align: center; }
+        .status-open { background: #e74c3c; } .status-pending { background: #f39c12; } .status-closed { background: #2ecc71; }
+        .problem-description { padding: 15px; background: #f9fbfc; border: 1px solid #ecf0f1; border-radius: 5px; margin-bottom: 20px; }
+        .reply-btn { background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; }
+        .reply-btn:hover { background: #2980b9; }
+        .image-link { display: inline-block; background: #9b59b6; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9em; margin-bottom: 10px; }
+        .closed-final-message { text-align: center; padding: 15px; background: #eaf7ed; color: #2ecc71; border: 1px solid #d4edda; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+        .admin-response-box { background: #f9f9f9; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
+        @media (max-width: 768px) { .top-controls { flex-direction: column; gap: 15px; } .report-header { flex-direction: column; align-items: flex-start; gap: 10px; } }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        console.log("🟢 Cargando script de Chat Alumno...");
+
+        // Variable global
+        var socket = io();
+
+        // 1. DEFINICIÓN DE LA FUNCIÓN CON EL NOMBRE CORRECTO
+        // El nombre coincide EXACTAMENTE con lo que pide tu error: enviarMensajeAlumno
+        window.enviarMensajeAlumno = function(reportId) {
+            console.log("🖱️ CLICK: Botón presionado para reporte #" + reportId);
+            
+            var textarea = document.getElementById('student_response_' + reportId);
+            
+            if (!textarea) {
+                alert("Error interno: No encuentro el cuadro de texto.");
+                return;
+            }
+
+            var message = textarea.value.trim();
+            if (message === "") {
+                alert('Escribe un mensaje primero.');
+                return;
+            }
+            
+            console.log("📤 Enviando:", message);
+
+            socket.emit('send_student_report_message', {
+                report_id: reportId,
+                message: message
+            });
+
+            textarea.value = '';
+        };
+
+        // 2. LÓGICA DE SOCKETS
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Conexión
+            socket.on('connect', function() {
+                console.log("✅ Conectado a SocketIO");
+                // Unirse a las salas
+                var cards = document.querySelectorAll('.report-card');
+                cards.forEach(function(card) {
+                    var rId = card.getAttribute('data-report-id');
+                    socket.emit('join_report_room', { report_id: rId });
+                });
+            });
+
+            // Recibir Mensajes
+            socket.on('new_chat_message', function(data) {
+                console.log("📩 Mensaje recibido:", data);
+                var reportId = data.report_id;
+                
+                var chatContainer = document.getElementById('chat-container-' + reportId);
+                var liveArea = document.getElementById('live-messages-' + reportId);
+                var pendingMsg = document.getElementById('pending-msg-' + reportId);
+                var statusBadge = document.getElementById('status-badge-' + reportId);
+
+                if (!liveArea) return;
+
+                if (pendingMsg) pendingMsg.style.display = 'none';
+                if (chatContainer) chatContainer.style.display = 'block';
+
+                var msgDiv = document.createElement('div');
+                // Estilos
+                var colorStyle = data.is_admin 
+                    ? 'border-left: 4px solid #3498db; background: #eaf2f8; margin-right: 10%;' 
+                    : 'border-left: 4px solid #2ecc71; background: #eafaf1; margin-left: 10%;';
+
+                msgDiv.style.cssText = "margin: 8px 0; padding: 10px; border-radius: 5px; " + colorStyle;
+                
+                var senderName = data.is_admin ? 'Administrador' : 'Tú';
+
+                msgDiv.innerHTML = `
+                    <div style="font-size:0.9em; font-weight:bold; margin-bottom:4px;">
+                        ${senderName} <span style="font-size:0.8em; font-weight:normal; color:#777">(${data.timestamp})</span>
+                    </div>
+                    <div>${data.message.replace(/\n/g, '<br>')}</div>
+                `;
+
+                liveArea.appendChild(msgDiv);
+                if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                if (data.is_admin && statusBadge && statusBadge.innerText.trim() !== 'Cerrado') {
+                    statusBadge.innerText = 'En Proceso';
+                    statusBadge.className = 'status-badge status-pending';
+                }
+            });
+            
+            // Cierre
+            socket.on('report_closed', function(data) {
+                var reportId = data.report_id;
+                var statusBadge = document.getElementById('status-badge-' + reportId);
+                var reportCard = document.querySelector('.report-card[data-report-id="' + reportId + '"]');
+                
+                if (statusBadge) {
+                    statusBadge.innerText = 'Cerrado';
+                    statusBadge.className = 'status-badge status-closed';
+                }
+                
+                if (reportCard) {
+                    // Borrar botones
+                    var buttons = reportCard.querySelectorAll('button');
+                    buttons.forEach(function(btn){
+                       if(btn.onclick && btn.onclick.toString().includes('enviarMensajeAlumno')){
+                           if(btn.parentNode) btn.parentNode.remove();
+                       } 
+                    });
+                    
+                    if(!reportCard.querySelector('.closed-final-message')) {
+                        var msg = document.createElement('p');
+                        msg.className = 'closed-final-message';
+                        msg.innerText = '✅ Reporte Cerrado.';
+                        reportCard.querySelector('.report-actions').appendChild(msg);
+                    }
+                }
+            });
+        });
+    </script>
 {% endblock %}

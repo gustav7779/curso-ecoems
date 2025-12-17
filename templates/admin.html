@@ -20,6 +20,7 @@
             </div>
         </a>
     </div>
+
     <div class="container admin-container">
         
         <div class="flex-container">
@@ -54,9 +55,7 @@
                 {% if current_user.two_factor_secret %}
                     <p>La autenticación de dos factores está **activa**.</p>
                     <form method="POST" action="{{ url_for('disable_2fa') }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de desactivar 2FA?');">
-                        
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
                         <button type="submit" class="button" style="background: #e74c3c;">Desactivar 2FA</button>
                     </form>
                     <a href="{{ url_for('setup_2fa') }}" class="button" style="background: #f39c12; margin-top: 10px;">Reconfigurar</a>
@@ -77,7 +76,6 @@
             {% if exams %}
                 <ul class="exam-list">
                     {% for exam in exams %}
-                        {# Bucle para encontrar el conteo de alumnos tomando el examen (del Código 2) #}
                         {% set active_count = 0 %}
                         {% for ex_id, ex_title, count in active_exams_summary %}
                             {% if ex_id == exam.id %}
@@ -87,52 +85,47 @@
 
                         <li class="exam-item">
                             <span class="exam-title">
-                                {# 🔑 LÍNEA MODIFICADA: Usamos '| list | length' para asegurar que la relación de SQLAlchemy se evalúe correctamente, previniendo errores 500. #}
                                 {{ exam.title }} ({{ exam.questions | list | length }} Preguntas)
                                 {% if active_count > 0 %}
-                                    {# Badge de monitoreo en vivo #}
                                     <span class="badge badge-warning">🟢 {{ active_count }} en Vivo</span>
                                 {% endif %}
                             </span>
+                            
                             <div class="exam-actions">
-                                
-                                {# 🔑 BOTÓN DE RENDIMIENTO/SIMULADOR (NUEVO) 🔑 #}
-                                <a href="{{ url_for('exam_simulator_view', exam_id=exam.id) }}" class="button action-btn simulator-btn" 
-                                    style="background: #9b59b6; margin: 0 4px 0 0;">
-                                    📊 Ver Rendimiento
+                                <a href="{{ url_for('exam_simulator_view', exam_id=exam.id) }}" class="button action-btn simulator-btn" style="background: #9b59b6; margin: 0 4px 0 0;" title="Ver Rendimiento Simulado">
+                                    📊 Rendimiento
                                 </a>
                                 
-                                {# 🔑 BOTÓN DE MONITOREO (Solo Admin) 🔑 #}
                                 {% if current_user.role == 'admin' %}
-                                <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="button action-btn monitor-btn" 
-                                    style="background: #e67e22; font-size: 0.8em; padding: 6px 8px; margin: 0 4px 0 0;">
-                                    👀 Monitorear
+                                <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="button action-btn monitor-btn" style="background: #e67e22; font-size: 0.8em; padding: 6px 8px; margin: 0 4px 0 0;" title="Monitor en Vivo">
+                                    👀 Monitor
                                 </a>
                                 {% endif %}
                                 
-                                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="button action-btn edit-btn-blue" style="margin: 0 4px 0 0;">
-                                    ⚙️ Editar Examen
+                                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="button action-btn edit-btn-blue" style="margin: 0 4px 0 0;" title="Editar Configuración">
+                                    ⚙️ Editar
                                 </a>
                                 
-                                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">
-                                    ✏️ Añadir Preguntas
+                                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;" title="Gestionar Preguntas">
+                                    ✏️ Preguntas
                                 </a>
-                                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="button action-btn view-btn" style="margin: 0 4px 0 0;">
-                                    📖 Ver Resultados
+
+                                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="button action-btn view-btn" style="margin: 0 4px 0 0;" title="Ver Tabla de Resultados">
+                                    📖 Resultados
+                                </a>
+
+                                <a href="{{ url_for('download_failure_stats', exam_id=exam.id) }}" class="button action-btn" style="background: #c0392b; margin: 0 4px 0 0;" title="Descargar análisis de reprobación por materia">
+                                    <i class="fas fa-file-csv"></i> Reprobación
                                 </a>
                                 
                                 <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de DUPLICAR el examen \'{{ exam.title }}\'?');" style="margin: 0;">
-                                    
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                                    <button type="submit" class="button action-btn duplicate-btn" style="margin: 0 4px 0 0;">📋 Duplicar</button>
+                                    <button type="submit" class="button action-btn duplicate-btn" style="margin: 0 4px 0 0;" title="Duplicar Examen">📋 Duplicar</button>
                                 </form>
                                 
                                 <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de eliminar el examen: {{ exam.title }}? Esto eliminará TODAS las preguntas y respuestas asociadas.');" style="margin: 0;">
-                                    
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                                    <input type="submit" value="🗑️ Eliminar" class="button action-btn delete-btn" style="margin: 0;">
+                                    <button type="submit" class="button action-btn delete-btn" style="margin: 0;" title="Eliminar Examen">🗑️</button>
                                 </form>
                             </div>
                         </li>
@@ -149,7 +142,7 @@
             <h2>📢 Gestión de Anuncios</h2>
             <div class="announcement-controls">
                 <a href="{{ url_for('new_announcement') }}" class="button primary-btn announcement-action-btn">Crear Nuevo Anuncio</a>
-                <a href="{{ url_for('admin_announcement_read_status') }}" class="button primary-btn announcement-action-btn" style="background: #16a085;">👁️ Trazabilidad de Lectura</a>
+                <a href="{{ url_for('admin_announcement_read_status') }}" class="button primary-btn announcement-action-btn" style="background: #16a085;">👀Que alumno vieron el examen👀</a>
             </div>
             
             <h3 class="subsection-title">Anuncios Publicados</h3>
@@ -168,13 +161,8 @@
                             <div class="exam-actions">
                                 <a href="{{ url_for('edit_announcement', announcement_id=announcement.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">✏️ Editar</a>
 
-                                <form method="POST"
-                                    action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}"
-                                    class="inline-form"
-                                    onsubmit="return confirm('¿Seguro que quieres eliminar este anuncio?');" style="margin: 0;">
-                                    
+                                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="inline-form" onsubmit="return confirm('¿Seguro que quieres eliminar este anuncio?');" style="margin: 0;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
                                     <button type="submit" class="button delete-btn action-btn" style="margin: 0;">🗑️ Eliminar</button>
                                 </form>
                             </div>
@@ -201,7 +189,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         
-        // --- LÓGICA DE ANIMACIÓN (Existente) ---
+        // --- LÓGICA DE ANIMACIÓN ---
         const contentWrapper = document.querySelector('.page-content-wrapper');
         const managementCards = document.querySelectorAll('.management-effect');
         const examListItems = document.querySelectorAll('.exam-list li');
@@ -256,7 +244,7 @@
 </script>
 
 <style>
-    /* --- ESTADO INICIAL PARA ANIMACIÓN ESCALONADA (Staggered Fade-in) --- */
+    /* --- ESTILOS BASE (MODO CLARO) --- */
     .hidden-card {
         opacity: 0 !important;
         transform: translateY(20px) !important;
@@ -268,7 +256,6 @@
         transition: opacity 0.5s ease-out, transform 0.5s ease-out;
     }
 
-    /* --- Contenedor Principal y Header Falso --- */
     .admin-container {
         padding: 0 20px;
         max-width: 1100px;
@@ -290,37 +277,21 @@
         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         margin-bottom: 5px;
     }
-    .header-card p {
-        color: #ecf0f1;
-    }
+    .header-card p { color: #ecf0f1; }
 
-    /* --- 🔥 NUEVO: BOTÓN TORRE DE CONTROL "SPR BONITO" 🔥 --- */
+    /* Botón Torre de Control */
     .control-tower-container {
-        display: flex;
-        justify-content: center;
-        padding: 10px 20px;
-        margin: -25px auto 30px auto; /* Ligeramente superpuesto al header */
-        position: relative;
-        z-index: 50; /* Sobre el fondo pero debajo del header-card */
-        max-width: 1100px;
+        display: flex; justify-content: center; padding: 10px 20px;
+        margin: -25px auto 30px auto; position: relative; z-index: 50; max-width: 1100px;
     }
     
     a.control-tower-button-link {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        max-width: 800px; /* Ancho máximo del botón */
-        padding: 25px 35px;
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        color: #2c3e50;
-        text-decoration: none;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        transition: all 0.3s ease;
-        border: 1px solid #e9ecef;
+        display: flex; align-items: center; width: 100%; max-width: 800px;
+        padding: 25px 35px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        color: #2c3e50; text-decoration: none; border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); transition: all 0.3s ease; border: 1px solid #e9ecef;
     }
 
-    /* Aplicar el efecto de hover de las otras tarjetas */
     a.control-tower-button-link:hover {
         transform: translateY(-8px) scale(1.02);
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -328,246 +299,140 @@
     }
 
     .control-tower-button-link .button-icon {
-        font-size: 3.5em;
-        margin-right: 25px;
-        color: #3498db;
-        transition: color 0.3s ease;
+        font-size: 3.5em; margin-right: 25px; color: #3498db; transition: color 0.3s ease;
     }
+    .control-tower-button-link:hover .button-icon { color: #2980b9; }
+    .control-tower-button-link .button-text strong { display: block; font-size: 1.8em; font-weight: 700; }
+    .control-tower-button-link .button-text span { font-size: 1.1em; color: #555; }
 
-    .control-tower-button-link:hover .button-icon {
-        color: #2980b9;
-    }
-
-    .control-tower-button-link .button-text strong {
-        display: block;
-        font-size: 1.8em;
-        font-weight: 700;
-    }
-    
-    .control-tower-button-link .button-text span {
-        font-size: 1.1em;
-        color: #555;
-    }
-    /* --- 🔥 FIN DE ESTILOS DE BOTÓN 🔥 --- */
-
-
-    /* --- Flex Container (Herramientas Rápidas) --- */
+    /* Flex Container */
     .flex-container {
-        display: flex;
-        gap: 25px; 
-        margin-bottom: 40px;
-        flex-wrap: wrap;
+        display: flex; gap: 25px; margin-bottom: 40px; flex-wrap: wrap;
     }
 
-    /* --- Tarjetas (General y Dinámico) --- */
+    /* Cards */
     .card {
-        flex: 1 1 280px; 
-        padding: 30px;
-        border-radius: 15px; 
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
-        transition: all 0.3s ease; 
-        background: #ffffff;
-        border: 1px solid #f0f0f0; 
-        position: relative;
-        overflow: hidden;
+        flex: 1 1 280px; padding: 30px; border-radius: 15px; 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); transition: all 0.3s ease; 
+        background: #ffffff; border: 1px solid #f0f0f0; position: relative; overflow: hidden;
     }
-    
-    .security-card {
-        border-top: 5px solid #ff7f50 !important;
-    }
+    .security-card { border-top: 5px solid #ff7f50 !important; }
 
     .card h2 {
-        border-bottom: 2px solid #ecf0f1;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
-        color: #2c3e50;
-        font-size: 1.8em;
-        font-weight: 700;
-        transition: color 0.3s;
+        border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 15px;
+        color: #2c3e50; font-size: 1.8em; font-weight: 700; transition: color 0.3s;
     }
-
-    .card h2:hover {
-        color: #3498db; 
-    }
+    .card h2:hover { color: #3498db; }
     
-    /* --- Botones y Acciones --- */
+    /* Botones */
     .button {
-        display: inline-block;
-        padding: 10px 15px;
-        border-radius: 5px;
-        color: white;
-        text-decoration: none;
-        font-weight: bold;
-        text-align: center;
-        transition: background 0.3s ease, transform 0.1s;
-        margin: 0; 
-        border: none;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: inline-block; padding: 10px 15px; border-radius: 5px; color: white;
+        text-decoration: none; font-weight: bold; text-align: center;
+        transition: background 0.3s ease, transform 0.1s; margin: 0; 
+        border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
-    /* Botón Crear Nuevo Examen (Prominente) */
-    .add-exam-btn {
-        margin-top: 20px;
-        padding: 14px 30px; 
-        font-size: 1.15em;
-        border-radius: 50px; 
-        box-shadow: 0 6px 18px rgba(46, 204, 113, 0.6); 
-    }
-
-    /* Estilos del Botón Monitorear (Línea Modificada) */
-    .monitor-btn {
-        background-color: #e67e22 !important; 
-        font-size: 0.8em; /* 🔑 AJUSTE CRÍTICO: Tamaño más pequeño 🔑 */
-        padding: 6px 8px !important; 
-    }
-    .monitor-btn:hover {
-        background-color: #d35400 !important;
-    }
-    
-    /* 🔑 Colores Específicos Restaurados 🔑 */
+    .add-exam-btn { margin-top: 20px; padding: 14px 30px; font-size: 1.15em; border-radius: 50px; box-shadow: 0 6px 18px rgba(46, 204, 113, 0.6); }
+    .monitor-btn { background-color: #e67e22 !important; font-size: 0.8em; padding: 6px 8px !important; }
+    .monitor-btn:hover { background-color: #d35400 !important; }
     .primary-btn { background: #3498db; }
     .success-btn { background: #2ecc71; }
     .danger-btn { background: #e74c3c; }
     .export-btn { background: #1abc9c !important; }
     .export-btn:hover { background: #16a085 !important; }
-
-    .edit-btn-blue { background: #3498db !important; } /* Editar Examen (Azul) */
-    .action-btn.edit-btn { background: #f39c12; } /* Añadir Preguntas (Amarillo) */
-    .action-btn.view-btn { background: #3498db; } /* Ver Resultados (Azul) */
-    .action-btn.delete-btn { background: #e74c3c; } /* Eliminar (Rojo) */
-    .action-btn.duplicate-btn { background: #9b59b6; } /* Duplicar (Púrpura) */
+    .edit-btn-blue { background: #3498db !important; } 
+    .action-btn.edit-btn { background: #f39c12; }
+    .action-btn.view-btn { background: #3498db; }
+    .action-btn.delete-btn { background: #e74c3c; }
+    .action-btn.duplicate-btn { background: #9b59b6; }
     .action-btn.duplicate-btn:hover { background: #8e44ad; } 
     
-    /* --- Listas de Exámenes (Bloques y Hover) --- */
-    .exam-list, .announcement-list {
-        list-style: none;
-        padding: 0;
-        margin-top: 15px;
-    }
-    
+    /* Listas */
+    .exam-list, .announcement-list { list-style: none; padding: 0; margin-top: 15px; }
     .exam-list li, .announcement-list li {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 10px; /* Más padding para que parezca bloque */
-        margin: 5px 0;
-        border-bottom: 1px solid #f0f0f0;
-        border-radius: 8px;
-        transition: all 0.2s ease-out; 
-        background: white; 
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 15px 10px; margin: 5px 0; border-bottom: 1px solid #f0f0f0;
+        border-radius: 8px; transition: all 0.2s ease-out; background: white; 
     }
     .exam-list li:hover, .announcement-list li:hover {
-        background: #fcfcfc;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Sombra al pasar el ratón */
-        transform: translateY(-1px); /* Pequeño levantamiento */
+        background: #fcfcfc; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transform: translateY(-1px);
     }
-    
-    .exam-actions {
-        display: flex;
-        gap: 4px; /* Espacio reducido para que parezca un bloque de botones */
-        flex-wrap: nowrap; 
-        min-width: fit-content;
-        align-items: center;
-    }
-    .exam-actions .inline-form {
-        display: flex;
-        align-items: center;
-    }
-
+    .exam-actions { display: flex; gap: 4px; flex-wrap: nowrap; min-width: fit-content; align-items: center; }
+    .exam-actions .inline-form { display: flex; align-items: center; }
     .exam-title, .announcement-list strong {
-        font-weight: 700;
-        color: #2c3e50;
-        flex-grow: 1;
-        margin-right: 15px;
-        font-size: 1.1em;
-        transition: color 0.3s;
+        font-weight: 700; color: #2c3e50; flex-grow: 1; margin-right: 15px; font-size: 1.1em; transition: color 0.3s;
     }
-    .exam-list li:hover .exam-title {
-        color: #3498db; 
-    }
+    .exam-list li:hover .exam-title { color: #3498db; }
     
-    /* --- ESTILO DEL BOTÓN DE CERRAR SESIÓN FINAL --- */
-    .logout-end-container {
-        text-align: center;
-        margin-top: 40px;
-        padding: 20px;
-        border-top: 1px solid #eee;
-    }
-    
-    .final-logout-btn {
-        background: #e74c3c;
-        padding: 12px 30px;
-        font-size: 1.1em;
-        font-weight: 700;
-        border-radius: 50px;
-        box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
-    }
-    .final-logout-btn:hover {
-        background: #c0392b;
-        transform: scale(1.02);
-    }
+    .logout-end-container { text-align: center; margin-top: 40px; padding: 20px; border-top: 1px solid #eee; }
+    .final-logout-btn { background: #e74c3c; padding: 12px 30px; font-size: 1.1em; font-weight: 700; border-radius: 50px; box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4); }
+    .final-logout-btn:hover { background: #c0392b; transform: scale(1.02); }
 
-    /* --- MEDIA QUERIES (Adaptabilidad para Móvil) --- */
-    @media (max-width: 768px) {
-        /* 🔥 Apilar la cuadrícula de estadísticas en móvil */
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    
-    /* 🔥🔥 NUEVO: MEDIA QUERY PARA BOTÓN TORRE DE CONTROL 🔥🔥 */
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
     @media (max-width: 600px) {
-        .control-tower-container {
-            margin-top: -15px;
-            padding: 10px 15px;
-        }
-        a.control-tower-button-link {
-            flex-direction: column;
-            text-align: center;
-            padding: 20px;
-        }
-        .control-tower-button-link .button-icon {
-            font-size: 2.8em;
-            margin-right: 0;
-            margin-bottom: 10px;
-        }
-        .control-tower-button-link .button-text strong {
-            font-size: 1.4em;
-        }
-        .control-tower-button-link .button-text span {
-            font-size: 0.9em;
-        }
-        
-        /* Ajustar el header-card para que no sea tan grande en móvil */
-         .header-card {
-            padding: 25px 20px;
-            margin-bottom: 30px;
-         }
-         .header-card h1 {
-            font-size: 1.8em; /* Reducido de 2.2em */
-         }
+        .control-tower-container { margin-top: -15px; padding: 10px 15px; }
+        a.control-tower-button-link { flex-direction: column; text-align: center; padding: 20px; }
+        .control-tower-button-link .button-icon { font-size: 2.8em; margin-right: 0; margin-bottom: 10px; }
+        .control-tower-button-link .button-text strong { font-size: 1.4em; }
+        .control-tower-button-link .button-text span { font-size: 0.9em; }
+        .header-card { padding: 25px 20px; margin-bottom: 30px; }
+        .header-card h1 { font-size: 1.8em; }
+        .exam-actions { flex-direction: column; gap: 5px; }
+        .exam-actions .button, .exam-actions .inline-form, .exam-actions .inline-form input { width: 100%; padding: 10px 15px; margin: 0; }
+        .announcement-controls { flex-direction: column; gap: 10px; }
+        .announcement-action-btn { width: 100%; margin: 0; }
+        .final-logout-btn { width: 100%; }
+    }
 
-        .exam-actions {
-            flex-direction: column;
-            gap: 5px;
-        }
-        .exam-actions .button, .exam-actions .inline-form, .exam-actions .inline-form input {
-            width: 100%;
-            padding: 10px 15px; 
-            margin: 0;
-        }
-        .announcement-controls {
-            flex-direction: column;
-            gap: 10px;
-        }
-        .announcement-action-btn {
-            width: 100%;
-            margin: 0;
-        }
-        .final-logout-btn {
-            width: 100%;
-        }
+    /* ================================================= */
+    /* 🌙 MODO OSCURO (ADMIN MENU) - DEFINITIVO 🌙 */
+    /* ================================================= */
+    
+    /* 1. Fondo Header */
+    body.dark-mode .header-card {
+        background: linear-gradient(135deg, #111, #2c3e50) !important;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.8) !important;
+    }
+
+    /* 2. Tarjetas y Contenedores (Fondo Gris y Borde) */
+    body.dark-mode .card,
+    body.dark-mode .control-tower-button-link,
+    body.dark-mode .exam-list li,
+    body.dark-mode .announcement-list li {
+        background: #1e1e1e !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #333 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
+    }
+
+    /* 3. Textos Generales (Blanco) */
+    body.dark-mode h1, 
+    body.dark-mode h2, 
+    body.dark-mode strong, 
+    body.dark-mode span, 
+    body.dark-mode p,
+    body.dark-mode .exam-title,
+    body.dark-mode .control-tower-button-link .button-text span {
+        color: #e0e0e0 !important;
+        border-bottom-color: #444 !important;
+    }
+
+    /* 4. Hover en elementos de lista (Para que no se pongan blancos) */
+    body.dark-mode .exam-list li:hover, 
+    body.dark-mode .announcement-list li:hover,
+    body.dark-mode .control-tower-button-link:hover {
+        background: #252525 !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.8) !important;
+    }
+
+    /* 5. Títulos al pasar el mouse (Cian) */
+    body.dark-mode .card h2:hover,
+    body.dark-mode .exam-list li:hover .exam-title {
+        color: #00cec9 !important;
+    }
+
+    /* 6. Icono del botón grande */
+    body.dark-mode .control-tower-button-link .button-icon {
+        color: #00cec9 !important;
     }
 </style>
 {% endblock %}

@@ -3,8 +3,8 @@
 {% block title %}Panel del Alumno | {{ username }}{% endblock %}
 
 {% block content %}
-    <div class="page-content-wrapper"> <!-- Contenedor para animación de carga -->
-        <div class="header-welcome-banner"> <!-- 🔑 CLAVE: Eliminada la clase hidden-content 🔑 -->
+    <div class="page-content-wrapper"> 
+        <div class="header-welcome-banner"> 
             <h1>👋 ¡Hola, {{ username | capitalize }}!</h1>
             <p>Tu Panel de Acceso Rápido y Resumen de Progreso.</p>
         </div>
@@ -19,16 +19,13 @@
                     {% set score_class = 'score-green' if score_percent >= 60 else 'score-red' %}
                     
                     <div class="card-content-wrapper performance-content">
-                        {# Acceso directo al título a través del modelo Exam #}
                         <p class="exam-title-display">Último Examen: <strong>{{ Exam.query.get(last_result.exam_id).title }}</strong></p>
                         
                         <div class="big-score {{ score_class }}">
                             {{ "%.0f"|format(score_percent) }}%
                         </div>
-                        <p class="score-details">
-                            Obtuviste "{{ last_result.score | int }}" de "{{ last_exam_questions_count }}" puntos.
-                        </p>
-                        <p class="score-date">Tomado el: {{ last_result.date_taken | datetimeformat('dd MMM yyyy') }}</p>
+                        
+                        <p class="score-date">Examen presentado el: {{ last_result.date_taken | datetimeformat('dd MMM yyyy') }}</p>
                     </div>
                     
                     <div class="card-actions">
@@ -37,7 +34,7 @@
                 {% else %}
                     <div class="card-content-wrapper performance-content">
                         <p class="big-score score-gray">0%</p>
-                        <p>Aún no has completado ninguna simulación. ¡Es hora de empezar!</p>
+                        <p class="empty-text">Aún no has completado ninguna simulación. ¡Es hora de empezar!</p>
                     </div>
                     <div class="card-actions">
                         <a href="{{ url_for('exams_list') }}" class="button success-btn shadow-lift">Comenzar Ahora</a>
@@ -65,12 +62,12 @@
                         <a href="{{ url_for('exams_list') }}" class="button button-secondary shadow-lift">Practicar Más</a>
                     </div>
                 {% else %}
-                     <div class="card-content-wrapper">
-                         <p>Aún no hay suficientes datos para determinar tus áreas débiles. ¡Sigue tomando exámenes!</p>
-                     </div>
-                     <div class="card-actions">
-                         <a href="{{ url_for('exams_list') }}" class="button button-secondary shadow-lift">Practicar Más</a>
-                     </div>
+                      <div class="card-content-wrapper">
+                          <p class="empty-text">Aún no hay suficientes datos para determinar tus áreas débiles. ¡Sigue tomando exámenes!</p>
+                      </div>
+                      <div class="card-actions">
+                          <a href="{{ url_for('exams_list') }}" class="button button-secondary shadow-lift">Practicar Más</a>
+                      </div>
                 {% endif %}
             </div>
             
@@ -98,7 +95,7 @@
                         {% if latest_reports %}
                             {% for report in latest_reports %}
                             <li class="report-status-item status-{{ report.status | lower | replace(' ', '-') }}">
-                                #{{ report.id }} ({{ report.title | truncate(20) }})
+                                <span>#{{ report.id }} ({{ report.title | truncate(20) }})</span>
                                 <span class="report-status-badge">{{ report.status }}</span>
                             </li>
                             {% endfor %}
@@ -119,10 +116,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Animación de Carga (Staggered Fade-in)
-            // Ya que el banner no tiene hidden-content, este aparecerá inmediatamente por CSS.
+            // Animación Fade-in
             const allCards = document.querySelectorAll('.hidden-content');
-            
             function staggerFadeIn() {
                 allCards.forEach((card, index) => {
                     setTimeout(() => {
@@ -130,291 +125,147 @@
                     }, 150 + index * 100); 
                 });
             }
-            
             staggerFadeIn();
 
-            // Efecto Hover en tarjetas de lista de reportes
+            // Hover efecto
             const reportItems = document.querySelectorAll('.latest-reports-list li');
-
             reportItems.forEach(item => {
-                item.addEventListener('mouseenter', () => {
-                    item.style.backgroundColor = '#f8f8f8';
-                });
-                item.addEventListener('mouseleave', () => {
-                    item.style.backgroundColor = 'transparent';
-                });
+                item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f8f8f8');
+                item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
             });
         });
     </script>
 
     <style>
-        /* --- ESTADO INICIAL PARA ANIMACIÓN ESCALONADA --- */
-        .hidden-content {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-        }
+        /* --- ESTILOS BASE (MODO CLARO) --- */
+        .hidden-content { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
         
         .header-welcome-banner { 
-            /* CLAVE: Establecer la opacidad a 1 para que aparezca inmediatamente */
-            opacity: 1; 
-            transform: translateY(0);
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-            
-            /* ESTILO ESPECÍFICO DEL BANNER */
-            max-width: 1100px;
-            margin: 20px auto 0 auto;
-            padding: 30px 20px;
-            text-align: center;
-            background: linear-gradient(135deg, #e6f0f8 0%, #ffffff 100%); /* Degradado suave */
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            border: 1px solid #dcdcdc;
+            opacity: 1; transform: translateY(0); transition: opacity 0.5s ease-out;
+            max-width: 1100px; margin: 20px auto 0 auto; padding: 30px 20px; text-align: center;
+            background: linear-gradient(135deg, #e6f0f8 0%, #ffffff 100%);
+            border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border: 1px solid #dcdcdc;
         }
+        .header-welcome-banner h1 { font-size: 2.8em; font-weight: 800; color: #2c3e50; margin-bottom: 5px; }
+        .header-welcome-banner p { font-size: 1.2em; color: #7f8c8d; }
 
-
-        /* --- LAYOUT DEL CONTENEDOR PRINCIPAL --- */
         .student-dashboard-grid {
-            width: 90%;
-            max-width: 1100px;
-            margin: 40px auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
+            width: 90%; max-width: 1100px; margin: 40px auto; display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px;
         }
-        
-        @media (min-width: 769px) {
-            .card-performance {
-                grid-column: span 2; 
-            }
-        }
-        
-        /* --- ENCABEZADO Y BIENVENIDA --- */
-        /* Aplicamos estilos a los elementos internos del banner */
-        .header-welcome-banner h1 {
-            font-size: 2.8em;
-            font-weight: 800;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        .header-welcome-banner p {
-            font-size: 1.2em;
-            color: #7f8c8d;
-        }
+        @media (min-width: 769px) { .card-performance { grid-column: span 2; } }
 
-        /* --- TARJETAS (CARDS) --- */
         .card {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: left;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); /* Sombra elegante */
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border-top: 6px solid; /* Borde superior más grueso */
+            background: white; padding: 30px; border-radius: 15px; text-align: left;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex; flex-direction: column; justify-content: space-between; border-top: 6px solid;
         }
-        
-        .card:hover {
-            transform: translateY(-5px); 
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15); /* Sombra más pronunciada al hacer hover */
-        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15); }
 
-        /* Asignación de colores por ID de card */
         .card[data-card-id="results"] { border-top-color: #3498db; }
         .card[data-card-id="weak-subjects"] { border-top-color: #f39c12; }
         .card[data-card-id="announcements"] { border-top-color: #2ecc71; }
         .card[data-card-id="support"] { border-top-color: #e74c3c; }
 
-        .card h2 {
-            margin-top: 0;
-            font-size: 1.8em;
-            color: #2c3e50;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-        .card h2 span { font-size: 1.2em; } /* Ajuste de tamaño para los emojis/iconos */
-        
-        .card-description {
-            color: #7f8c8d;
-            font-size: 1em;
-        }
+        .card h2 { margin-top: 0; font-size: 1.8em; color: #2c3e50; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px; font-weight: 700; }
+        .card-description { color: #7f8c8d; font-size: 1em; }
 
-        /* --- ESTILOS DE RENDIMIENTO Y ESTADO --- */
-        .performance-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 10px 0;
-        }
-        .exam-title-display {
-            font-size: 1.1em;
-            color: #555;
-        }
-        .big-score {
-            font-size: 4.5em;
-            font-weight: 900;
-            margin: 10px 0 15px 0;
-            line-height: 1;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        .score-red { color: #e74c3c; }
-        .score-green { color: #2ecc71; }
-        .score-gray { color: #95a5a6; }
+        .performance-content { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 0; }
+        .exam-title-display { font-size: 1.1em; color: #555; }
+        .big-score { font-size: 4.5em; font-weight: 900; margin: 10px 0 15px 0; line-height: 1; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); }
+        .score-red { color: #e74c3c; } .score-green { color: #2ecc71; } .score-gray { color: #95a5a6; }
         .warning-text { font-size: 0.9em; margin: 0; color: #a93226; font-weight: 500;}
 
-        /* Listas de Detalles */
-        .detail-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 15px;
-        }
-        .subject-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px dotted #eee;
-            font-size: 1em;
-        }
-        .subject-item strong {
-            color: #34495e;
-            font-weight: 600;
-        }
+        .detail-list { list-style: none; padding: 0; margin-top: 15px; }
+        .subject-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dotted #eee; font-size: 1em; }
+        .subject-item strong { color: #34495e; font-weight: 600; }
         
-        /* --- WIDGET DE REPORTES --- */
-        .subsection-title {
-            font-size: 1.2em; 
-            margin-top: 25px; 
-            border-bottom: 1px dashed #ecf0f1; 
-            padding-bottom: 5px; 
-            color: #7f8c8d;
-            font-weight: 600;
-        }
-        .report-status-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.95em;
-            color: #34495e;
-            transition: background-color 0.15s;
-        }
+        .subsection-title { font-size: 1.2em; margin-top: 25px; border-bottom: 1px dashed #ecf0f1; padding-bottom: 5px; color: #7f8c8d; font-weight: 600; }
+        .report-status-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95em; color: #34495e; }
         .no-report-item { color: #95a5a6; font-size: 0.9em; padding: 8px 0; }
         
-        .report-status-badge {
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 0.75em;
-            color: white;
-        }
-
-        /* Colores de estado de reporte */
+        .report-status-badge { padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75em; color: white; }
         .status-abierto .report-status-badge { background: #e67e22; }
         .status-en-proceso .report-status-badge { background: #3498db; }
         .status-cerrado .report-status-badge { background: #2ecc71; }
-        .announcement-badge { 
-            background: #e74c3c; 
-            color: white;
-            padding: 4px 8px;
-            border-radius: 50px;
-            font-size: 0.7em;
-            font-weight: bold;
-            margin-left: 10px;
-        }
+        .announcement-badge { background: #e74c3c; color: white; padding: 4px 8px; border-radius: 50px; font-size: 0.7em; font-weight: bold; margin-left: 10px; }
 
-        /* --- BOTONES DE ACCIÓN PRINCIPAL --- */
-        .card-actions {
-            margin-top: auto;
-            padding-top: 20px;
-            border-top: 1px dashed #f0f4f8; 
-        }
+        .card-actions { margin-top: auto; padding-top: 20px; border-top: 1px dashed #f0f4f8; }
+        .button { display: block; width: 100%; padding: 14px 0; margin-top: 10px; text-decoration: none; border-radius: 10px; font-weight: 700; transition: all 0.3s ease; text-align: center; border: none; cursor: pointer; }
+        .shadow-lift { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
+        .button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); }
 
-        .button {
-            display: block; 
-            width: 100%;
-            padding: 14px 0;
-            margin-top: 10px;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            text-align: center;
-            border: none;
-            cursor: pointer;
-        }
-        .shadow-lift {
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .button:hover {
-             transform: translateY(-2px);
-             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Colores de botones */
         .primary-btn { background: #3498db; color: white; }
         .success-btn { background: #2ecc71; color: white; }
-        .button-secondary { 
-            background: #ecf0f1; 
-            color: #7f8c8d; 
-            border: 2px solid #bdc3c7;
-            padding: 12px 0;
-        }
+        .button-secondary { background: #ecf0f1; color: #7f8c8d; border: 2px solid #bdc3c7; padding: 12px 0; }
         .support-btn { background: #c0392b; color: white; margin-bottom: 5px; }
 
-        /* Estilo para el área de soporte con botones divididos */
-        .action-split {
-            display: flex;
-            flex-direction: column;
+        .new-report-btn { display: block; width: 100%; margin-top: 10px; padding: 10px 0; font-size: 1em; background: transparent; color: #e74c3c; border: 2px solid #e74c3c; text-decoration: none; border-radius: 10px; font-weight: 700; text-align: center; transition: all 0.2s ease; }
+        .new-report-btn:hover { background: #e74c3c; color: white; transform: none; }
+        
+        @media (max-width: 600px) { .student-dashboard-grid { width: 95%; margin: 20px auto; gap: 15px; } .card { padding: 20px; } .header-welcome-banner { margin: 10px auto; } .header-welcome-banner h1 { font-size: 2.2em; } }
+
+        /* ========================================= */
+        /* 🌙 MODO OSCURO (PANEL ALUMNO) 🌙 */
+        /* ========================================= */
+        
+        /* 1. Fondo del Header de Bienvenida */
+        body.dark-mode .header-welcome-banner {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%) !important;
+            border-color: #333 !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         }
-        .new-report-btn {
-            display: block;
-            width: 100%;
-            margin-top: 10px;
-            padding: 10px 0;
-            font-size: 1em;
-            background: transparent; 
-            color: #e74c3c; 
-            border: 2px solid #e74c3c; 
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 700;
-            text-align: center;
-            transition: all 0.2s ease; 
+        body.dark-mode .header-welcome-banner h1 { color: #ffffff !important; }
+        body.dark-mode .header-welcome-banner p { color: #bbbbbb !important; }
+
+        /* 2. Tarjetas (Fondo y Bordes) */
+        body.dark-mode .card {
+            background-color: #1e1e1e !important; /* Gris oscuro */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6) !important;
+            border-left: 1px solid #333 !important;
+            border-right: 1px solid #333 !important;
+            border-bottom: 1px solid #333 !important;
+            /* El border-top se mantiene del color original (azul/rojo/verde) */
         }
 
-        .new-report-btn:hover {
-            background: #e74c3c; 
-            color: white; 
-            transform: none;
+        /* 3. Textos Generales en Tarjetas */
+        body.dark-mode .card h2,
+        body.dark-mode .card p,
+        body.dark-mode .exam-title-display,
+        body.dark-mode .score-details,
+        body.dark-mode .score-date,
+        body.dark-mode .empty-text,
+        body.dark-mode .warning-text,
+        body.dark-mode .subject-item strong,
+        body.dark-mode .report-status-item {
+            color: #e0e0e0 !important;
+        }
+
+        /* 4. Títulos Secundarios */
+        body.dark-mode .subsection-title {
+            color: #bbbbbb !important;
+            border-bottom-color: #444 !important;
         }
         
-        /* --- Responsive Design --- */
-        @media (max-width: 600px) {
-            .student-dashboard-grid {
-                width: 95%;
-                margin: 20px auto;
-                gap: 15px;
-            }
-            .card {
-                padding: 20px;
-            }
-            .header-welcome-banner {
-                margin: 10px auto;
-            }
-            .header-welcome-banner h1 {
-                font-size: 2.2em;
-            }
+        /* 5. Bordes internos */
+        body.dark-mode .card h2 { border-bottom-color: #444 !important; }
+        body.dark-mode .subject-item,
+        body.dark-mode .report-status-item { border-bottom-color: #333 !important; }
+        body.dark-mode .card-actions { border-top-color: #333 !important; }
+
+        /* 6. Botones Secundarios en Oscuro */
+        body.dark-mode .button-secondary {
+            background-color: #2d2d2d !important;
+            border-color: #555 !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark-mode .button-secondary:hover {
+            background-color: #444 !important;
+        }
+
+        /* 7. Hover en listas */
+        body.dark-mode .latest-reports-list li:hover {
+            background-color: #252525 !important;
         }
     </style>
 {% endblock %}

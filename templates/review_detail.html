@@ -155,7 +155,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Datos del servidor (ya analizados)
-        const resultData = {{ result | tojson }};
+        const resultData = {{ result.to_dict() | tojson }};
         const proctoringDataRaw = resultData.proctoring_data;
         const allQuestions = document.querySelectorAll('.question-card');
         
