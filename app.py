@@ -51,21 +51,24 @@ import random
 
 load_dotenv()
 
-# --- CONFIGURACIÓN DE PRODUCCIÓN (CLAVE SECRETA Y DB) ---
-app = Flask(__name__) # <--- Asegúrate de que esta línea esté presente
+app = Flask(__name__)
 
-# 🔥 CONFIGURACIÓN HÍBRIDA (Local usa SQLite, Heroku usa Postgres) 🔥
+# --- CONFIGURACIÓN DE BASE DE DATOS ROBUSTA ---
+# 1. Obtenemos la URL que te dio Heroku
 database_url = os.environ.get('DATABASE_URL')
 
-# Parche para Heroku (cambia postgres:// a postgresql:// si es necesario para SQLAlchemy nuevo)
+# 2. Corrección para Heroku: SQLAlchemy necesita 'postgresql://' en vez de 'postgres://'
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-# Si hay database_url (Heroku) úsala, si no (Local) usa SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///curso_ecoms.db'
+# 3. Fallback: Si no hay URL (estás en local), usa SQLite
+if not database_url:
+    database_url = 'sqlite:///curso_ecoms.db'
 
-# Si hay SECRET_KEY (Heroku) úsala, si no (Local) usa una clave genérica
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'clave_secreta_para_desarrollo_local_123')
+print(f"🔌 CONECTANDO A: {database_url}") # Esto nos servirá para depurar si falla
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'clave_secreta_local_123')
 # Aumentamos el límite a 500 MB para soportar la grabación de video/sesión
 # Límite de 100 MB (100 * 1024 * 1024)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
