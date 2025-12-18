@@ -72,7 +72,6 @@ app.config['SECRET_KEY'] = 'clave_secreta_emergencia_2025'
 # Aumentamos el límite a 500 MB para soportar la grabación de video/sesión
 # Límite de 100 MB (100 * 1024 * 1024)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///curso_ecoems.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # --- CONFIGURACIÓN PARA SUBIDA DE IMÁGENES DE PREGUNTAS (NUEVO) ---
