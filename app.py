@@ -3020,6 +3020,8 @@ def delete_question(question_id):
     return redirect(url_for("add_question", exam_id=exam_id))
 
 
+@# --- EN app.py ---
+
 @app.route("/admin/exams/delete/<int:exam_id>", methods=["POST"])
 @login_required
 def delete_exam(exam_id):
@@ -3030,18 +3032,45 @@ def delete_exam(exam_id):
     exam_to_delete = Exam.query.get_or_404(exam_id)
 
     try:
+        # 🔥 PASO 1: LIMPIEZA PROFUNDA (Borrar hijos antes que al padre) 🔥
+        
+        # A. Borrar Resultados de este examen
+        db.session.query(ExamResult).filter_by(exam_id=exam_id).delete()
+        
+        # B. Borrar Sesiones Activas de este examen
+        db.session.query(ActiveExamSession).filter_by(exam_id=exam_id).delete()
+
+        # C. Borrar Logs de Violaciones (Trampas) de este examen
+        db.session.query(ViolationLog).filter_by(exam_id=exam_id).delete()
+
+        # D. Borrar Respuestas de los alumnos (Esto es vital, suelen bloquear el borrado de preguntas)
+        # Obtenemos los IDs de las preguntas de este examen
+        question_ids = db.session.query(Question.id).filter_by(exam_id=exam_id).all()
+        question_ids = [q[0] for q in question_ids] # Convertir a lista simple [1, 2, 3...]
+
+        if question_ids:
+            # Borramos todas las respuestas asociadas a esas preguntas
+            db.session.query(Answer).filter(Answer.question_id.in_(question_ids)).delete(synchronize_session=False)
+
+        # 🔥 PASO 2: AHORA SÍ, BORRAR EL EXAMEN 🔥
+        # Al haber borrado las respuestas, las preguntas se borran solas por el "cascade" del modelo,
+        # o se borrarán sin protestar al borrar el examen.
         db.session.delete(exam_to_delete)
+        
         db.session.commit()
+        
         app.logger.info(
-            f"AUDIT LOG: Admin user {current_user.username} deleted exam '{exam_to_delete.title}' (ID: {exam_id})."
+            f"AUDIT LOG: Admin {current_user.username} deleted exam '{exam_to_delete.title}' (ID: {exam_id})."
         )
         flash(
-            f"Examen '{exam_to_delete.title}' y todos sus datos han sido eliminados.",
+            f"Examen '{exam_to_delete.title}' y todos sus datos asociados han sido eliminados correctamente.",
             "success",
         )
+
     except Exception as e:
         db.session.rollback()
-        flash(f"Error al eliminar el examen: {e}", "danger")
+        app.logger.error(f"Error al eliminar el examen: {e}")
+        flash(f"Error crítico al eliminar: {e}", "danger")
 
     return redirect(url_for("admin_panel"))
 
