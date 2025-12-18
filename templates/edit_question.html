@@ -28,7 +28,7 @@
                         {% if question.image_filename %}
                             <div class="current-image-preview">
                                 <p class="small-text"><em>Imagen Actual:</em></p>
-                                <img src="{{ url_for('static', filename='images/' + question.image_filename) }}" alt="Imagen pregunta">
+                               <img src="{{ question.image_filename }}">
                             </div>
                         {% endif %}
                         

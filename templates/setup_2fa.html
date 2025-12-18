@@ -14,7 +14,7 @@
                 <h2>Paso 1: Escanea el Código QR</h2>
                 {% if qr_base64 %}
                 <div class="qr-code-box">
-                    <img src="data:image/png;base64,{{ qr_base64 }}" alt="Código QR de 2FA">
+                    <img src="{{ question.image_filename }}">
                 </div>
                 {% endif %}
                 <p>O ingresa la clave manualmente:</p>

@@ -32,6 +32,8 @@ import base64
 from io import BytesIO
 import time
 import re
+import cloudinary
+import cloudinary.uploader
 import logging
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
@@ -64,6 +66,13 @@ if database_url and database_url.startswith("postgres://"):
 # 3. Fallback: Si no hay URL (estás en local), usa SQLite
 if not database_url:
     database_url = 'sqlite:///curso_ecoms.db'
+    # --- CONFIGURACIÓN DE CLOUDINARY (Imágenes Inmortales) ---
+cloudinary.config(
+    cloud_name = "djisdkjkf",
+    api_key = "718931262622593",
+    api_secret = "tXTLBgTP9estWoakSSRMQp0tHLc", # 🔥 TU SECRETO REAL
+    secure = True
+)
 
 print(f"🔌 CONECTANDO A: {database_url}") # Esto nos servirá para depurar si falla
 
@@ -482,7 +491,38 @@ def handle_connect():
             f"Socket conectado y unido al room de usuario: User {current_user.username} (ID: {current_user.id})"
         )
         # --- ENVIAR ALERTA INDIVIDUAL (PING) ---
+# --- 🔥 AGREGAR ESTO PARA QUE EL ADMIN LEA AL ALUMNO 🔥 ---
+@socketio.on("send_message_from_student")
+def handle_student_message(data):
+    # 1. Seguridad: Solo alumnos autenticados
+    if not current_user.is_authenticated:
+        return
 
+    message_content = data.get("message")
+
+    if message_content:
+        # 2. Preparamos el paquete de datos
+        # Usamos hora local (puedes ajustar con tu lógica de pytz si quieres)
+        timestamp = datetime.now().strftime("%H:%M:%S")
+
+        # 3. 🔥 CLAVE DEL ÉXITO: Enviar a la sala del PROPIO alumno 🔥
+        # Como el Admin ya ejecutó 'join_room(student_id)' al abrir el chat,
+        # al emitir en esta sala, ambos (Admin y Alumno) verán el mensaje.
+        emit(
+            "chat_notification",
+            {
+                "sender": current_user.username,  # Nombre del alumno
+                "message": message_content,
+                "timestamp": timestamp,
+                "is_student": True, # Bandera para que el JS lo pinte de otro color
+                "user_id": current_user.id # Para identificar quién es en el front del admin
+            },
+            room=str(current_user.id),
+            namespace="/"
+        )
+        
+        # Log para depuración en la terminal negra
+        app.logger.info(f"CHAT: Student {current_user.username} sent: {message_content}")
 
 @socketio.on("send_individual_ping")
 @login_required
@@ -2554,34 +2594,42 @@ def add_question(exam_id):
 
     exam = Exam.query.get_or_404(exam_id)
 
+ # --- 1. MUEVE ESTA FUNCIÓN AFUERA DE TU RUTA (En el ámbito global) ---
+def save_image_helper(file_obj, prefix="img"):
+    # Validación básica
+    if not file_obj or file_obj.filename == '':
+        return None
+    
+    try:
+        # Subir a Cloudinary
+        upload_result = cloudinary.uploader.upload(file_obj)
+        # Devolver la URL segura
+        return upload_result['secure_url'] 
+    except Exception as e:
+        # Puedes usar print o app.logger.error si tienes acceso a app
+        print(f"Error subiendo a Cloudinary: {e}") 
+        return None
+
+# --- 2. DENTRO DE TU RUTA ---
+# @app.route(...)
+# def tu_funcion_de_ruta():
+    # ... código previo ...
+
     # --- LÓGICA PARA GUARDAR NUEVA PREGUNTA (POST) ---
     if request.method == "POST":
         try:
+            # Recopilar datos del formulario
             subject = request.form.get("subject")
             text = request.form.get("text")
             option_a = request.form.get("option_a")
             option_b = request.form.get("option_b")
-            option_c = request.form.get("option_c")  # Puede estar vacío
-            option_d = request.form.get("option_d")  # Puede estar vacío
+            option_c = request.form.get("option_c")
+            option_d = request.form.get("option_d")
             correct_option = request.form.get("correct_option")
             manual_difficulty = request.form.get("manual_difficulty", "Medium")
 
-            # --- FUNCION INTERNA PARA GUARDAR IMÁGENES (DRY) ---
-            # Esto evita repetir el código de 'secure_filename' y 'os.path.join' 5 veces
-            def save_image_helper(file_obj, prefix):
-                if file_obj and file_obj.filename != "" and allowed_file(file_obj.filename):
-                    filename = secure_filename(file_obj.filename)
-                    # Nombre único: exam_ID_prefijo_timestamp_nombre
-                    unique_filename = f"exam_{exam.id}_{prefix}_{int(time.time())}_{filename}"
-                    
-                    # Asegurar directorio
-                    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-                    
-                    # Guardar
-                    file_obj.save(os.path.join(app.config["UPLOAD_FOLDER"], unique_filename))
-                    return unique_filename
-                return None
-
+            # --- USO DE LA FUNCIÓN HELPER ---
+            
             # 1. Guardar Imagen Principal de la Pregunta
             main_image_filename = save_image_helper(request.files.get("image_file"), "q_main")
 
@@ -2596,19 +2644,16 @@ def add_question(exam_id):
                 exam_id=exam.id,
                 subject=subject,
                 text=text,
-                # Opciones de texto
                 option_a=option_a,
                 option_b=option_b,
                 option_c=option_c,
                 option_d=option_d,
-                # Imágenes de opciones (NUEVO)
                 image_a=img_a,
                 image_b=img_b,
                 image_c=img_c,
                 image_d=img_d,
-                # Otros datos
                 correct_option=correct_option,
-                image_filename=main_image_filename, # Imagen principal
+                image_filename=main_image_filename,
                 manual_difficulty=manual_difficulty,
             )
 
@@ -2619,8 +2664,11 @@ def add_question(exam_id):
             return redirect(url_for("add_question", exam_id=exam.id))
 
         except Exception as e:
+            # Aquí es donde el 'try' busca caer si hay error
             db.session.rollback()
             flash(f"Error al guardar la pregunta: {str(e)}", "danger")
+            # Es buena práctica devolver algo o redirigir en caso de error también
+            return redirect(url_for("add_question", exam_id=exam.id))
 
     # --- LÓGICA PARA MOSTRAR LA PÁGINA (GET) ---
     # Obtener todas las preguntas de este examen para la lista de la derecha

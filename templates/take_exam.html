@@ -187,7 +187,7 @@
     // =================================================================
     // 1. FUNCIONES GLOBALES (ACCESIBLES DESDE CUALQUIER LUGAR)
     // =================================================================
-    
+     
     // Definimos esto AFUERA para que las IAs y errores siempre la encuentren
     function showFloatingNotification(msg, type) {
         let container = document.getElementById('toast-container');
@@ -884,8 +884,21 @@
             }
         });
 
-        // Chat Logic
-        studentChatForm.addEventListener('submit', function (e) { e.preventDefault(); const message = studentMessageInput.value.trim(); if (message && !studentMessageInput.disabled) { socket.emit('send_message_to_admin', { target_admin_id: 1, message: message }); addChatMessage(message, 'student'); studentMessageInput.value = ''; studentMessageInput.focus(); } });
+        // Chat Logic 🔥 MODIFICACIÓN AQUÍ 🔥
+        studentChatForm.addEventListener('submit', function (e) { 
+            e.preventDefault(); 
+            const message = studentMessageInput.value.trim(); 
+            if (message && !studentMessageInput.disabled) { 
+                // ANTES: socket.emit('send_message_to_admin', { target_admin_id: 1, message: message });
+                // AHORA (Coincide con Python):
+                socket.emit('send_message_from_student', { message: message }); 
+                
+                addChatMessage(message, 'student'); 
+                studentMessageInput.value = ''; 
+                studentMessageInput.focus(); 
+            } 
+        });
+        
         closeChatButton.addEventListener('click', () => document.getElementById('student-chat-panel').style.display = 'none');
         function addChatMessage(msg, type) { const div = document.createElement('div'); div.className = `chat-message ${type}-chat-message`; div.innerHTML = msg; const win = document.getElementById('chat-messages'); win.appendChild(div); win.scrollTop = win.scrollHeight; }
 
@@ -1168,7 +1181,7 @@
             </p>
             <p class="question-text question-centered">{{ question.text }}</p>
             {% if question.image_filename %}
-            <img src="{{ url_for('static', filename='images/' + question.image_filename) }}" alt="Imagen de apoyo"
+            <img src="{{ question.image_filename }}">
                 class="question-image" draggable="false">
             {% endif %}
             
@@ -1211,7 +1224,7 @@
                             {# Imagen de la opción (Si existe) #}
                             {% if img_file %}
                                 <div style="margin-top: 8px;">
-                                    <img src="{{ url_for('static', filename='uploads/' + img_file) }}" 
+                                    <img src="{{ question.image_filename }}">
                                          alt="Opción {{ letter }}" 
                                          class="img-fluid"
                                          style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
@@ -1994,8 +2007,21 @@
             }
         });
 
-        // Chat Logic
-        studentChatForm.addEventListener('submit', function (e) { e.preventDefault(); const message = studentMessageInput.value.trim(); if (message && !studentMessageInput.disabled) { socket.emit('send_message_to_admin', { target_admin_id: 1, message: message }); addChatMessage(message, 'student'); studentMessageInput.value = ''; studentMessageInput.focus(); } });
+        // Chat Logic 🔥 MODIFICACIÓN AQUÍ 🔥
+        studentChatForm.addEventListener('submit', function (e) { 
+            e.preventDefault(); 
+            const message = studentMessageInput.value.trim(); 
+            if (message && !studentMessageInput.disabled) { 
+                // ANTES: socket.emit('send_message_to_admin', { target_admin_id: 1, message: message });
+                // AHORA (Coincide con Python):
+                socket.emit('send_message_from_student', { message: message }); 
+                
+                addChatMessage(message, 'student'); 
+                studentMessageInput.value = ''; 
+                studentMessageInput.focus(); 
+            } 
+        });
+        
         closeChatButton.addEventListener('click', () => document.getElementById('student-chat-panel').style.display = 'none');
         function addChatMessage(msg, type) { const div = document.createElement('div'); div.className = `chat-message ${type}-chat-message`; div.innerHTML = msg; const win = document.getElementById('chat-messages'); win.appendChild(div); win.scrollTop = win.scrollHeight; }
 
@@ -2016,65 +2042,6 @@
         // =========================================================
         // 6. INICIALIZACIÓN Y LISTENERS
         // =========================================================
-        
-        if (examForm) {
-            examForm.addEventListener('click', (e) => {
-                if (e.target.type === 'radio') { autoSave(e.target.dataset.qid, e.target.value); }
-            });
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !isReportingError) window.reportViolation('TAB_CHANGE');
-        });
-        window.addEventListener('blur', () => {
-            if (!isReportingError && !isRequestingPermissions) window.reportViolation('WINDOW_BLUR');
-        });
-
-        if (reportErrorButton) {
-            reportErrorButton.addEventListener('click', () => {
-                isReportingError = true; 
-                showFloatingNotification("Modo reporte: Seguridad pausada temporalmente.", "info");
-            });
-        }
-
-        if (requestHelpBtn) requestHelpBtn.addEventListener('click', () => {
-            isReportingError = true; socket.emit('student_requests_chat');
-            requestHelpBtn.textContent = "✅ Enviado"; requestHelpBtn.disabled = true;
-            showFloatingNotification("Has solicitado ayuda. Espera a que Gus te contacte.", "info");
-            setTimeout(() => { requestHelpBtn.textContent = "🙋‍♂️ Hablar con Gus"; requestHelpBtn.disabled = false; isReportingError = false; }, 30000);
-        });
-
-        // Navegación
-        let currentQ = 0;
-        function showQ(idx) { if (questionCards[currentQ]) questionCards[currentQ].style.display = 'none'; if (questionCards[idx]) { questionCards[idx].style.display = 'block'; currentQ = idx; } }
-        examForm.addEventListener('click', (e) => {
-            if (e.target.classList.contains('next-question-btn')) { e.preventDefault(); if (currentQ < totalQuestions - 1) showQ(currentQ + 1); }
-            if (e.target.classList.contains('flag-and-next-btn')) { e.preventDefault(); const qid = e.target.dataset.qid; toggleFlag(qid); if (currentQ < totalQuestions - 1) showQ(currentQ + 1); }
-            if (e.target.classList.contains('review-mode-btn')) { e.preventDefault(); mapContainer.classList.remove('fase-1'); mapContainer.classList.add('fase-2'); reviewModeInfo.style.display = 'block'; finalSubmitButton.style.display = 'block'; document.querySelector('.question-map-container').scrollIntoView({ behavior: 'smooth' }); }
-            if (e.target.classList.contains('finish-directly-btn') || e.target.id === 'final-submit-button') { e.preventDefault(); showConfirmSubmitModal(true); }
-            if (e.target.type === 'radio') { autoSave(e.target.dataset.qid, e.target.value); }
-        });
-        mapContainer.addEventListener('click', (e) => { e.preventDefault(); if (mapContainer.classList.contains('fase-2') && e.target.classList.contains('flagged')) { showQ(parseInt(e.target.dataset.index)); } });
-
-        const FLAG_STORAGE_KEY = `flaggedQuestions_exam_${EXAM_ID}`;
-        function loadFlaggedQuestions() { const f = localStorage.getItem(FLAG_STORAGE_KEY); return f ? JSON.parse(f) : []; }
-        function saveFlaggedQuestions(arr) { localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(arr)); }
-        function toggleFlag(qid) {
-            let f = loadFlaggedQuestions(); const idx = f.indexOf(qid);
-            const btn = document.getElementById(`map-btn-${qid}`);
-            const card = document.getElementById(`q-${qid}`);
-            if (idx > -1) { f.splice(idx, 1); if (btn) btn.classList.remove('flagged'); if (card) card.classList.remove('flagged'); }
-            else { f.push(qid); if (btn) { btn.classList.add('flagged'); btn.classList.remove('answered'); } if (card) card.classList.add('flagged'); }
-            saveFlaggedQuestions(f);
-        }
-        loadFlaggedQuestions().forEach(qid => { const btn = document.getElementById(`map-btn-${qid}`); const card = document.getElementById(`q-${qid}`); if (btn && !btn.classList.contains('answered')) btn.classList.add('flagged'); if (card) card.classList.add('flagged'); });
-
-        const confirmModal = document.getElementById('confirm-submit-modal');
-        const btnYes = document.getElementById('confirm-submit-btn-yes');
-        const btnNo = document.getElementById('confirm-submit-btn-no');
-        window.showConfirmSubmitModal = function () { isSubmitting = true; if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } confirmModal.style.display = 'flex'; };
-        btnYes.addEventListener('click', () => submitExamFinally('manual'));
-        btnNo.addEventListener('click', () => { confirmModal.style.display = 'none'; isSubmitting = false; if (isExamActive) timerInterval = setInterval(window.updateCountdown, 1000); });
         
         // 🔥 FUNCIÓN MODIFICADA: Enviar petición POST silenciosa al cancelar 🔥
         function stopExamAndShowCancellation(reason) { 
