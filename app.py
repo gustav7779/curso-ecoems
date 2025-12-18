@@ -1571,7 +1571,8 @@ def api_exam_performance(exam_id):
     )
 
 
-# --- RESETEAR INTENTO (VERSIÓN SEGURA POR USUARIO) ---
+# --- EN app.py ---
+
 @app.route("/admin/reset_attempt/<int:exam_id>/<int:user_id>", methods=["POST"])
 @login_required
 def reset_attempt_by_user(exam_id, user_id):
@@ -1579,17 +1580,31 @@ def reset_attempt_by_user(exam_id, user_id):
         return jsonify({"success": False, "message": "No autorizado"}), 403
 
     try:
-        # 1. Borrar todas las respuestas de este usuario en este examen
-        db.session.query(Answer).filter_by(exam_id=exam_id, user_id=user_id).delete()
+        # 1. 🔥 CORRECCIÓN AQUÍ: Borrar respuestas filtrando por PREGUNTAS del examen 🔥
+        # Subquery: Obtener IDs de preguntas de este examen
+        exam_question_ids = db.session.query(Question.id).filter_by(exam_id=exam_id).all()
+        exam_question_ids = [q[0] for q in exam_question_ids] # Convertir a lista simple [1, 2, 3...]
 
-        # 2. Buscar y borrar el registro del resultado (el intento)
+        if exam_question_ids:
+            # Borrar respuestas que coincidan con esas preguntas y el usuario
+            db.session.query(Answer).filter(
+                Answer.user_id == user_id,
+                Answer.question_id.in_(exam_question_ids)
+            ).delete(synchronize_session=False)
+
+        # 2. Borrar el resultado del examen (El intento general)
         result = ExamResult.query.filter_by(exam_id=exam_id, user_id=user_id).first()
         if result:
             db.session.delete(result)
+        
+        # 3. Borrar sesión activa si existe
+        active_session = ActiveExamSession.query.filter_by(exam_id=exam_id, user_id=user_id).first()
+        if active_session:
+            db.session.delete(active_session)
 
         db.session.commit()
 
-        # 3. Avisar al alumno para sacarlo del examen
+        # 4. Avisar al alumno
         socketio.emit(
             "exam_reset_notification",
             {"message": "Tu examen ha sido reiniciado por el administrador."},
@@ -1600,6 +1615,7 @@ def reset_attempt_by_user(exam_id, user_id):
 
     except Exception as e:
         db.session.rollback()
+        app.logger.error(f"Error reset: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 @app.route('/admin/api/unlock_student', methods=['POST'])
 @login_required

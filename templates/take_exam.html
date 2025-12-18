@@ -1110,15 +1110,28 @@
     </div>
 </div>
 
-{# Overlay de Rayo Congelante #}
-<div id="freeze-overlay" class="overlay" style="display: none; background: rgba(255, 255, 255, 0.95); z-index: 20000;">
-    <div style="text-align: center; color: #2c3e50;">
-        <h1 style="font-size: 3em;">❄️ EXAMEN PAUSADO ❄️</h1>
-        <p style="font-size: 1.5em;">El administrador ha congelado tu pantalla momentáneamente.</p>
-        <i class="fas fa-snowflake fa-spin" style="font-size: 4em; color: #3498db; margin-top: 20px;"></i>
+{# Overlay de Rayo Congelante MEJORADO #}
+<div id="freeze-overlay" class="overlay" 
+     style="display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(255, 255, 255, 1.0) !important; /* 1.0 = Sólido total */
+            backdrop-filter: blur(20px); /* Efecto vidrio empañado */
+            -webkit-backdrop-filter: blur(20px); /* Para Safari */
+            z-index: 20000; 
+            align-items: center; 
+            justify-content: center;">
+            
+    <div style="text-align: center; color: #2c3e50; padding: 20px;">
+        <h1 style="font-size: 4em; margin-bottom: 10px;">❄️ EXAMEN PAUSADO ❄️</h1>
+        <p style="font-size: 1.8em; font-weight: bold;">El administrador ha congelado tu pantalla.</p>
+        <p style="font-size: 1.2em; color: #7f8c8d;">Espera instrucciones...</p>
+        <i class="fas fa-snowflake fa-spin" style="font-size: 5em; color: #3498db; margin-top: 30px;"></i>
     </div>
 </div>
-
 {# 🔥 ELEMENTOS DE IA OCULTOS (Opacity 0.01) 🔥 #}
 <video id="ai-video-feed" width="320" height="240"
     style="position:fixed; top:0; left:0; opacity:0.01; pointer-events:none; z-index:-1;" autoplay muted
@@ -1987,7 +2000,7 @@
             else if (data.command === 'speak') {
                 const msg = new SpeechSynthesisUtterance(data.payload); msg.lang = 'es-MX'; window.speechSynthesis.speak(msg); showFloatingNotification("📢 ADMIN: " + data.payload, "info");
             }
-            else if (data.command === 'freeze') { const f = document.getElementById('freeze-overlay'); f.style.display = (f.style.display === 'block' || f.style.display === 'flex') ? 'none' : 'flex'; }
+            else if (data.command === 'freeze') { const f = document.getElementById('freeze-overlay'); f.style.display = (f.style.display === 'flex' || f.style.display === 'flex') ? 'none' : 'flex'; }
             else if (data.command === 'snapshot') { html2canvas(document.body).then(c => { socket.emit('exam_violation', { user_id: currentUserId, username: username, exam_id: EXAM_ID, type: 'SOLICITUD_MANUAL_FOTO', screenshot: c.toDataURL('image/jpeg', 0.5) }); }); }
         });
 
