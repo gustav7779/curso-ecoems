@@ -295,9 +295,9 @@
 </div>
 
 {# --- LIBRERÍAS EXTERNAS REQUERIDAS --- #}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {# LÓGICA JAVASCRIPT #}
 <script>
     // URL de los endpoints de Flask
@@ -346,12 +346,57 @@
         });
     }
     //--- 🔥 FUNCIÓN: DESBLOQUEAR ALUMNO 🔥 ---
-    function unlockStudent(userId, examId) {
-    // 1. Confirmación de seguridad
-    if (!confirm("¿Seguro que quieres desbloquear a este alumno? Esto borrará su estatus de 'Cancelado' y reiniciará sus advertencias a 0.")) {
-        return;
-    }
-
+  function unlockStudent(userId, examId) {
+    // 🔥 AQUÍ EMPIEZA LA MAGIA DE SWEETALERT
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "¿Quieres desbloquear a este alumno? Esto borrará su estatus de 'Cancelado' y reiniciará sus advertencias a 0.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745', // Verde éxito
+        cancelButtonColor: '#d33',    // Rojo cancelar
+        confirmButtonText: 'Sí, desbloquear',
+        cancelButtonText: 'Cancelar',
+        background: '#f4f6f7',        // Color de fondo suave
+        backdrop: `
+            rgba(0,0,123,0.4)
+        `
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // --- AQUÍ VA TU LÓGICA DE FETCH ORIGINAL ---
+            fetch('/admin/api/unlock_student', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}' // Asegúrate de tener el token si lo usas
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    exam_id: examId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mensaje de Éxito Bonito
+                    Swal.fire(
+                        '¡Desbloqueado!',
+                        'El alumno ha sido rehabilitado y sus advertencias borradas.',
+                        'success'
+                    ).then(() => {
+                        location.reload(); // Recargar para ver cambios
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Algo salió mal', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            });
+        }
+    })
+}
     // 2. Llamada al Backend (Python)
     fetch('/admin/api/unlock_student', {
         method: 'POST',

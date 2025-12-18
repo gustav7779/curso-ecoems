@@ -1617,6 +1617,8 @@ def reset_attempt_by_user(exam_id, user_id):
         db.session.rollback()
         app.logger.error(f"Error reset: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
+# --- EN app.py ---
+
 @app.route('/admin/api/unlock_student', methods=['POST'])
 @login_required
 def unlock_student_exam():
@@ -1624,35 +1626,43 @@ def unlock_student_exam():
     if current_user.role != 'admin':
         return jsonify({'error': 'No autorizado'}), 403
 
-    data = request.json
-    user_id = data.get('user_id')
-    exam_id = data.get('exam_id')
+    try:
+        data = request.json
+        # 1. Asegurar que sean enteros (evita errores de tipo)
+        user_id = int(data.get('user_id'))
+        exam_id = int(data.get('exam_id'))
 
-    # 1. BUSCAR Y RESETEAR EL RESULTADO (Quitar el -1.0)
-    result = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
-    
-    if result:
-        # OPCIÓN A: Borrón y cuenta nueva (Se borran sus respuestas anteriores)
-        # db.session.delete(result) 
+        # 2. BUSCAR Y RESETEAR EL RESULTADO (Quitar el -1.0)
+        result = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
         
-        # OPCIÓN B: Segunda oportunidad (Mantiene lo que llevaba, pero le quita el bloqueo)
-        # Lo regresamos a -2.0 (Estado "Iniciando")
-        result.score = -2.0 
-        result.submission_type = None # Limpiamos la marca de cancelación
-    
-    # 2. LIMPIAR SESIÓN ACTIVA (Para que inicie con 0 strikes)
-    # Es importante borrar la sesión vieja para que el contador de violaciones vuelva a 0
-    active_session = ActiveExamSession.query.filter_by(user_id=user_id, exam_id=exam_id).first()
-    if active_session:
-        db.session.delete(active_session)
+        if result:
+            # Lo regresamos a estado "Iniciando" (-2.0)
+            result.score = -2.0 
+            result.submission_type = None # Limpiamos la marca de cancelación
+            # Opcional: Limpiar fecha para que no cuente como intento gastado hoy
+            # result.date_taken = datetime.utcnow() 
+        
+        # 3. LIMPIAR SESIÓN ACTIVA (Esto reinicia el contador de la sesión actual)
+        active_session = ActiveExamSession.query.filter_by(user_id=user_id, exam_id=exam_id).first()
+        if active_session:
+            db.session.delete(active_session)
 
-    db.session.commit()
+        # 4. 🔥 BORRAR EL HISTORIAL DE VIOLACIONES (Logs) 🔥
+        # Esto elimina las advertencias previas de la base de datos para este examen
+        db.session.query(ViolationLog).filter_by(user_id=user_id, exam_id=exam_id).delete()
 
-    # 3. MAGIA: Avisar al alumno que refresque su página automáticamente
-    # Esto hace que la pantalla roja desaparezca sola en la compu del alumno
-    socketio.emit('execute_repair', {'command': 'unlock'}, room=str(user_id))
+        db.session.commit()
 
-    return jsonify({'success': True, 'msg': 'Alumno desbloqueado. Contadores a cero.'})
+        # 5. MAGIA: Avisar al alumno que refresque su página automáticamente
+        socketio.emit('execute_repair', {'command': 'unlock'}, room=str(user_id))
+
+        return jsonify({'success': True, 'msg': 'Alumno desbloqueado y advertencias borradas.'})
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error al desbloquear: {e}")
+        # Esto hará que el mensaje de error sea visible en la consola del navegador si falla
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route("/admin/exam_simulator/<int:exam_id>")
 @login_required
