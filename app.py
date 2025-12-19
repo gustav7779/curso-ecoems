@@ -1972,8 +1972,11 @@ def setup_2fa():
 
     user = current_user
 
+    # --- LÓGICA DE VERIFICACIÓN (POST) MEJORADA ---
     if request.method == "POST":
-        totp_code = request.form.get("totp_code")
+        # 1. Limpiar espacios (por si el usuario pone "123 456")
+        totp_code = request.form.get("totp_code", "").replace(" ", "")
+        
         secret = session.get("new_2fa_secret")
 
         if not secret:
@@ -1982,7 +1985,12 @@ def setup_2fa():
 
         totp = pyotp.TOTP(secret)
 
-        if totp.verify(totp_code, valid_window=1):
+        # 2. Debug en logs (Para ver qué está pasando en Heroku)
+        expected = totp.now()
+        app.logger.info(f"DEBUG 2FA -> Input Usuario: '{totp_code}' | Esperado: '{expected}'")
+
+        # 3. Mayor tolerancia (valid_window=2 son +/- 60 segundos)
+        if totp.verify(totp_code, valid_window=2):
             user.two_factor_secret = secret
             db.session.commit()
             session.pop("new_2fa_secret", None)
@@ -1992,11 +2000,13 @@ def setup_2fa():
             flash("✅ Autenticación de Dos Factores activada correctamente.", "success")
             return redirect(url_for("admin_panel"))
         else:
+            # Mensaje de error con pista (Solo para debug, luego puedes quitar la variable expected)
             flash(
-                "Código de verificación incorrecto. Intenta escanear el código QR y vuelve a intentarlo.",
+                f"Código incorrecto. El servidor esperaba: {expected}. Revisa la hora de tu celular.",
                 "danger",
             )
 
+    # --- LÓGICA DE GENERACIÓN DE QR (GET) ---
     if not user.two_factor_secret:
         new_secret = pyotp.random_base32()
         session["new_2fa_secret"] = new_secret
@@ -2022,7 +2032,6 @@ def setup_2fa():
 
     flash("El 2FA ya está configurado para este usuario.", "info")
     return redirect(url_for("admin_panel"))
-
 
 @app.route("/disable_2fa", methods=["POST"])
 @login_required
