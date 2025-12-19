@@ -1811,15 +1811,17 @@ def login():
             return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        username = request.form["username"]
+        # Usamos .strip() para limpiar espacios accidentales al inicio/final
+        username = request.form["username"].strip() if request.form["username"] else ""
         password = request.form["password"]
 
-        if not re.match(r"^[a-zA-Z0-9_]{3,150}$", username):
+        # Regex actualizada para permitir espacios, acentos (áéíóúüñ) y mayúsculas
+        if not re.match(r"^[a-zA-Z0-9_\sáéíóúüñÁÉÍÓÚÜÑ]{3,150}$", username):
             app.logger.warning(
                 f"SECURITY: Invalid username format attempted: {username}"
             )
             flash(
-                "Formato de usuario inválido. Solo se permiten letras, números y '_'.",
+                "Formato de usuario inválido. Se permiten letras, números, espacios, acentos y '_'.",
                 "danger",
             )
             return redirect(url_for("login"))
@@ -1841,7 +1843,6 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user is None or not check_password_hash(user.password, password):
-
             failed_attempts = session.get("failed_attempts", 0) + 1
             session["failed_attempts"] = failed_attempts
 
@@ -1890,7 +1891,6 @@ def login():
 
         app.logger.info(f"AUDIT LOG: User {user.username} logged in successfully.")
 
-        # 🔥 NUEVO: Emitir evento de inicio de sesión
         socketio.emit(
             "new_activity",
             {
@@ -1905,11 +1905,7 @@ def login():
         else:
             return redirect(url_for("dashboard"))
 
-    # --- 🔥 MODIFICACIÓN 2! 🔥 ---
-    # Renderiza index.html aquí, ya que es tu página de login
     return render_template("index.html")
-
-
 # --- 🔥 FIN DE MODIFICACIÓN 🔥 ---
 
 
@@ -2368,20 +2364,16 @@ def new_announcement():
 
     return render_template("new_announcement.html")
 
-@app.route('/fix_database_images')
-def fix_db_images():
-    try:
-        with db.engine.connect() as conn:
-            # Intentamos crear las columnas una por una
-            # Si ya existen, dará error (no pasa nada)
-            conn.execute(text("ALTER TABLE question ADD COLUMN image_a VARCHAR(255)"))
-            conn.execute(text("ALTER TABLE question ADD COLUMN image_b VARCHAR(255)"))
-            conn.execute(text("ALTER TABLE question ADD COLUMN image_c VARCHAR(255)"))
-            conn.execute(text("ALTER TABLE question ADD COLUMN image_d VARCHAR(255)"))
-            conn.commit()
-        return "✅ Base de datos actualizada: Se agregaron las columnas de imágenes A, B, C, D."
-    except Exception as e:
-        return f"⚠️ Aviso (puede que ya existan): {str(e)}"
+# @app.route('/fix_database_images')
+# def fix_db_images():
+#     try:
+#         with db.engine.connect() as conn:
+#             conn.execute(text("ALTER TABLE question ADD COLUMN image_a VARCHAR(255)"))
+#             # ... etc
+#             conn.commit()
+#         return "✅ Base de datos actualizada"
+#     except Exception as e:
+#         return f"⚠️ Error: {str(e)}"
 @app.route("/admin/announcements/edit/<int:announcement_id>", methods=["GET", "POST"])
 @login_required
 def edit_announcement(announcement_id):
@@ -3302,19 +3294,22 @@ def manage_users():
     users = query.all()
 
     if request.method == "POST":
-        username = request.form.get("username")
+        # .strip() elimina espacios accidentales al principio o final
+        username = request.form.get("username").strip() if request.form.get("username") else None
         password = request.form.get("password")
         role = request.form.get("role", "student")
-
         phone_number = request.form.get("phone_number")
 
         if not username or not password:
             flash("El nombre de usuario y la contraseña son obligatorios.", "danger")
             return redirect(url_for("manage_users"))
 
-        if not re.match(r"^[a-zA-Z0-9_]{3,150}$", username):
+        # Regex actualizada: 
+        # a-zA-Z (letras), 0-9 (números), _ (guion bajo), \s (espacios)
+        # áéíóúüñÁÉÍÓÚÜÑ (acentos y letra ñ)
+        if not re.match(r"^[a-zA-Z0-9_\sáéíóúüñÁÉÍÓÚÜÑ]{3,150}$", username):
             flash(
-                "El nombre de usuario debe tener entre 3 y 150 caracteres y solo contener letras, números y '_'.",
+                "El nombre debe tener entre 3 y 150 caracteres (letras, números, espacios, acentos o '_').",
                 "danger",
             )
             return redirect(url_for("manage_users"))
@@ -3338,11 +3333,9 @@ def manage_users():
 
         try:
             db.session.commit()
-
             app.logger.info(
                 f"AUDIT LOG: Admin user {current_user.username} created new user '{username}' ({role})."
             )
-
             flash(f"Usuario {username} ({role}) creado exitosamente.", "success")
 
         except IntegrityError:
@@ -3361,7 +3354,6 @@ def manage_users():
     return render_template(
         "manage_users.html", users=users, show_inactive=show_inactive
     )
-
 
 @app.route("/admin/users/toggle_status/<int:user_id>", methods=["POST"])
 @login_required

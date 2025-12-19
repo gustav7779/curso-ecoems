@@ -375,7 +375,7 @@
                     
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <input type="text" name="username" placeholder="Usuario" required>
+                   <input type="text" name="username" placeholder="Nombre completo o Usuario" required autocomplete="username" spellcheck="false">
                     <input type="password" name="password" placeholder="Contraseña" required>
                     <button type="submit">Entrar</button>
                 </form>
