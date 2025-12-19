@@ -2789,20 +2789,24 @@ def import_csv(exam_id):
     return redirect(url_for("add_question", exam_id=exam_id))
 
 
-# --- RUTA PARA EDITAR PREGUNTA (CORREGIDA PARA CLOUDINARY) ---
+# --- EN app.py (Reemplaza edit_question) ---
+
 @app.route("/admin/question/edit/<int:question_id>", methods=["GET", "POST"])
 @login_required
 def edit_question(question_id):
-    # Verificar permisos
     if current_user.role not in ["admin", "ayudante"]:
         flash("No autorizado", "danger")
         return redirect(url_for("dashboard"))
 
     question = Question.query.get_or_404(question_id)
-    exam = Exam.query.get(question.exam_id) # Para el botón de volver
+    exam = Exam.query.get(question.exam_id)
 
     if request.method == "POST":
         try:
+            # DEBUG: Ver qué archivos están llegando
+            app.logger.info(f"--- EDITANDO PREGUNTA {question_id} ---")
+            app.logger.info(f"Archivos recibidos: {request.files}")
+
             # 1. Actualizar textos
             question.subject = request.form.get("subject")
             question.text = request.form.get("text")
@@ -2813,47 +2817,59 @@ def edit_question(question_id):
             question.correct_option = request.form.get("correct_option")
             question.manual_difficulty = request.form.get("manual_difficulty")
 
-            # 2. Actualizar imágenes (SOLO SI SE SUBIÓ UNA NUEVA)
-            # Usamos tu save_image_helper. Si devuelve URL, actualizamos. Si no, dejamos la vieja.
+            # 2. Actualizar imágenes (Con logs de debug)
             
-            # Imagen Principal
-            if request.files.get("image_file"):
-                new_url = save_image_helper(request.files["image_file"], "q_edit")
-                if new_url:
-                    question.image_filename = new_url 
-
-            # Imagen Opción A
-            if request.files.get("image_a"):
-                new_url_a = save_image_helper(request.files["image_a"], "opt_a_edit")
+            # --- INCISO A ---
+            file_a = request.files.get("image_a")
+            if file_a and file_a.filename != '':
+                app.logger.info(f"Procesando imagen A: {file_a.filename}")
+                new_url_a = save_image_helper(file_a, "opt_a_edit")
                 if new_url_a:
                     question.image_a = new_url_a
-
-            # Imagen Opción B
-            if request.files.get("image_b"):
-                new_url_b = save_image_helper(request.files["image_b"], "opt_b_edit")
+                    app.logger.info(f"✅ Imagen A guardada: {new_url_a}")
+                else:
+                    app.logger.error("❌ Error: save_image_helper devolvió None para A")
+            
+            # --- INCISO B ---
+            file_b = request.files.get("image_b")
+            if file_b and file_b.filename != '':
+                app.logger.info(f"Procesando imagen B: {file_b.filename}")
+                new_url_b = save_image_helper(file_b, "opt_b_edit")
                 if new_url_b:
                     question.image_b = new_url_b
-
-            # Imagen Opción C
-            if request.files.get("image_c"):
-                new_url_c = save_image_helper(request.files["image_c"], "opt_c_edit")
+            
+            # --- INCISO C ---
+            file_c = request.files.get("image_c")
+            if file_c and file_c.filename != '':
+                app.logger.info(f"Procesando imagen C: {file_c.filename}")
+                new_url_c = save_image_helper(file_c, "opt_c_edit")
                 if new_url_c:
                     question.image_c = new_url_c
 
-            # Imagen Opción D
-            if request.files.get("image_d"):
-                new_url_d = save_image_helper(request.files["image_d"], "opt_d_edit")
+            # --- INCISO D ---
+            file_d = request.files.get("image_d")
+            if file_d and file_d.filename != '':
+                app.logger.info(f"Procesando imagen D: {file_d.filename}")
+                new_url_d = save_image_helper(file_d, "opt_d_edit")
                 if new_url_d:
                     question.image_d = new_url_d
 
-            # 3. Guardar cambios en la DB
+            # --- IMAGEN PRINCIPAL ---
+            file_main = request.files.get("image_file")
+            if file_main and file_main.filename != '':
+                app.logger.info(f"Procesando imagen Principal: {file_main.filename}")
+                new_url = save_image_helper(file_main, "q_edit")
+                if new_url:
+                    question.image_filename = new_url
+
             db.session.commit()
-            flash("✅ Pregunta actualizada correctamente.", "success")
+            app.logger.info("--- CAMBIOS GUARDADOS EN DB ---")
+            flash("✅ Pregunta e imágenes actualizadas.", "success")
             return redirect(url_for("add_question", exam_id=question.exam_id))
 
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Error editando pregunta: {e}")
+            app.logger.error(f"FATAL ERROR EDITANDO: {e}")
             flash(f"Error al editar: {str(e)}", "danger")
 
     return render_template("edit_question.html", question=question, exam=exam)
