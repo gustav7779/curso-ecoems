@@ -2608,8 +2608,28 @@ def duplicate_exam(exam_id):
 
     return redirect(url_for("admin_panel"))
 
+# ==============================================================================
+# 1. FUNCIÓN DE AYUDA (DEBE IR PRIMERO Y PEGADA A LA IZQUIERDA)
+# ==============================================================================
+def save_image_helper(file_obj, prefix="img"):
+    # Validación básica: si no hay archivo, devolvemos None
+    if not file_obj or file_obj.filename == '':
+        return None
+    
+    try:
+        # Intentamos subir a Cloudinary
+        upload_result = cloudinary.uploader.upload(file_obj)
+        # Si funciona, devolvemos el link de internet (https://...)
+        return upload_result['secure_url'] 
+    except Exception as e:
+        # Si falla, imprimimos el error y devolvemos None
+        print(f"Error subiendo a Cloudinary: {e}") 
+        return None
 
-# --- 🔥 RUTA PRINCIPAL DE PREGUNTAS (AGREGAR/LISTAR) 🔥 ---
+
+# ==============================================================================
+# 2. RUTA DE AGREGAR PREGUNTAS (VA DEBAJO DE LA FUNCIÓN DE AYUDA)
+# ==============================================================================
 @app.route("/admin/exam/<int:exam_id>/questions", methods=["GET", "POST"])
 @login_required
 def add_question(exam_id):
@@ -2618,28 +2638,8 @@ def add_question(exam_id):
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("dashboard"))
 
+    # 🔥 BUSCAR EL EXAMEN (Vital para que no de error 500)
     exam = Exam.query.get_or_404(exam_id)
-
- # --- 1. MUEVE ESTA FUNCIÓN AFUERA DE TU RUTA (En el ámbito global) ---
-def save_image_helper(file_obj, prefix="img"):
-    # Validación básica
-    if not file_obj or file_obj.filename == '':
-        return None
-    
-    try:
-        # Subir a Cloudinary
-        upload_result = cloudinary.uploader.upload(file_obj)
-        # Devolver la URL segura
-        return upload_result['secure_url'] 
-    except Exception as e:
-        # Puedes usar print o app.logger.error si tienes acceso a app
-        print(f"Error subiendo a Cloudinary: {e}") 
-        return None
-
-# --- 2. DENTRO DE TU RUTA ---
-# @app.route(...)
-# def tu_funcion_de_ruta():
-    # ... código previo ...
 
     # --- LÓGICA PARA GUARDAR NUEVA PREGUNTA (POST) ---
     if request.method == "POST":
@@ -2655,19 +2655,16 @@ def save_image_helper(file_obj, prefix="img"):
             manual_difficulty = request.form.get("manual_difficulty", "Medium")
 
             # --- USO DE LA FUNCIÓN HELPER ---
-            
-            # 1. Guardar Imagen Principal de la Pregunta
+            # (Como la definimos arriba, aquí ya la reconoce)
             main_image_filename = save_image_helper(request.files.get("image_file"), "q_main")
-
-            # 2. 🔥 Guardar Imágenes de los Incisos (A, B, C, D) 🔥
             img_a = save_image_helper(request.files.get("image_a"), "opt_a")
             img_b = save_image_helper(request.files.get("image_b"), "opt_b")
             img_c = save_image_helper(request.files.get("image_c"), "opt_c")
             img_d = save_image_helper(request.files.get("image_d"), "opt_d")
 
-            # Crear la pregunta en la DB con TODOS los campos
+            # Crear la pregunta en la DB
             new_question = Question(
-                exam_id=exam.id,
+                exam_id=exam.id, 
                 subject=subject,
                 text=text,
                 option_a=option_a,
@@ -2690,18 +2687,18 @@ def save_image_helper(file_obj, prefix="img"):
             return redirect(url_for("add_question", exam_id=exam.id))
 
         except Exception as e:
-            # Aquí es donde el 'try' busca caer si hay error
             db.session.rollback()
+            # Es bueno usar app.logger si está disponible, si no print sirve para debug
+            print(f"Error al guardar pregunta: {e}")
             flash(f"Error al guardar la pregunta: {str(e)}", "danger")
-            # Es buena práctica devolver algo o redirigir en caso de error también
             return redirect(url_for("add_question", exam_id=exam.id))
 
     # --- LÓGICA PARA MOSTRAR LA PÁGINA (GET) ---
-    # Obtener todas las preguntas de este examen para la lista de la derecha
     questions = (
         Question.query.filter_by(exam_id=exam_id).order_by(Question.id.asc()).all()
     )
 
+    # Retornar el HTML (Vital para que se vea la página)
     return render_template("add_question.html", exam=exam, questions=questions, question=None)
 
 
