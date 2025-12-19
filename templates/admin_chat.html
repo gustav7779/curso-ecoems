@@ -51,33 +51,40 @@
         const messageInput = document.getElementById('message-input');
         const endChatBtn = document.getElementById('end-chat-btn');
 
+      // 1. Conexión y Unión a salas
         socket.on('connect', function() {
             console.log("Admin conectado al chat.");
-            // 🔥 UNIRSE AL CANAL GLOBAL DE ADMINS PARA RECIBIR MENSAJES
+            // Nos unimos a la sala del alumno para recibir sus mensajes directos
+            socket.emit('join_room', { user_id: TARGET_USER_ID });
+            // Nos unimos al canal global por si acaso
             socket.emit('admin_join_pulse');
         });
 
-        // 2. Recibir mensajes (Ahora vienen por el canal global)
-        socket.on('admin_message_received', function(data) {
-            console.log("Mensaje recibido:", data);
+        // 2. ESCUCHAR MENSAJES DEL ALUMNO (Evento corregido)
+        socket.on('chat_notification', function(data) {
+            console.log("Evento recibido del servidor:", data);
             
-            // 🔥 FILTRO DE SEGURIDAD: Solo mostrar si viene del alumno actual
-            // Convertimos a string ambos para asegurar que coincidan (ej. "2" == 2)
-            if (String(data.sender_id) === String(TARGET_USER_ID)) {
+            // Verificamos que el mensaje sea del alumno con el que estamos hablando
+            const isFromCurrentStudent = String(data.user_id) === String(TARGET_USER_ID);
+            
+            // Si es del alumno y es un mensaje de estudiante, lo pintamos
+            if (isFromCurrentStudent && data.is_student) {
                 appendMessage(data.message, 'student', data.timestamp);
             }
         });
 
-        // 3. Enviar mensajes al Alumno
+        // 3. ENVIAR MENSAJES (Mantenemos tu lógica de envío)
         chatForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const msg = messageInput.value.trim();
             
             if (msg) {
+                // Enviamos al servidor
                 socket.emit('send_message_to_student', {
                     target_user_id: TARGET_USER_ID,
                     message: msg
                 });
+                // Lo pintamos en nuestra pantalla de una vez (lado derecho)
                 appendMessage(msg, 'admin', new Date().toLocaleTimeString());
                 messageInput.value = '';
             }

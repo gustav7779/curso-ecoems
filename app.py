@@ -499,6 +499,7 @@ def handle_connect():
         )
         # --- ENVIAR ALERTA INDIVIDUAL (PING) ---
 # --- 🔥 AGREGAR ESTO PARA QUE EL ADMIN LEA AL ALUMNO 🔥 ---
+# --- 🔥 ESTA ES LA FUNCIÓN QUE DEBES MODIFICAR 🔥 ---
 @socketio.on("send_message_from_student")
 def handle_student_message(data):
     # 1. Seguridad: Solo alumnos autenticados
@@ -508,28 +509,37 @@ def handle_student_message(data):
     message_content = data.get("message")
 
     if message_content:
-        # 2. Preparamos el paquete de datos
-        # Usamos hora local (puedes ajustar con tu lógica de pytz si quieres)
+        # Preparamos el paquete de datos
         timestamp = datetime.now().strftime("%H:%M:%S")
+        
+        # Diccionario con la info del mensaje
+        message_data = {
+            "sender": current_user.username,
+            "message": message_content,
+            "timestamp": timestamp,
+            "is_student": True, 
+            "user_id": current_user.id
+        }
 
-        # 3. 🔥 CLAVE DEL ÉXITO: Enviar a la sala del PROPIO alumno 🔥
-        # Como el Admin ya ejecutó 'join_room(student_id)' al abrir el chat,
-        # al emitir en esta sala, ambos (Admin y Alumno) verán el mensaje.
+        # 1. Envía a la sala privada del alumno (para que él lo vea en su pantalla)
         emit(
             "chat_notification",
-            {
-                "sender": current_user.username,  # Nombre del alumno
-                "message": message_content,
-                "timestamp": timestamp,
-                "is_student": True, # Bandera para que el JS lo pinte de otro color
-                "user_id": current_user.id # Para identificar quién es en el front del admin
-            },
+            message_data,
             room=str(current_user.id),
             namespace="/"
         )
         
-        # Log para depuración en la terminal negra
-        app.logger.info(f"CHAT: Student {current_user.username} sent: {message_content}")
+        # 2. 🔥 ESTO ES LO NUEVO: Envía también al panel global del Admin 🔥
+        # Esto asegura que el Admin reciba el mensaje aunque haya problemas con la sala privada
+        emit(
+            "chat_notification",
+            message_data,
+            room="admin_pulse_room",
+            namespace="/"
+        )
+        
+        # Log para que veas en la terminal si el servidor procesó el mensaje
+        app.logger.info(f"CHAT LIVE: Alumno {current_user.username} envió: {message_content}")
 
 @socketio.on("send_individual_ping")
 @login_required
