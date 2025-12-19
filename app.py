@@ -37,13 +37,14 @@ import cloudinary.uploader
 import logging
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
-from sqlalchemy import func, case, or_
+from sqlalchemy import func, case, or_, text
 from sqlalchemy.exc import IntegrityError
 from flask_socketio import SocketIO, emit, join_room, leave_room, ConnectionRefusedError
 import csv
 import io
 import uuid
 import json
+import text
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
@@ -337,8 +338,6 @@ class Exam(db.Model):
     violation_logs = db.relationship(
         "ViolationLog", backref="exam", lazy=True, cascade="all, delete-orphan"
     )
-
-
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
@@ -347,16 +346,25 @@ class Question(db.Model):
     option_c = db.Column(db.String(255), nullable=True)
     option_d = db.Column(db.String(255), nullable=True)
     correct_option = db.Column(db.String(10), nullable=True)
-    image_filename = db.Column(db.String(255), nullable=True)
+    
+    image_filename = db.Column(db.String(255), nullable=True) # Imagen Principal
+
+    # 🔥🔥 AGREGA ESTAS 4 LÍNEAS PARA QUE FUNCIONEN LOS INCISOS 🔥🔥
+    image_a = db.Column(db.String(255), nullable=True)
+    image_b = db.Column(db.String(255), nullable=True)
+    image_c = db.Column(db.String(255), nullable=True)
+    image_d = db.Column(db.String(255), nullable=True)
+    # -------------------------------------------------------------
+
     subject = db.Column(db.String(100), nullable=True)
     exam_id = db.Column(db.Integer, db.ForeignKey("exam.id"), nullable=False)
     order_index = db.Column(db.Integer, default=0)
-    # --- 🔥 INICIO DE MODIFICACIÓN: SIMULADOR DE RENDIMIENTO 🔥 ---
+    
+    # --- MODIFICACIÓN: SIMULADOR DE RENDIMIENTO ---
     times_answered = db.Column(db.Integer, default=0, nullable=False)
     correct_answers = db.Column(db.Integer, default=0, nullable=False)
     difficulty_score = db.Column(db.Float, default=0.5, nullable=False)
-    manual_difficulty = db.Column(
-        db.String(20), default="Medium", nullable=False
+    manual_difficulty = db.Column(db.String(20), default="Medium", nullable=False)
     )  # <--- NUEVO CAMPO MANUAL
     # --- 🔥 FIN DE MODIFICACIÓN: SIMULADOR DE RENDIMIENTO 🔥 ---
 
@@ -2361,7 +2369,20 @@ def new_announcement():
 
     return render_template("new_announcement.html")
 
-
+@app.route('/fix_database_images')
+def fix_db_images():
+    try:
+        with db.engine.connect() as conn:
+            # Intentamos crear las columnas una por una
+            # Si ya existen, dará error (no pasa nada)
+            conn.execute(text("ALTER TABLE question ADD COLUMN image_a VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE question ADD COLUMN image_b VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE question ADD COLUMN image_c VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE question ADD COLUMN image_d VARCHAR(255)"))
+            conn.commit()
+        return "✅ Base de datos actualizada: Se agregaron las columnas de imágenes A, B, C, D."
+    except Exception as e:
+        return f"⚠️ Aviso (puede que ya existan): {str(e)}"
 @app.route("/admin/announcements/edit/<int:announcement_id>", methods=["GET", "POST"])
 @login_required
 def edit_announcement(announcement_id):
