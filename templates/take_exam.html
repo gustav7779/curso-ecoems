@@ -184,94 +184,486 @@
 </style>
 
 <script>
-    // =================================================================
-    // 1. FUNCIONES GLOBALES (ACCESIBLES DESDE CUALQUIER LUGAR)
-    // =================================================================
-     
-    // Definimos esto AFUERA para que las IAs y errores siempre la encuentren
-    function showFloatingNotification(msg, type) {
-        let container = document.getElementById('toast-container');
+    // Lógica del contador para la sala de espera
+    document.addEventListener('DOMContentLoaded', function() {
+        let startTime = parseInt("{{ start_time_utc | default('0') }}");
+        
+        function updateWaitTimer() {
+            const now = Math.floor(Date.now() / 1000);
+            const distance = startTime - now;
+
+            if (distance < 0) {
+                location.reload(); 
+                return;
+            }
+
+            const days = Math.floor(distance / (60 * 60 * 24));
+            const hours = Math.floor((distance % (60 * 60 * 24)) / (60 * 60));
+            const minutes = Math.floor((distance % (60 * 60)) / 60);
+            const seconds = Math.floor(distance % 60);
+
+            const elDias = document.getElementById("dias");
+            if(elDias) elDias.innerText = days < 10 ? "0" + days : days;
+            
+            const elHoras = document.getElementById("horas");
+            if(elHoras) elHoras.innerText = hours < 10 ? "0" + hours : hours;
+            
+            const elMin = document.getElementById("minutos");
+            if(elMin) elMin.innerText = minutes < 10 ? "0" + minutes : minutes;
+            
+            const elSeg = document.getElementById("segundos");
+            if(elSeg) elSeg.innerText = seconds < 10 ? "0" + seconds : seconds;
+        }
+
+        if(startTime > 0) {
+            setInterval(updateWaitTimer, 1000);
+            updateWaitTimer();
+        }
+    });
+</script>
+
+{% else %}
+{# ----------------------------------------------------- #}
+{# 📝 VISTA 2: EL EXAMEN COMPLETO 📝 #}
+{# ----------------------------------------------------- #}
+
+{# --- MARCA DE AGUA DE SEGURIDAD --- #}
+<div id="watermark-overlay">
+    {# 50 repeticiones para cubrir toda la pantalla #}
+    {% for _ in range(50) %}
+    <div class="watermark-text">{{ current_user.username }} - ID: {{ current_user.id }}</div>
+    {% endfor %}
+</div>
+
+{# --- 1. ELEMENTOS FLOTANTES --- #}
+<div class="header-controls-group">
+    {# Botón de Ayuda (Timbre) #}
+    <button id="request-help-btn" class="btn help-btn" title="Solicitar hablar con el profesor">
+        🙋‍♂️ Hablar con Gus
+    </button>
+
+    <a href="{{ url_for('new_report') }}" id="report-error-button" class="btn report-error-btn" target="_blank"
+        title="Reportar un problema sin perder el examen">
+        🚨 Reportar Error
+    </a>
+
+    <div id="fixed-timer-container" class="fixed-timer-box">
+        <span>⏰ Tiempo:</span>
+        <div id="countdown" class="countdown-display">Cargando...</div>
+    </div>
+</div>
+
+{# --- PANEL DE CHAT --- #}
+<div id="student-chat-panel" class="student-chat-panel">
+    <div class="chat-panel-header">
+        <strong>💬 Soporte en Vivo</strong>
+        <span class="close-chat" id="close-chat-button">×</span>
+    </div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <form id="student-chat-form" class="student-chat-form">
+        <input type="text" id="student-message-input" placeholder="Escribe tu consulta rápida..." required>
+        <button type="submit" class="chat-send-btn">Enviar</button>
+    </form>
+</div>
+
+{# --- 2. OVERLAYS --- #}
+
+{# 🔥 FIX: Solo mostrar Overlay de Bienvenida si el examen NO ha iniciado (tiempo = 0) #}
+{% if start_time_utc == 0 %}
+<div id="welcome-overlay" class="overlay">
+    <div class="overlay-content">
+        <h1 class="welcome-title">✨ ¡Antes de Presentar el Examen, {{ current_user.username }}! ✨</h1>
+        <p class="exam-prep-text">Debes saber lo siguiente para contestar el **{{ exam.title }}**.</p>
+        <p class="exam-info-text">Tienes **3 horas (180 minutos)** para contestar el examen.</p>
+        <p class="exam-info-text">Lee con atención y cualquier consulta presiona el botón Hablar con Gus.</p>
+        <p class="exam-info-text">Cualquier error presiona en Reportar Error.</p>
+
+        <button id="start-exam-button" class="button start-btn">
+            Comenzar Examen Ahora 🚀
+        </button>
+
+        <p class="warning-text">Recuerda: El envío es automático si el tiempo se agota.</p>
+        <p class="permission-note" style="margin-top: 10px; font-size: 0.9em; color: #3498db;">
+            ℹ️ Al hacer clic, el navegador te pedirá permiso para usar la cámara y el micrófono.
+            <strong>Por favor, acepta para activar el monitoreo y puedas hacer el examen.</strong>
+        </p>
+    </div>
+</div>
+{% endif %}
+
+{# Overlay de Cancelación #}
+<div id="cancellation-overlay" class="overlay" style="display: none;">
+    <div class="overlay-content cancel-content">
+        <h1 class="cancel-title">🚫 Examen Cancelado 🚫</h1>
+        <p class="cancel-info-text">Tu examen ha sido cancelado.</p>
+        <h3 class="reason-label">Motivo:</h3>
+        <div id="cancellation-reason-display" class="reason-box"></div>
+
+        <a href="{{ url_for('new_report') }}" target="_blank" class="button"
+            style="background-color: #e67e22; margin-right: 10px; text-decoration: none; display: inline-block; color: white; padding: 10px 20px; border-radius: 6px;">
+            🚨 Reportar Error
+        </a>
+
+        <a href="{{ url_for('dashboard') }}" class="button back-btn"
+            style="text-decoration: none; display: inline-block; color: white;">
+            Regresar al Inicio
+        </a>
+    </div>
+</div>
+
+{# Modal de Confirmación de Envío #}
+<div id="confirm-submit-modal" class="overlay" style="display: none; z-index: 10000;">
+    <div class="overlay-content" style="max-width: 450px; border-color: #f39c12;">
+        <h2 id="confirm-modal-text" class="confirm-title" style="color: #34495e; font-size: 1.5em; line-height: 1.4;">
+            ¿Estás seguro de entregar?
+        </h2>
+        <p>Si envías ahora, no podrás cambiar tus respuestas.</p>
+        <div class="modal-actions" style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+            <button id="confirm-submit-btn-yes" class="action-btn confirm-btn-yes">✅ Sí, Enviar</button>
+            <button id="confirm-submit-btn-no" class="action-btn confirm-btn-no">No, Cancelar</button>
+        </div>
+    </div>
+</div>
+
+{# Overlay de Rayo Congelante MEJORADO #}
+<div id="freeze-overlay" class="overlay" 
+     style="display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(255, 255, 255, 1.0) !important; /* 1.0 = Sólido total */
+            backdrop-filter: blur(20px); /* Efecto vidrio empañado */
+            -webkit-backdrop-filter: blur(20px); /* Para Safari */
+            z-index: 20000; 
+            align-items: center; 
+            justify-content: center;">
+            
+    <div style="text-align: center; color: #2c3e50; padding: 20px;">
+        <h1 style="font-size: 4em; margin-bottom: 10px;">❄️ EXAMEN PAUSADO ❄️</h1>
+        <p style="font-size: 1.8em; font-weight: bold;">El administrador ha congelado tu pantalla.</p>
+        <p style="font-size: 1.2em; color: #7f8c8d;">Espera instrucciones...</p>
+        <i class="fas fa-snowflake fa-spin" style="font-size: 5em; color: #3498db; margin-top: 30px;"></i>
+    </div>
+</div>
+{# 🔥 ELEMENTOS DE IA OCULTOS (Opacity 0.01) 🔥 #}
+<video id="ai-video-feed" width="320" height="240"
+    style="position:fixed; top:0; left:0; opacity:0.01; pointer-events:none; z-index:-1;" autoplay muted
+    playsinline></video>
+<canvas id="ai-canvas" style="position:fixed; top:0; left:0; opacity:0; pointer-events:none; z-index:-1;"></canvas>
+
+{# --- 3. CONTENIDO DEL EXAMEN --- #}
+<div class="exam-header-info">
+    <h2 class="exam-title-main">📝 Examen: {{ exam.title }}</h2>
+    <p class="exam-description">{{ exam.description }}</p>
+    <p class="exam-subject-header">Monitoreo de Seguridad: <span class="security-status-active">Activado</span></p>
+
+    {# 🔥 FIX: Solo mostrar Botón Manual si el examen NO ha iniciado (tiempo = 0) #}
+    {% if start_time_utc == 0 %}
+    <div id="manual-start-container"
+        style="display: none; background: #f1c40f; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 2px solid #f39c12;">
+        <h3 style="margin: 0 0 10px 0; color: #333;">⚠️ Iniciar Examen</h3>
+        <button id="manual-start-btn" class="button start-btn" style="padding: 10px 20px; font-size: 1em;">▶️ ACTIVAR
+            CÁMARA E INICIAR</button>
+    </div>
+    {% endif %}
+</div>
+
+<div class="container exam-container">
+    {# Mapa de Preguntas #}
+    <div class="question-map-container">
+        <h3>Mapa del Examen</h3>
+        <div class="question-map-grid fase-1" id="question-map-grid">
+            {# 🔥 Iteramos sobre 'questions' (ordenado aleatoriamente desde backend) #}
+            {% for q in questions %}
+            <a href="#q-{{ q.id }}" class="question-map-btn {% if saved_answers.get(q.id) %}answered{% endif %}"
+                id="map-btn-{{ q.id }}" data-index="{{ loop.index0 }}" title="Pregunta {{ loop.index }}">
+                {{ loop.index }}
+            </a>
+            {% endfor %}
+        </div>
+        <div class="map-legend">
+            <span class="legend-item legend-unanswered"></span> Pendiente
+            <span class="legend-item legend-answered"></span> Respondida
+            <span class="legend-item legend-flagged"></span> Marcada
+        </div>
+    </div>
+
+    {# Formulario Principal #}
+    <form method="POST" class="exam-form" id="exam-form">
+
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {# 🔥 INPUT OCULTO PARA RRWEB (GRABACIÓN) 🔥 #}
+        <input type="hidden" name="recording_data" id="recording-data-input">
+
+        {# 🔥 Iteramos sobre 'questions' (ordenado) #}
+        {% for question in questions %}
+        <div class="question-card" id="q-{{ question.id }}" data-index="{{ loop.index0 }}"
+            style="{% if not loop.first %}display: none;{% endif %}">
+
+            <p class="question-meta">
+                <span><strong>Materia:</strong> <span class="subject-tag">{{ question.subject or 'General' }}</span>
+                    <strong>Pregunta {{ loop.index }} de {{ loop.length }}</strong></span>
+            </p>
+            <p class="question-text question-centered">{{ question.text }}</p>
+            
+            {# 🔥 FIX IMÁGENES: Corregido error de sintaxis y añadido contenedor responsivo #}
+            {% if question.image_filename %}
+            <div class="question-image-container">
+                <img src="{{ question.image_filename }}" class="question-image" draggable="false" alt="Imagen de la pregunta">
+            </div>
+            {% endif %}
+            
+            <div class="options-group">
+                
+                {# 1. Definimos la lista con 3 valores: Letra, Texto e IMAGEN #}
+                {% set all_options = [
+                    ('A', question.option_a, question.image_a),
+                    ('B', question.option_b, question.image_b),
+                    ('C', question.option_c, question.image_c),
+                    ('D', question.option_d, question.image_d)
+                ] %}
+            
+                {% set q_name = 'q' + question.id | string %}
+                {# Recuperamos la respuesta guardada para marcar el radio button #}
+                {% set saved_response = saved_answers.get(question.id | string, '') %} 
+                {# Nota: convertí question.id a string en el get() por si acaso las claves del dict son strings #}
+            
+                {% for letter, text, img_file in all_options %}
+                    {# 2. Mostramos la opción si existe Texto O Imagen #}
+                    {% if text or img_file %}
+                    
+                    <label class="option-label" style="justify-content: flex-start !important; align-items: flex-start; cursor: pointer; padding: 10px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 5px; display: flex;">
+                        
+                        {# Radio Button #}
+                        <input type="radio" name="{{ q_name }}" value="{{ letter }}" data-qid="{{ question.id }}"
+                               {% if saved_response == letter %}checked{% endif %}
+                               style="margin-top: 5px; margin-right: 10px;"> 
+                        
+                        {# Contenedor de Contenido (Texto + Imagen) #}
+                        <div class="option-content-wrapper" style="text-align: left !important; width: 100%;">
+                            
+                            {# Texto de la opción #}
+                            {% if text %}
+                                <div style="font-size: 1rem; color: #333;">
+                                    <strong>{{ letter }})</strong> {{ text }}
+                                </div>
+                            {% endif %}
+            
+                            {# Imagen de la opción (Si existe) #}
+                            {# 🔥 FIX: Usamos img_file en lugar de question.image_filename aquí #}
+                            {% if img_file %}
+                                <div style="margin-top: 8px;">
+                                    <img src="{{ img_file }}"
+                                         alt="Opción {{ letter }}" 
+                                         class="img-fluid"
+                                         style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
+                                    {% if not text %}
+                                        <span style="display:block; font-size: 0.8em; color: #666;">(Opción {{ letter }})</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+            
+                    </label>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="question-nav-buttons">
+                {% if not loop.last %}
+                <button type="button" class="button flag-and-next-btn" data-qid="{{ question.id }}">🚩 Marcar y
+                    Siguiente</button>
+                <button type="button" class="button next-question-btn">Siguiente Pregunta →</button>
+                {% else %}
+                <button type="button" class="button review-mode-btn">🔄 Ir a Revisión (🚩)</button>
+                <button type="button" class="button finish-directly-btn">✅ Finalizar y Entregar Ahora</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div id="review-mode-info" style="display: none;">
+            <h3>Modo de Revisión</h3>
+            <p>Estás en modo de revisión. Usa el "Mapa del Examen" para saltar a las preguntas marcadas (🚩). Presiona
+                entregar cuando estés listo.</p>
+        </div>
+
+        <button type="submit" class="button submit-btn" id="final-submit-button" style="display: none;">✅ Entregar
+            Examen y Calificar</button>
+    </form>
+    <a href="{{ url_for('exams_list') }}" class="btn back-nav-btn">⬅ Volver a la Lista de Exámenes</a>
+</div>
+
+{# --- CONTENEDOR DE ALERTAS AMARILLAS (PING) --- #}
+<div id="exam-toast-container"
+    style="position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;">
+</div>
+
+{# --- LIBRERÍAS JS --- #}
+{# 🔥 AGREGAMOS SWEETALERT2 PARA EL ALUMNO 🔥 #}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+{# LIBRERÍAS DE IA #}
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+
+{# GRABACIÓN DE SESIÓN (RRWEB) #}
+<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+
+<script>
+    // 🔥 1. ESTO VA HASTA ARRIBA (Global) 🔥
+    window.showFloatingNotification = function(msg, type) {
+        let container = document.getElementById('exam-toast-container');
         if (!container) {
+            // Si no existe, lo creamos al vuelo para que no falle
             container = document.createElement('div');
-            container.id = 'toast-container';
-            container.style.cssText = "position: fixed; bottom: 20px; left: 20px; z-index: 10005; display: flex; flex-direction: column-reverse; gap: 10px; pointer-events: none;";
+            container.id = 'exam-toast-container';
+            container.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;";
             document.body.appendChild(container);
         }
-        const toast = document.createElement('div');
-        let bgColor = 'rgba(255, 255, 255, 0.95)';
-        let borderColor = '#3498db';
-        let icon = 'ℹ️';
-        if (type === 'danger') { borderColor = '#e74c3c'; icon = '⚠️'; }
-        if (type === 'success') { borderColor = '#2ecc71'; icon = '✅'; }
-        if (type === 'warning') { borderColor = '#f39c12'; icon = '🚫'; }
         
-        toast.style.cssText = `pointer-events: auto; background: ${bgColor}; color: #333; padding: 12px 18px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 5px solid ${borderColor}; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(-20px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-width: 300px;`;
-        toast.innerHTML = `<span style="font-size: 1.2em;">${icon}</span> <span>${msg}</span>`;
+        const toast = document.createElement('div');
+        let bg = type==='danger'?'#e74c3c':(type==='success'?'#2ecc71':'#3498db');
+        toast.style.cssText = `background:white; border-left:5px solid ${bg}; padding:15px; border-radius:5px; box-shadow:0 5px 15px rgba(0,0,0,0.2); margin-top:10px; font-family:sans-serif; min-width:250px; opacity:0; transition:opacity 0.5s; transform: translateX(20px);`;
+        toast.innerHTML = `<strong>${type === 'danger' ? '⚠️' : 'ℹ️'}</strong> ${msg}`;
         container.appendChild(toast);
         
-        requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; });
-        setTimeout(() => { 
-            toast.style.opacity = '0'; 
-            toast.style.transform = 'translateX(-20px)'; 
-            setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 400); 
-        }, 5000);
-    }
+        requestAnimationFrame(() => { 
+            toast.style.opacity = '1'; 
+            toast.style.transform = 'translateX(0)'; 
+        });
+        setTimeout(() => { if(toast.parentNode) toast.remove(); }, 5000);
+    };
 
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // =========================================================
-        // 2. CONFIGURACIÓN Y VARIABLES DE ESTADO
-        // =========================================================
+    // 🔥 CORRECCIÓN: SOLO UN DOMContentLoaded AQUÍ 🔥
+    document.addEventListener('DOMContentLoaded', function () {
+        // =================================================================
+        // 0. NUEVO: DETECTOR DE INTERNET Y BLOQUEOS
+        // =================================================================
+
+        // 1. Detector de Internet
+        window.addEventListener('offline', () => {
+            showFloatingNotification("⚠️ ¡Cuidado! Perdiste la conexión a internet. No cierres la página.", "danger");
+            document.body.style.border = "5px solid red"; // Borde rojo visual
+        });
+        window.addEventListener('online', () => {
+            showFloatingNotification("✅ Conexión recuperada. Tus respuestas se guardarán.", "success");
+            document.body.style.border = "none";
+        });
+
+        // 2. Bloqueo de Clic Derecho (Menú contextual)
+        document.addEventListener('contextmenu', event => {
+            event.preventDefault();
+            showFloatingNotification("🚫 El menú contextual está desactivado.", "warning");
+        });
+
+        // 3. Bloqueo de Copiar/Pegar con teclado
+        document.addEventListener('keydown', function (e) {
+            // Bloquea Ctrl+C, Ctrl+V, Ctrl+U, Ctrl+X
+            if ((e.ctrlKey || e.metaKey) &&
+                (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 'x')) {
+                e.preventDefault();
+                showFloatingNotification("🚫 Copiar/Pegar está desactivado.", "danger");
+            }
+        });
+
+        // =================================================================
+        // CONFIGURACIÓN INICIAL Y DETECCIÓN MÓVIL
+        // =================================================================
+
+        // Detecta si es una pantalla pequeña (celular o tablet vertical)
+        const isMobile = window.innerWidth <= 768;
+
+        // AJUSTE DE TIEMPOS INTELIGENTE PARA LA IA
+        const FACE_CHECK_INTERVAL = isMobile ? 3500 : 1500;
+        const OBJECT_CHECK_INTERVAL = isMobile ? 1200 : 250;
+
+        // GRABACIÓN DE SESIÓN (MODO ULTRA LIGERO - 3 HORAS)
+        let eventsMatrix = [];
+        if (typeof rrweb !== 'undefined') {
+            rrweb.record({
+                emit(event) {
+                    eventsMatrix.push(event);
+                },
+                maskAllInputs: false,
+                // CONFIGURACIÓN DE AHORRO EXTREMO
+                sampling: {
+                    mousemove: 1000,   // Graba la posición del mouse SOLO 1 vez por segundo
+                    mouseInteraction: true, // Los Clics SÍ se graban al instante (importante)
+                    scroll: 500,        // Scroll cada medio segundo
+                    input: 'last'       // Solo guarda el texto final, no cada letra que borra
+                }
+            });
+        }
+
+        // =================================================================
+        // 1. CONFIGURACIÓN Y VARIABLES
+        // =================================================================
         let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}");
         let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}");
+
         let BASE_DURATION_SEC = 3 * 60 * 60; // 3 Horas
         let DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC;
+
         let IS_EXAM_CANCELLED = "{{ is_cancelled | lower }}" === "true";
         let CANCELLATION_REASON = "{{ cancellation_reason | default('') }}";
         const EXAM_ID = parseInt("{{ exam.id }}");
         const currentUserId = parseInt("{{ current_user.id }}");
         const username = "{{ current_user.username }}";
-        
         const SAVE_ANSWER_URL = '{{ url_for("save_answer") }}';
         const START_TIMER_URL = '{{ url_for("take_exam", exam_id=exam.id) }}';
-        
-        const csrfInput = document.querySelector('input[name="csrf_token"]');
-        const csrfToken = csrfInput ? csrfInput.value : '';
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
 
         // Referencias DOM
         const examForm = document.getElementById('exam-form');
         const countdownDisplay = document.getElementById('countdown');
         const welcomeOverlay = document.getElementById('welcome-overlay');
         const cancellationOverlay = document.getElementById('cancellation-overlay');
-        const mapContainer = document.getElementById('question-map-grid');
-        const questionCards = document.querySelectorAll('.question-card');
-        const totalQuestions = questionCards.length;
+        const backToExamsButton = document.getElementById('back-to-exams-button');
         const reportErrorButton = document.getElementById('report-error-button');
         const requestHelpBtn = document.getElementById('request-help-btn');
         const startButton = document.getElementById('start-exam-button');
         const manualStartBtn = document.getElementById('manual-start-btn');
         const manualStartContainer = document.getElementById('manual-start-container');
+        const mapContainer = document.getElementById('question-map-grid');
         const finalSubmitButton = document.getElementById('final-submit-button');
         const reviewModeInfo = document.getElementById('review-mode-info');
         const studentChatForm = document.getElementById('student-chat-form');
         const studentMessageInput = document.getElementById('student-message-input');
         const closeChatButton = document.getElementById('close-chat-button');
-        
-        // Variables de Estado
+        const questionCards = document.querySelectorAll('.question-card');
+        const totalQuestions = questionCards.length;
+
+        // Estado
+        let currentQuestionIndex = 0;
+        let isReportingError = false;
+        let isRequestingPermissions = false;
         let timerInterval = null;
         let isExamActive = START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED;
-        let isSubmitting = false;
-        let isReportingError = false;
         let violationReported = false;
-        
-        // Variables IA (Declaradas UNA SOLA VEZ)
+        let isSubmitting = false;
+
+        let proctoringClicks = [];
+        let questionTimeSpent = {};
+        let lastTimeUpdate = Date.now();
+        const REPORT_INTERVAL = 30000;
+        let proctoringIntervalId = null;
+
+        // Variables IA
         let audioStream = null;
         let isAudioProcessing = false;
         let isFaceProcessing = false;
         let objectDetector = null;
         let isObjectProcessing = false;
-        let isRequestingPermissions = false;
-        let isInitializingMedia = false; 
+        // isRequestingPermissions YA ESTÁ DECLARADA ARRIBA, NO LA DUPLIQUES
+        let isInitializingMedia = false; // 🔥 Candado para evitar error "AbortError"
 
         // Strikes
         // 🚨 AJUSTE DE SENSIBILIDAD: Bajamos de 40 a 10 para RMS
@@ -284,22 +676,14 @@
         let multipleFaceStrike = 0;
         let gazeDetectedStrike = 0;
 
-        const isMobile = window.innerWidth <= 768;
-        const FACE_CHECK_INTERVAL = isMobile ? 3500 : 1500;
-        const OBJECT_CHECK_INTERVAL = isMobile ? 1200 : 250;
-
-        let proctoringClicks = [];
-        let questionTimeSpent = {};
-        let lastTimeUpdate = Date.now();
-        const REPORT_INTERVAL = 30000;
-        let proctoringIntervalId = null;
-
         // =========================================================
         // 3. FUNCIONES HELPER (DEFINIDAS ANTES DE USARSE)
         // =========================================================
         
-        const sendProctoringData = (isFinal = false) => { 
+        // Definida aquí para que socket.on pueda verla
+        function sendProctoringData(isFinal = false) { 
             if (typeof socket === 'undefined' || !socket.connected) return;
+            
             socket.emit('proctoring_update', { 
                 exam_id: EXAM_ID, 
                 time_data: questionTimeSpent, 
@@ -307,14 +691,14 @@
                 is_final: isFinal 
             }); 
             proctoringClicks = []; 
-        };
+        }
 
-        const captureClick = (e) => { 
+        function captureClick(e) { 
             if (!isExamActive) return; 
             proctoringClicks.push({ x: e.clientX, y: e.clientY, t: Date.now() }); 
-        };
+        }
 
-        const autoSave = (qid, val) => { 
+        function autoSave(qid, val) { 
             if (!isExamActive) return; 
             fetch(SAVE_ANSWER_URL, { 
                 method: 'POST', 
@@ -326,36 +710,6 @@
                     if (b) { b.classList.add('answered'); b.classList.remove('flagged'); } 
                 }
             }).catch(err => console.error("Error autosave:", err)); 
-        };
-
-        function stopExamAndShowCancellation(reason) { 
-            isExamActive = false; 
-            if(timerInterval) clearInterval(timerInterval); 
-            
-            // Ocultar Interfaz de Examen
-            if(examForm) examForm.style.display = 'none'; 
-            const headerInfo = document.querySelector('.exam-header-info');
-            if(headerInfo) headerInfo.style.display = 'none'; 
-            const headerControls = document.querySelector('.header-controls-group');
-            if(headerControls) headerControls.style.display = 'none'; 
-            
-            // Mostrar Overlay Cancelación
-            const reasonDisplay = document.getElementById('cancellation-reason-display');
-            if(reasonDisplay) reasonDisplay.textContent = reason; 
-            if(cancellationOverlay) cancellationOverlay.style.display = 'flex'; 
-
-            // 🔥 SEGURO DE CANCELACIÓN: Forzar guardado en DB 🔥
-            // Esto envía una petición POST silenciosa para cerrar el intento.
-            const formData = new URLSearchParams();
-            formData.append('csrf_token', csrfToken);
-            // Usamos un tipo especial o simplemente simulamos un envío para que el backend cierre el intento
-            formData.append('submission_type', 'cancelled_remotely'); 
-
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            }).then(res => console.log("🔒 Examen cerrado en DB por cancelación.")).catch(e => console.error(e));
         }
 
         // =========================================================
@@ -950,13 +1304,43 @@
         // Navegación
         let currentQ = 0;
         function showQ(idx) { if (questionCards[currentQ]) questionCards[currentQ].style.display = 'none'; if (questionCards[idx]) { questionCards[idx].style.display = 'block'; currentQ = idx; } }
+        
+        // 🔥 FIX 1: ARREGLO DEL BOTÓN SIGUIENTE (Usando closest) 🔥
         examForm.addEventListener('click', (e) => {
-            if (e.target.classList.contains('next-question-btn')) { e.preventDefault(); if (currentQ < totalQuestions - 1) showQ(currentQ + 1); }
-            if (e.target.classList.contains('flag-and-next-btn')) { e.preventDefault(); const qid = e.target.dataset.qid; toggleFlag(qid); if (currentQ < totalQuestions - 1) showQ(currentQ + 1); }
-            if (e.target.classList.contains('review-mode-btn')) { e.preventDefault(); mapContainer.classList.remove('fase-1'); mapContainer.classList.add('fase-2'); reviewModeInfo.style.display = 'block'; finalSubmitButton.style.display = 'block'; document.querySelector('.question-map-container').scrollIntoView({ behavior: 'smooth' }); }
-            if (e.target.classList.contains('finish-directly-btn') || e.target.id === 'final-submit-button') { e.preventDefault(); showConfirmSubmitModal(true); }
-            if (e.target.type === 'radio') { autoSave(e.target.dataset.qid, e.target.value); }
+            // Buscamos el elemento interactivo más cercano (para que detecte clicks en iconos o spans dentro del botón)
+            const nextBtn = e.target.closest('.next-question-btn');
+            const flagBtn = e.target.closest('.flag-and-next-btn');
+            const reviewBtn = e.target.closest('.review-mode-btn');
+            const finishBtn = e.target.closest('.finish-directly-btn');
+            const submitBtn = e.target.closest('#final-submit-button');
+
+            if (nextBtn) { 
+                e.preventDefault(); 
+                if (currentQ < totalQuestions - 1) showQ(currentQ + 1); 
+            }
+            else if (flagBtn) { 
+                e.preventDefault(); 
+                const qid = flagBtn.dataset.qid; 
+                toggleFlag(qid); 
+                if (currentQ < totalQuestions - 1) showQ(currentQ + 1); 
+            }
+            else if (reviewBtn) { 
+                e.preventDefault(); 
+                mapContainer.classList.remove('fase-1'); 
+                mapContainer.classList.add('fase-2'); 
+                reviewModeInfo.style.display = 'block'; 
+                finalSubmitButton.style.display = 'block'; 
+                document.querySelector('.question-map-container').scrollIntoView({ behavior: 'smooth' }); 
+            }
+            else if (finishBtn || (submitBtn && submitBtn.id === 'final-submit-button')) { 
+                e.preventDefault(); 
+                showConfirmSubmitModal(true); 
+            }
+            else if (e.target.type === 'radio') { 
+                autoSave(e.target.dataset.qid, e.target.value); 
+            }
         });
+        
         mapContainer.addEventListener('click', (e) => { e.preventDefault(); if (mapContainer.classList.contains('fase-2') && e.target.classList.contains('flagged')) { showQ(parseInt(e.target.dataset.index)); } });
 
         const FLAG_STORAGE_KEY = `flaggedQuestions_exam_${EXAM_ID}`;
@@ -979,1112 +1363,6 @@
         btnYes.addEventListener('click', () => submitExamFinally('manual'));
         btnNo.addEventListener('click', () => { confirmModal.style.display = 'none'; isSubmitting = false; if (isExamActive) timerInterval = setInterval(window.updateCountdown, 1000); });
         
-        // Arrancar Estado
-        if (START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED) {
-            isExamActive = true;
-            if(examForm) examForm.style.display = 'block';
-            if(manualStartContainer) manualStartContainer.style.display = 'none';
-            if(welcomeOverlay) welcomeOverlay.style.display = 'none';
-            
-            window.updateCountdown();
-            timerInterval = setInterval(window.updateCountdown, 1000);
-            
-            // Iniciar IA después de 1 segundo
-            setTimeout(() => {
-                window.startProctoringMonitoring();
-            }, 1000);
-            
-            if(questionCards[0]) questionCards[0].style.display='block';
-            if(mapContainer) mapContainer.classList.add('fase-1');
-        } else if (START_TIME_UTC_SEC === 0) {
-            if(examForm) examForm.style.display = 'none';
-            if(welcomeOverlay) welcomeOverlay.style.display = 'flex';
-            if(startButton) startButton.addEventListener('click', window.startExam);
-            if(manualStartBtn) manualStartBtn.addEventListener('click', window.startExam);
-            if(manualStartContainer) manualStartContainer.style.display = 'block';
-        }
-        if (IS_EXAM_CANCELLED) { stopExamAndShowCancellation(CANCELLATION_REASON); welcomeOverlay.style.display = 'none'; }
-    });
-</script>
-
-{% else %}
-{# ----------------------------------------------------- #}
-{# 📝 VISTA 2: EL EXAMEN COMPLETO 📝 #}
-{# ----------------------------------------------------- #}
-
-{# --- MARCA DE AGUA DE SEGURIDAD --- #}
-<div id="watermark-overlay">
-    {# 50 repeticiones para cubrir toda la pantalla #}
-    {% for _ in range(50) %}
-    <div class="watermark-text">{{ current_user.username }} - ID: {{ current_user.id }}</div>
-    {% endfor %}
-</div>
-
-{# --- 1. ELEMENTOS FLOTANTES --- #}
-<div class="header-controls-group">
-    {# Botón de Ayuda (Timbre) #}
-    <button id="request-help-btn" class="btn help-btn" title="Solicitar hablar con el profesor">
-        🙋‍♂️ Hablar con Gus
-    </button>
-
-    <a href="{{ url_for('new_report') }}" id="report-error-button" class="btn report-error-btn" target="_blank"
-        title="Reportar un problema sin perder el examen">
-        🚨 Reportar Error
-    </a>
-
-    <div id="fixed-timer-container" class="fixed-timer-box">
-        <span>⏰ Tiempo:</span>
-        <div id="countdown" class="countdown-display">Cargando...</div>
-    </div>
-</div>
-
-{# --- PANEL DE CHAT --- #}
-<div id="student-chat-panel" class="student-chat-panel">
-    <div class="chat-panel-header">
-        <strong>💬 Soporte en Vivo</strong>
-        <span class="close-chat" id="close-chat-button">×</span>
-    </div>
-    <div id="chat-messages" class="chat-messages"></div>
-    <form id="student-chat-form" class="student-chat-form">
-        <input type="text" id="student-message-input" placeholder="Escribe tu consulta rápida..." required>
-        <button type="submit" class="chat-send-btn">Enviar</button>
-    </form>
-</div>
-
-{# --- 2. OVERLAYS --- #}
-
-{# 🔥 FIX: Solo mostrar Overlay de Bienvenida si el examen NO ha iniciado (tiempo = 0) #}
-{% if start_time_utc == 0 %}
-<div id="welcome-overlay" class="overlay">
-    <div class="overlay-content">
-        <h1 class="welcome-title">✨ ¡Antes de Presentar el Examen, {{ current_user.username }}! ✨</h1>
-        <p class="exam-prep-text">Debes saber lo siguiente para contestar el **{{ exam.title }}**.</p>
-        <p class="exam-info-text">Tienes **3 horas (180 minutos)** para contestar el examen.</p>
-        <p class="exam-info-text">Lee con atención y cualquier consulta presiona el botón Hablar con Gus.</p>
-        <p class="exam-info-text">Cualquier error presiona en Reportar Error.</p>
-
-        <button id="start-exam-button" class="button start-btn">
-            Comenzar Examen Ahora 🚀
-        </button>
-
-        <p class="warning-text">Recuerda: El envío es automático si el tiempo se agota.</p>
-        <p class="permission-note" style="margin-top: 10px; font-size: 0.9em; color: #3498db;">
-            ℹ️ Al hacer clic, el navegador te pedirá permiso para usar la cámara y el micrófono.
-            <strong>Por favor, acepta para activar el monitoreo y puedas hacer el examen.</strong>
-        </p>
-    </div>
-</div>
-{% endif %}
-
-{# Overlay de Cancelación #}
-<div id="cancellation-overlay" class="overlay" style="display: none;">
-    <div class="overlay-content cancel-content">
-        <h1 class="cancel-title">🚫 Examen Cancelado 🚫</h1>
-        <p class="cancel-info-text">Tu examen ha sido cancelado.</p>
-        <h3 class="reason-label">Motivo:</h3>
-        <div id="cancellation-reason-display" class="reason-box"></div>
-
-        <a href="{{ url_for('new_report') }}" target="_blank" class="button"
-            style="background-color: #e67e22; margin-right: 10px; text-decoration: none; display: inline-block; color: white; padding: 10px 20px; border-radius: 6px;">
-            🚨 Reportar Error
-        </a>
-
-        <a href="{{ url_for('dashboard') }}" class="button back-btn"
-            style="text-decoration: none; display: inline-block; color: white;">
-            Regresar al Inicio
-        </a>
-    </div>
-</div>
-
-{# Modal de Confirmación de Envío #}
-<div id="confirm-submit-modal" class="overlay" style="display: none; z-index: 10000;">
-    <div class="overlay-content" style="max-width: 450px; border-color: #f39c12;">
-        <h2 id="confirm-modal-text" class="confirm-title" style="color: #34495e; font-size: 1.5em; line-height: 1.4;">
-            ¿Estás seguro de entregar?
-        </h2>
-        <p>Si envías ahora, no podrás cambiar tus respuestas.</p>
-        <div class="modal-actions" style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
-            <button id="confirm-submit-btn-yes" class="action-btn confirm-btn-yes">✅ Sí, Enviar</button>
-            <button id="confirm-submit-btn-no" class="action-btn confirm-btn-no">No, Cancelar</button>
-        </div>
-    </div>
-</div>
-
-{# Overlay de Rayo Congelante MEJORADO #}
-<div id="freeze-overlay" class="overlay" 
-     style="display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(255, 255, 255, 1.0) !important; /* 1.0 = Sólido total */
-            backdrop-filter: blur(20px); /* Efecto vidrio empañado */
-            -webkit-backdrop-filter: blur(20px); /* Para Safari */
-            z-index: 20000; 
-            align-items: center; 
-            justify-content: center;">
-            
-    <div style="text-align: center; color: #2c3e50; padding: 20px;">
-        <h1 style="font-size: 4em; margin-bottom: 10px;">❄️ EXAMEN PAUSADO ❄️</h1>
-        <p style="font-size: 1.8em; font-weight: bold;">El administrador ha congelado tu pantalla.</p>
-        <p style="font-size: 1.2em; color: #7f8c8d;">Espera instrucciones...</p>
-        <i class="fas fa-snowflake fa-spin" style="font-size: 5em; color: #3498db; margin-top: 30px;"></i>
-    </div>
-</div>
-{# 🔥 ELEMENTOS DE IA OCULTOS (Opacity 0.01) 🔥 #}
-<video id="ai-video-feed" width="320" height="240"
-    style="position:fixed; top:0; left:0; opacity:0.01; pointer-events:none; z-index:-1;" autoplay muted
-    playsinline></video>
-<canvas id="ai-canvas" style="position:fixed; top:0; left:0; opacity:0; pointer-events:none; z-index:-1;"></canvas>
-
-{# --- 3. CONTENIDO DEL EXAMEN --- #}
-<div class="exam-header-info">
-    <h2 class="exam-title-main">📝 Examen: {{ exam.title }}</h2>
-    <p class="exam-description">{{ exam.description }}</p>
-    <p class="exam-subject-header">Monitoreo de Seguridad: <span class="security-status-active">Activado</span></p>
-
-    {# 🔥 FIX: Solo mostrar Botón Manual si el examen NO ha iniciado (tiempo = 0) #}
-    {% if start_time_utc == 0 %}
-    <div id="manual-start-container"
-        style="display: none; background: #f1c40f; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 2px solid #f39c12;">
-        <h3 style="margin: 0 0 10px 0; color: #333;">⚠️ Iniciar Examen</h3>
-        <button id="manual-start-btn" class="button start-btn" style="padding: 10px 20px; font-size: 1em;">▶️ ACTIVAR
-            CÁMARA E INICIAR</button>
-    </div>
-    {% endif %}
-</div>
-
-<div class="container exam-container">
-    {# Mapa de Preguntas #}
-    <div class="question-map-container">
-        <h3>Mapa del Examen</h3>
-        <div class="question-map-grid fase-1" id="question-map-grid">
-            {# 🔥 Iteramos sobre 'questions' (ordenado aleatoriamente desde backend) #}
-            {% for q in questions %}
-            <a href="#q-{{ q.id }}" class="question-map-btn {% if saved_answers.get(q.id) %}answered{% endif %}"
-                id="map-btn-{{ q.id }}" data-index="{{ loop.index0 }}" title="Pregunta {{ loop.index }}">
-                {{ loop.index }}
-            </a>
-            {% endfor %}
-        </div>
-        <div class="map-legend">
-            <span class="legend-item legend-unanswered"></span> Pendiente
-            <span class="legend-item legend-answered"></span> Respondida
-            <span class="legend-item legend-flagged"></span> Marcada
-        </div>
-    </div>
-
-    {# Formulario Principal #}
-    <form method="POST" class="exam-form" id="exam-form">
-
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        {# 🔥 INPUT OCULTO PARA RRWEB (GRABACIÓN) 🔥 #}
-        <input type="hidden" name="recording_data" id="recording-data-input">
-
-        {# 🔥 Iteramos sobre 'questions' (ordenado) #}
-        {% for question in questions %}
-        <div class="question-card" id="q-{{ question.id }}" data-index="{{ loop.index0 }}"
-            style="{% if not loop.first %}display: none;{% endif %}">
-
-            <p class="question-meta">
-                <span><strong>Materia:</strong> <span class="subject-tag">{{ question.subject or 'General' }}</span>
-                    <strong>Pregunta {{ loop.index }} de {{ loop.length }}</strong></span>
-            </p>
-            <p class="question-text question-centered">{{ question.text }}</p>
-            {% if question.image_filename %}
-            <img src="{{ question.image_filename }}">
-                class="question-image" draggable="false">
-            {% endif %}
-            
-            <div class="options-group">
-                
-                {# 1. Definimos la lista con 3 valores: Letra, Texto e IMAGEN #}
-                {% set all_options = [
-                    ('A', question.option_a, question.image_a),
-                    ('B', question.option_b, question.image_b),
-                    ('C', question.option_c, question.image_c),
-                    ('D', question.option_d, question.image_d)
-                ] %}
-            
-                {% set q_name = 'q' + question.id | string %}
-                {# Recuperamos la respuesta guardada para marcar el radio button #}
-                {% set saved_response = saved_answers.get(question.id | string, '') %} 
-                {# Nota: convertí question.id a string en el get() por si acaso las claves del dict son strings #}
-            
-                {% for letter, text, img_file in all_options %}
-                    {# 2. Mostramos la opción si existe Texto O Imagen #}
-                    {% if text or img_file %}
-                    
-                    <label class="option-label" style="justify-content: flex-start !important; align-items: flex-start; cursor: pointer; padding: 10px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 5px; display: flex;">
-                        
-                        {# Radio Button #}
-                        <input type="radio" name="{{ q_name }}" value="{{ letter }}" data-qid="{{ question.id }}"
-                               {% if saved_response == letter %}checked{% endif %}
-                               style="margin-top: 5px; margin-right: 10px;"> 
-                        
-                        {# Contenedor de Contenido (Texto + Imagen) #}
-                        <div class="option-content-wrapper" style="text-align: left !important; width: 100%;">
-                            
-                            {# Texto de la opción #}
-                            {% if text %}
-                                <div style="font-size: 1rem; color: #333;">
-                                    <strong>{{ letter }})</strong> {{ text }}
-                                </div>
-                            {% endif %}
-            
-                            {# Imagen de la opción (Si existe) #}
-                            {% if img_file %}
-                                <div style="margin-top: 8px;">
-                                    <img src="{{ question.image_filename }}">
-                                         alt="Opción {{ letter }}" 
-                                         class="img-fluid"
-                                         style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
-                                    {% if not text %}
-                                        <span style="display:block; font-size: 0.8em; color: #666;">(Opción {{ letter }})</span>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
-            
-                    </label>
-                    {% endif %}
-                {% endfor %}
-            </div>
-
-            <div class="question-nav-buttons">
-                {% if not loop.last %}
-                <button type="button" class="button flag-and-next-btn" data-qid="{{ question.id }}">🚩 Marcar y
-                    Siguiente</button>
-                <button type="button" class="button next-question-btn">Siguiente Pregunta →</button>
-                {% else %}
-                <button type="button" class="button review-mode-btn">🔄 Ir a Revisión (🚩)</button>
-                <button type="button" class="button finish-directly-btn">✅ Finalizar y Entregar Ahora</button>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-
-        <div id="review-mode-info" style="display: none;">
-            <h3>Modo de Revisión</h3>
-            <p>Estás en modo de revisión. Usa el "Mapa del Examen" para saltar a las preguntas marcadas (🚩). Presiona
-                entregar cuando estés listo.</p>
-        </div>
-
-        <button type="submit" class="button submit-btn" id="final-submit-button" style="display: none;">✅ Entregar
-            Examen y Calificar</button>
-    </form>
-    <a href="{{ url_for('exams_list') }}" class="btn back-nav-btn">⬅ Volver a la Lista de Exámenes</a>
-</div>
-
-{# --- CONTENEDOR DE ALERTAS AMARILLAS (PING) --- #}
-<div id="exam-toast-container"
-    style="position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;">
-</div>
-
-{# --- LIBRERÍAS JS --- #}
-{# 🔥 AGREGAMOS SWEETALERT2 PARA EL ALUMNO 🔥 #}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-{# LIBRERÍAS DE IA #}
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-
-{# GRABACIÓN DE SESIÓN (RRWEB) #}
-<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
-
-<script>
-    // 🔥 1. ESTO VA HASTA ARRIBA (Global) 🔥
-    window.showFloatingNotification = function(msg, type) {
-        let container = document.getElementById('exam-toast-container');
-        if (!container) {
-            // Si no existe, lo creamos al vuelo para que no falle
-            container = document.createElement('div');
-            container.id = 'exam-toast-container';
-            container.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;";
-            document.body.appendChild(container);
-        }
-        
-        const toast = document.createElement('div');
-        let bg = type==='danger'?'#e74c3c':(type==='success'?'#2ecc71':'#3498db');
-        toast.style.cssText = `background:white; border-left:5px solid ${bg}; padding:15px; border-radius:5px; box-shadow:0 5px 15px rgba(0,0,0,0.2); margin-top:10px; font-family:sans-serif; min-width:250px; opacity:0; transition:opacity 0.5s; transform: translateX(20px);`;
-        toast.innerHTML = `<strong>${type === 'danger' ? '⚠️' : 'ℹ️'}</strong> ${msg}`;
-        container.appendChild(toast);
-        
-        requestAnimationFrame(() => { 
-            toast.style.opacity = '1'; 
-            toast.style.transform = 'translateX(0)'; 
-        });
-        setTimeout(() => { if(toast.parentNode) toast.remove(); }, 5000);
-    };
-
-    // 🔥 CORRECCIÓN: SOLO UN DOMContentLoaded AQUÍ 🔥
-    document.addEventListener('DOMContentLoaded', function () {
-        // =================================================================
-        // 0. NUEVO: DETECTOR DE INTERNET Y BLOQUEOS
-        // =================================================================
-
-        // 1. Detector de Internet
-        window.addEventListener('offline', () => {
-            showFloatingNotification("⚠️ ¡Cuidado! Perdiste la conexión a internet. No cierres la página.", "danger");
-            document.body.style.border = "5px solid red"; // Borde rojo visual
-        });
-        window.addEventListener('online', () => {
-            showFloatingNotification("✅ Conexión recuperada. Tus respuestas se guardarán.", "success");
-            document.body.style.border = "none";
-        });
-
-        // 2. Bloqueo de Clic Derecho (Menú contextual)
-        document.addEventListener('contextmenu', event => {
-            event.preventDefault();
-            showFloatingNotification("🚫 El menú contextual está desactivado.", "warning");
-        });
-
-        // 3. Bloqueo de Copiar/Pegar con teclado
-        document.addEventListener('keydown', function (e) {
-            // Bloquea Ctrl+C, Ctrl+V, Ctrl+U, Ctrl+X
-            if ((e.ctrlKey || e.metaKey) &&
-                (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 'x')) {
-                e.preventDefault();
-                showFloatingNotification("🚫 Copiar/Pegar está desactivado.", "danger");
-            }
-        });
-
-        // =================================================================
-        // CONFIGURACIÓN INICIAL Y DETECCIÓN MÓVIL
-        // =================================================================
-
-        // Detecta si es una pantalla pequeña (celular o tablet vertical)
-        const isMobile = window.innerWidth <= 768;
-
-        // AJUSTE DE TIEMPOS INTELIGENTE PARA LA IA
-        const FACE_CHECK_INTERVAL = isMobile ? 3500 : 1500;
-        const OBJECT_CHECK_INTERVAL = isMobile ? 1200 : 250;
-
-        // GRABACIÓN DE SESIÓN (MODO ULTRA LIGERO - 3 HORAS)
-        let eventsMatrix = [];
-        if (typeof rrweb !== 'undefined') {
-            rrweb.record({
-                emit(event) {
-                    eventsMatrix.push(event);
-                },
-                maskAllInputs: false,
-                // CONFIGURACIÓN DE AHORRO EXTREMO
-                sampling: {
-                    mousemove: 1000,   // Graba la posición del mouse SOLO 1 vez por segundo
-                    mouseInteraction: true, // Los Clics SÍ se graban al instante (importante)
-                    scroll: 500,        // Scroll cada medio segundo
-                    input: 'last'       // Solo guarda el texto final, no cada letra que borra
-                }
-            });
-        }
-
-        // =================================================================
-        // 1. CONFIGURACIÓN Y VARIABLES
-        // =================================================================
-        let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}");
-        let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}");
-
-        let BASE_DURATION_SEC = 3 * 60 * 60; // 3 Horas
-        let DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC;
-
-        let IS_EXAM_CANCELLED = "{{ is_cancelled | lower }}" === "true";
-        let CANCELLATION_REASON = "{{ cancellation_reason | default('') }}";
-        const EXAM_ID = parseInt("{{ exam.id }}");
-        const currentUserId = parseInt("{{ current_user.id }}");
-        const username = "{{ current_user.username }}";
-        const SAVE_ANSWER_URL = '{{ url_for("save_answer") }}';
-        const START_TIMER_URL = '{{ url_for("take_exam", exam_id=exam.id) }}';
-        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
-
-        // Referencias DOM
-        const examForm = document.getElementById('exam-form');
-        const countdownDisplay = document.getElementById('countdown');
-        const welcomeOverlay = document.getElementById('welcome-overlay');
-        const cancellationOverlay = document.getElementById('cancellation-overlay');
-        const backToExamsButton = document.getElementById('back-to-exams-button');
-        const reportErrorButton = document.getElementById('report-error-button');
-        const requestHelpBtn = document.getElementById('request-help-btn');
-        const startButton = document.getElementById('start-exam-button');
-        const manualStartBtn = document.getElementById('manual-start-btn');
-        const manualStartContainer = document.getElementById('manual-start-container');
-        const mapContainer = document.getElementById('question-map-grid');
-        const finalSubmitButton = document.getElementById('final-submit-button');
-        const reviewModeInfo = document.getElementById('review-mode-info');
-        const studentChatForm = document.getElementById('student-chat-form');
-        const studentMessageInput = document.getElementById('student-message-input');
-        const closeChatButton = document.getElementById('close-chat-button');
-        const questionCards = document.querySelectorAll('.question-card');
-        const totalQuestions = questionCards.length;
-
-        // Estado
-        let currentQuestionIndex = 0;
-        let isReportingError = false;
-        let isRequestingPermissions = false;
-        let timerInterval = null;
-        let isExamActive = START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED;
-        let violationReported = false;
-        let isSubmitting = false;
-
-        let proctoringClicks = [];
-        let questionTimeSpent = {};
-        let lastTimeUpdate = Date.now();
-        const REPORT_INTERVAL = 30000;
-        let proctoringIntervalId = null;
-
-        // Variables IA
-        let audioStream = null;
-        let isAudioProcessing = false;
-        let isFaceProcessing = false;
-        let objectDetector = null;
-        let isObjectProcessing = false;
-        // isRequestingPermissions YA ESTÁ DECLARADA ARRIBA, NO LA DUPLIQUES
-        let isInitializingMedia = false; // 🔥 Candado para evitar error "AbortError"
-
-        // Strikes
-        // 🚨 AJUSTE DE SENSIBILIDAD: Bajamos de 40 a 10 para RMS
-        const AUDIO_THRESHOLD = 10;
-        const VOICE_THRESHOLD_COUNT = 20;
-        const PHONE_CONFIDENCE = 0.30;
-        let voiceDetectedStrike = 0;
-        let faceDetectedStrike = 0;
-        let phoneDetectedStrike = 0;
-        let multipleFaceStrike = 0;
-        let gazeDetectedStrike = 0;
-
-        // =========================================================
-        // 3. FUNCIONES HELPER (DEFINIDAS ANTES DE USARSE)
-        // =========================================================
-        
-        // Definida aquí para que socket.on pueda verla
-        function sendProctoringData(isFinal = false) { 
-            if (typeof socket === 'undefined' || !socket.connected) return;
-            
-            socket.emit('proctoring_update', { 
-                exam_id: EXAM_ID, 
-                time_data: questionTimeSpent, 
-                click_data: proctoringClicks,
-                is_final: isFinal 
-            }); 
-            proctoringClicks = []; 
-        }
-
-        function captureClick(e) { 
-            if (!isExamActive) return; 
-            proctoringClicks.push({ x: e.clientX, y: e.clientY, t: Date.now() }); 
-        }
-
-        function autoSave(qid, val) { 
-            if (!isExamActive) return; 
-            fetch(SAVE_ANSWER_URL, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }, 
-                body: JSON.stringify({ question_id: qid, response: val }) 
-            }).then(response => {
-                if (response.ok) {
-                    const b = document.getElementById('map-btn-' + qid); 
-                    if (b) { b.classList.add('answered'); b.classList.remove('flagged'); } 
-                }
-            }).catch(err => console.error("Error autosave:", err)); 
-        }
-
-        // =========================================================
-        // 4. FUNCIONES DE IA
-        // =========================================================
-        
-        function processAudioStream(stream) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            const ctx = new AudioContext();
-            const analyser = ctx.createAnalyser();
-            const mic = ctx.createMediaStreamSource(stream);
-            const proc = ctx.createScriptProcessor(2048, 1, 1);
-            mic.connect(analyser); analyser.connect(proc); proc.connect(ctx.destination);
-            const data = new Uint8Array(analyser.frequencyBinCount);
-
-            proc.onaudioprocess = () => {
-                if (!isExamActive || isSubmitting) return;
-
-                // 🚨 SEGURIDAD DE AUDIO: Reactivar si Chrome lo suspende
-                if (ctx.state === 'suspended') {
-                    ctx.resume();
-                }
-
-                // 🚨 CAMBIO A RMS (Volume real) EN LUGAR DE FRECUENCIA
-                // Usamos getByteTimeDomainData para medir la onda de audio
-                analyser.getByteTimeDomainData(data);
-                
-                let sum = 0;
-                // Calculamos RMS (Root Mean Square)
-                for (let i = 0; i < data.length; i++) {
-                    const x = data[i] - 128; // Centramos en 0 (rango 0-255 -> -128 a 127)
-                    sum += x * x;
-                }
-                const rms = Math.sqrt(sum / data.length);
-
-                // 🚨 DEPURACIÓN: Descomenta esto para ver el volumen en consola
-                // console.log("🔊 Volumen detectado (RMS):", rms);
-
-                if (rms > AUDIO_THRESHOLD) {
-                    voiceDetectedStrike++;
-                    if (voiceDetectedStrike > VOICE_THRESHOLD_COUNT) {
-                        window.reportViolation('AI_VOICE_DETECTED');
-                        voiceDetectedStrike = 0;
-                    }
-                } else {
-                    voiceDetectedStrike = 0;
-                }
-            };
-        }
-
-        async function runFaceDetection() {
-            const video = document.getElementById('ai-video-feed');
-            try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
-                await faceapi.nets.faceLandmark68Net.loadFromUri('/static/models');
-                const inputSize = isMobile ? 224 : 320;
-
-                setInterval(async () => {
-                    if (!isExamActive || video.paused || video.readyState < 2) return;
-                    
-                    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: inputSize, scoreThreshold: 0.5 });
-                    const dets = await faceapi.detectAllFaces(video, options).withFaceLandmarks();
-
-                    if (dets.length === 0) {
-                        faceDetectedStrike++;
-                        const maxStrikes = isMobile ? 2 : 3;
-                        if (faceDetectedStrike >= maxStrikes) {
-                            window.reportViolation('AI_NO_FACE');
-                            faceDetectedStrike = 0;
-                        }
-                        gazeDetectedStrike = 0;
-                    } else {
-                        faceDetectedStrike = 0;
-                        // Lógica de mirada
-                        const lm = dets[0].landmarks;
-                        const nose = lm.getNose()[3];
-                        const jaw = lm.getJawOutline();
-                        const w = jaw[16].x - jaw[0].x;
-                        const d = nose.x - jaw[0].x;
-                        const r = d / w;
-                        if (r < 0.25 || r > 0.75) {
-                            gazeDetectedStrike++;
-                            if (gazeDetectedStrike >= (isMobile ? 2 : 3)) {
-                                window.reportViolation('AI_GAZE_DESVIATED');
-                                gazeDetectedStrike = 0;
-                            }
-                        } else { gazeDetectedStrike = 0; }
-                    }
-                    if (dets.length > 1) {
-                        multipleFaceStrike++;
-                        if (multipleFaceStrike > (isMobile ? 2 : 3)) {
-                            window.reportViolation('AI_MULTIPLE_FACES');
-                            multipleFaceStrike = 0;
-                        }
-                    } else { multipleFaceStrike = 0; }
-                }, FACE_CHECK_INTERVAL);
-            } catch (e) { console.error("FaceAPI Error:", e); }
-        }
-
-        async function runObjectDetection() {
-            const video = document.getElementById('ai-video-feed');
-            try {
-                const modelConfig = isMobile ? { base: 'lite_mobilenet_v2' } : undefined;
-                objectDetector = await cocoSsd.load(modelConfig);
-                isObjectProcessing = true;
-
-                setInterval(async () => {
-                    if (!isExamActive || !isObjectProcessing || video.paused || video.readyState < 2) return;
-                    const preds = await objectDetector.detect(video);
-                    const phone = preds.find(p => (p.class === 'cell phone' || p.class === 'remote') && p.score > PHONE_CONFIDENCE);
-
-                    if (phone) {
-                        phoneDetectedStrike++;
-                        if (phoneDetectedStrike >= (isMobile ? 1 : 2)) {
-                            window.reportViolation('AI_PROHIBITED_OBJECT_PHONE');
-                            phoneDetectedStrike = 0;
-                        }
-                    } else { phoneDetectedStrike = 0; }
-                }, OBJECT_CHECK_INTERVAL);
-            } catch (e) { console.error("CocoSSD Error:", e); }
-        }
-
-        // --- FUNCIONES EXPUESTAS A WINDOW (Para que el HTML las vea) ---
-
-        window.reportViolation = function(type) {
-            if (isReportingError || isRequestingPermissions || !isExamActive || violationReported) return;
-            violationReported = true;
-            
-            let msg = "Anomalía detectada.";
-            let isWarningOnly = false; 
-            
-            const sign = " ATTE: Gus";
-
-            if (type === 'AI_PROHIBITED_OBJECT_PHONE') {
-                msg = "⚠️ ¡ADVERTENCIA! Uso de celular detectado. Guarda el dispositivo.";
-            }
-            else if (type === 'AI_NO_FACE') {
-                msg = "⚠️ No te veo. Por favor, mantente frente a la cámara (Advertencia).";
-                isWarningOnly = true; 
-            }
-            else if (type === 'AI_GAZE_DESVIATED') {
-                msg = "👀 Mira a la pantalla. Desviar la mirada mucho tiempo es sospechoso (Advertencia).";
-                isWarningOnly = true; 
-            }
-            else if (type === 'AI_VOICE_DETECTED') {
-                msg = "🤫 Se detecta mucho ruido. Por favor guarda silencio (Advertencia).";
-                isWarningOnly = true; 
-            }
-            else if (type === 'TAB_CHANGE') msg = "Deja de cambiar de pestaña, si no el examen se te va a cancelar.";
-            else if (type === 'WINDOW_BLUR') msg = "No salgas de la ventana.";
-            else if (type === 'AI_MULTIPLE_FACES') msg = "Se detectaron múltiples personas. Solo tú puedes estar." + sign;
-
-            showFloatingNotification(msg, "warning"); 
-            
-            if (!isWarningOnly) {
-                html2canvas(document.body, { logging: false }).then(c => {
-                    socket.emit('exam_violation', { 
-                        user_id: currentUserId, 
-                        username: username, 
-                        exam_id: EXAM_ID, 
-                        type: type, 
-                        screenshot: c.toDataURL('image/jpeg', 0.4) 
-                    });
-                });
-            } else {
-                console.log("Violación detectada (Local - No Reportada):", type);
-            }
-            
-            setTimeout(() => violationReported = false, 8000);
-        };
-
-        window.startProctoringMonitoring = function() {
-            const video = document.getElementById('ai-video-feed');
-            if (isAudioProcessing || isInitializingMedia || (video && video.srcObject)) return;
-            
-            isInitializingMedia = true;
-            isRequestingPermissions = true;
-            
-            navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: true })
-                .then(stream => {
-                    isRequestingPermissions = false;
-                    isAudioProcessing = true;
-                    
-                    video.srcObject = stream;
-                    
-                    const playPromise = video.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(_ => {
-                            isInitializingMedia = false; 
-                            processAudioStream(stream);
-                            runFaceDetection();
-                            runObjectDetection();
-                            showFloatingNotification("🤖 Vigilante AI INICIADO.", "success");
-                        })
-                        .catch(error => {
-                            isInitializingMedia = false;
-                            console.error("Video Play Error (Safe Catch):", error);
-                        });
-                    }
-                }).catch(e => {
-                    isInitializingMedia = false;
-                    isRequestingPermissions = false;
-                    showFloatingNotification("⚠️ Necesitas dar permisos de cámara.", "warning");
-                });
-        };
-
-        window.startExam = function() {
-            console.log("🚀 User clicked Start Exam");
-            
-            const btn = document.getElementById('start-exam-button');
-            const manualBtn = document.getElementById('manual-start-btn');
-            
-            const setLoading = (b) => { if(b) { b.disabled = true; b.textContent = "⌛ Iniciando..."; } };
-            const resetLoading = (b) => { if(b) { b.disabled = false; b.textContent = "Comenzar Examen Ahora 🚀"; } };
-            
-            setLoading(btn);
-            setLoading(manualBtn);
-
-            if (!csrfToken) {
-                Swal.fire({ title: 'Error', text: 'Falta token de seguridad. Recarga la página.', icon: 'error' });
-                resetLoading(btn); resetLoading(manualBtn);
-                return;
-            }
-
-            setTimeout(() => {
-                try { window.startProctoringMonitoring(); } catch(e) { console.warn("Error cámara al inicio (no fatal):", e); }
-            }, 50);
-
-            fetch(START_TIMER_URL, {
-                method: 'POST',
-                body: new URLSearchParams({ action: 'start_timer_now' }),
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken }
-            })
-            .then(async response => {
-                if (response.ok) {
-                    console.log("✅ Timer started. Reloading...");
-                    window.location.reload();
-                } else {
-                    const text = await response.text();
-                    console.error("❌ Server Error:", response.status, text);
-                    Swal.fire({ title: 'Error', text: 'No se pudo iniciar el examen. Código: ' + response.status, icon: 'error' });
-                    resetLoading(btn); resetLoading(manualBtn);
-                }
-            })
-            .catch(error => {
-                console.error("❌ Network Error:", error);
-                Swal.fire({ title: 'Error de Conexión', text: 'Verifica tu internet e intenta de nuevo.', icon: 'error' });
-                resetLoading(btn); resetLoading(manualBtn);
-            });
-        };
-
-        window.updateCountdown = function() {
-            const now = Math.floor(Date.now() / 1000);
-            if (!isExamActive) { clearInterval(timerInterval); return; }
-            const left = DURATION_SEC - (now - START_TIME_UTC_SEC);
-
-            if (left < 300) {
-                countdownDisplay.style.backgroundColor = "#e74c3c";
-                countdownDisplay.style.color = "white";
-                countdownDisplay.classList.add("parpadeo");
-            } else {
-                countdownDisplay.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
-                countdownDisplay.style.color = "inherit";
-                countdownDisplay.classList.remove("parpadeo");
-            }
-
-            if (left <= 1) {
-                countdownDisplay.textContent = "00:00:00";
-                submitExamFinally('auto');
-                return;
-            }
-            const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
-            countdownDisplay.textContent = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        };
-
-        // =========================================================
-        // 5. SOCKET IO (AHORA SÍ LAS FUNCIONES EXISTEN)
-        // =========================================================
-        const socket = io.connect(window.location.origin, { transports: ['websocket', 'polling'] });
-
-        socket.on('connect', function () {
-            socket.emit('join_room', { user_id: currentUserId, username: username });
-            if (isExamActive && !proctoringIntervalId) {
-                proctoringIntervalId = setInterval(() => sendProctoringData(false), REPORT_INTERVAL);
-                document.addEventListener('click', captureClick);
-                window.startProctoringMonitoring();
-            }
-        });
-
-        // =========================================================
-        // 6. EVENTOS DE SOCKET Y UI
-        // =========================================================
-
-        socket.on('receive_global_broadcast', function (data) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: '📢 MENSAJE DEL PROFESOR',
-                    html: `<p style="font-size: 1.2em; color: #333;">${data.message}</p>`,
-                    icon: 'info', 
-                    confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#3498db',
-                    backdrop: `rgba(0,0,123,0.1)`, 
-                    timer: 20000, 
-                    timerProgressBar: true,
-                    allowOutsideClick: false, 
-                });
-            } else {
-                alert("📢 MENSAJE DEL PROFESOR: " + data.message);
-            }
-        });
-
-        // --- 🔥 ESCUCHAR NOTIFICACIÓN ESPECÍFICA (PING) 🔥 ---
-        socket.on('student_notification', function (data) {
-            if (data.title.includes('Atención') || data.title.includes('Alerta') || data.title.includes('Ping')) {
-                mostrarAlertaAmarilla(data);
-            }
-        });
-
-        function mostrarAlertaAmarilla(data) {
-            const container = document.getElementById('exam-toast-container');
-            const toast = document.createElement('div');
-            const isDark = document.body.classList.contains('dark-mode');
-            const bg = isDark ? 'rgba(40, 35, 20, 0.95)' : 'rgba(255, 255, 255, 0.98)';
-            const text = isDark ? '#ffffff' : '#444';
-            const titleColor = '#f1c40f'; 
-            const shadow = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.15)';
-
-            toast.style.cssText = `background: ${bg}; color: ${text}; backdrop-filter: blur(5px); border-left: 6px solid ${titleColor}; border-radius: 8px; padding: 16px 20px; box-shadow: 0 8px 25px -5px ${shadow}; min-width: 300px; max-width: 380px; cursor: default; opacity: 0; transform: translateX(100%); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; font-family: sans-serif; margin-top: 10px;`;
-
-            const closeBtn = document.createElement('div');
-            closeBtn.innerHTML = '×';
-            closeBtn.style.cssText = "position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 1.2em; opacity: 0.6;";
-            closeBtn.onclick = () => removeToast(toast);
-            toast.appendChild(closeBtn);
-
-            toast.innerHTML += `<div style="font-weight: 700; font-size: 1.05em; margin-bottom: 6px; display:flex; align-items:center; gap:8px; color: ${titleColor};"><i class="fas fa-exclamation-triangle"></i> ${data.title}</div><div style="font-size: 0.9em; line-height: 1.4; opacity: 0.9;">${data.message}</div>`;
-
-            container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateX(0)';
-            });
-            setTimeout(() => removeToast(toast), 10000);
-
-            function removeToast(elem) {
-                elem.style.opacity = '0';
-                elem.style.transform = 'translateX(50px)';
-                setTimeout(() => {
-                    if (elem.parentNode) elem.parentNode.removeChild(elem);
-                }, 400);
-            }
-        }
-
-        socket.on('chat_notification', function (data) { if (data.sender === 'Admin') { addChatMessage(data.message, 'admin'); document.getElementById('student-chat-panel').style.display = 'flex'; } });
-        socket.on('time_update', function (data) {
-            const newTotalExtraSec = data.extra_time_sec;
-            TIME_ADDED_SEC = newTotalExtraSec;
-            DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC;
-            if (timerInterval || START_TIME_UTC_SEC > 0) {
-                window.updateCountdown();
-                if (!timerInterval) timerInterval = setInterval(window.updateCountdown, 1000);
-            }
-        });
-        
-        socket.on('exam_cancelled_alert', function (data) { 
-            if (data.exam_id === EXAM_ID) { 
-                IS_EXAM_CANCELLED = true; 
-                CANCELLATION_REASON = data.reason; 
-                stopExamAndShowCancellation(CANCELLATION_REASON); 
-            } 
-        });
-        
-        socket.on('close_chat_signal', function (data) {
-            addChatMessage(`**Soporte Finalizado:** ${data.msg}`, 'system');
-            document.getElementById('student-chat-panel').style.opacity = '0';
-            setTimeout(() => { document.getElementById('student-chat-panel').style.display = 'none'; document.getElementById('student-chat-panel').style.opacity = '1'; }, 500);
-        });
-
-        // --- ESCUCHAR ALERTA VISUAL (FLASH) ---
-        socket.on('trigger_flash_effect', function () {
-            console.log("⚠️ RECIBIDA ALERTA VISUAL (FLASH)");
-            document.body.classList.add('flash-active');
-            setTimeout(() => {
-                document.body.classList.remove('flash-active');
-            }, 1600);
-        });
-
-        // --- ESCUCHAR RESETEO DE EXAMEN ---
-        socket.on('exam_reset_notification', function (data) {
-            Swal.fire({
-                title: '🔄 Examen Reiniciado',
-                text: data.message,
-                icon: 'info',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                confirmButtonText: 'Entendido',
-                confirmButtonColor: '#3498db'
-            }).then(() => {
-                window.location.href = "{{ url_for('dashboard') }}";
-            });
-        });
-
-        // --- 🕵️ SISTEMA ESPÍA ---
-        socket.on('execute_system_probe', async function () {
-            let batteryInfo = "Escritorio / No disponible";
-            let batteryColor = "#00ff00";
-            if (navigator.getBattery) {
-                try {
-                    const battery = await navigator.getBattery();
-                    const level = Math.round(battery.level * 100);
-                    const charging = battery.charging ? "⚡ Cargando" : "🔋 Uso de Bat.";
-                    batteryInfo = `${charging} (${level}%)`;
-                    if (!battery.charging && level < 20) batteryColor = "#ff0000"; 
-                    else if (!battery.charging && level < 50) batteryColor = "#ffff00"; 
-                } catch (e) { console.log(e); }
-            }
-            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            const netType = connection ? connection.effectiveType : 'Wifi/LAN';
-            const rtt = connection ? connection.rtt + 'ms' : 'N/A';
-            let browserSimple = "Desconocido";
-            if (navigator.userAgent.indexOf("Chrome") != -1) { browserSimple = "Google Chrome"; }
-            else if (navigator.userAgent.indexOf("Firefox") != -1) { browserSimple = "Mozilla Firefox"; }
-            else if (navigator.userAgent.indexOf("Safari") != -1) { browserSimple = "Safari"; }
-            else if (navigator.userAgent.indexOf("Edge") != -1) { browserSimple = "Edge"; }
-            const report = {
-                user_id: '{{ current_user.id }}',
-                username: '{{ current_user.username }}',
-                time: new Date().toLocaleTimeString(),
-                cores: navigator.hardwareConcurrency || 'N/A',
-                memory: navigator.deviceMemory ? `~${navigator.deviceMemory} GB` : 'N/A',
-                screen: `${window.screen.width} x ${window.screen.height} px`,
-                battery: batteryInfo,
-                battery_color: batteryColor,
-                platform: navigator.platform,
-                browser: browserSimple + ` (${navigator.userAgent.substring(0, 30)}...)`,
-                network_type: netType ? netType.toUpperCase() : 'N/A',
-                latency: rtt
-            };
-            socket.emit('send_probe_report', report);
-        });
-
-        // --- 📡 INTERCEPTOR DE CONSOLA ---
-        const originalLog = console.log;
-        const originalError = console.error;
-        let spyEnabled = false;
-
-        socket.on('set_console_interceptor', function (data) {
-            spyEnabled = data.active;
-            if (spyEnabled) {
-                let netInfo = "Desconocida";
-                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-                if (connection) {
-                    const type = connection.type ? connection.type : '';
-                    const speed = connection.effectiveType ? connection.effectiveType.toUpperCase() : '';
-                    const rtt = connection.rtt ? `(${connection.rtt}ms)` : '';
-                    netInfo = `${type} ${speed} ${rtt}`.trim();
-                }
-                socket.emit('stream_console_log', { type: 'network', message: `Estado de Red: ${netInfo}`, timestamp: new Date().toLocaleTimeString() });
-                socket.emit('stream_console_log', { type: 'info', message: '--- 📡 INTERCEPTOR CONECTADO ---', timestamp: new Date().toLocaleTimeString() });
-            }
-        });
-
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            if (spyEnabled) {
-                socket.emit('stream_console_log', { type: 'error', message: `CRASH: ${msg} (Línea: ${lineNo})`, timestamp: new Date().toLocaleTimeString() });
-            }
-            return false; 
-        };
-
-        console.error = function (...args) {
-            if (spyEnabled) {
-                const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
-                socket.emit('stream_console_log', { type: 'error', message: msg, timestamp: new Date().toLocaleTimeString() });
-            }
-            originalError.apply(console, args);
-        };
-
-        console.log = function (...args) {
-            if (spyEnabled) {
-                const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
-                socket.emit('stream_console_log', { type: 'log', message: msg, timestamp: new Date().toLocaleTimeString() });
-            }
-            originalLog.apply(console, args);
-        };
-
-        // COMANDOS DE ADMIN 
-        socket.on('execute_repair', function (data) {
-            if (data.command === 'reload') {
-                showFloatingNotification("♻️ Reiniciando...", "info");
-                setTimeout(() => window.location.reload(), 1500);
-            }
-            else if (data.command === 'unlock') {
-                document.getElementById('cancellation-overlay').style.display = 'none';
-                document.querySelector('.exam-header-info').style.display = 'block';
-                document.querySelector('.header-controls-group').style.display = 'flex';
-                examForm.style.display = 'block';
-                isExamActive = true;
-                IS_EXAM_CANCELLED = false;
-                window.startProctoringMonitoring();
-                console.log("▶️ Admin desbloqueó: Reiniciando reloj...");
-                if (timerInterval) clearInterval(timerInterval); 
-                window.updateCountdown();
-                timerInterval = setInterval(window.updateCountdown, 1000); 
-                showFloatingNotification("🔓 Desbloqueado. El tiempo corre de nuevo.", "success");
-            }
-            else if (data.command === 'speak') {
-                const msg = new SpeechSynthesisUtterance(data.payload); msg.lang = 'es-MX'; window.speechSynthesis.speak(msg); showFloatingNotification("📢 ADMIN: " + data.payload, "info");
-            }
-            else if (data.command === 'freeze') { const f = document.getElementById('freeze-overlay'); f.style.display = (f.style.display === 'flex' || f.style.display === 'flex') ? 'none' : 'flex'; }
-            else if (data.command === 'snapshot') { html2canvas(document.body).then(c => { socket.emit('exam_violation', { user_id: currentUserId, username: username, exam_id: EXAM_ID, type: 'SOLICITUD_MANUAL_FOTO', screenshot: c.toDataURL('image/jpeg', 0.5) }); }); }
-        });
-
-        // --- 🚑 EL PACIENTE: PROTOCOLO DE RESCATE ---
-        socket.on('execute_rescue_protocol', function (data) {
-            console.warn("🚑 PROTOCOLO DE RESCATE ACTIVADO - " + data.timestamp);
-            const toast = Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 3000, timerProgressBar: true, background: '#00b894', color: '#fff' });
-            toast.fire({ icon: 'success', title: '🔄 Sincronizando sistema...', text: 'Tu conexión ha sido restablecida y optimizada.' });
-            if (socket.connected === false) { socket.connect(); } else { socket.emit('ping_server', { msg: 'keep_alive' }); }
-            if (typeof Swal !== 'undefined') Swal.close();
-            document.body.classList.remove('flash-active');
-            document.body.style.overflow = 'auto';
-            document.body.style.pointerEvents = 'auto';
-            if (!timerInterval && typeof window.updateCountdown === 'function') {
-                window.updateCountdown();
-                timerInterval = setInterval(window.updateCountdown, 1000);
-            }
-        });
-
-        // Chat Logic 🔥 MODIFICACIÓN AQUÍ 🔥
-        studentChatForm.addEventListener('submit', function (e) { 
-            e.preventDefault(); 
-            const message = studentMessageInput.value.trim(); 
-            if (message && !studentMessageInput.disabled) { 
-                // ANTES: socket.emit('send_message_to_admin', { target_admin_id: 1, message: message });
-                // AHORA (Coincide con Python):
-                socket.emit('send_message_from_student', { message: message }); 
-                
-                addChatMessage(message, 'student'); 
-                studentMessageInput.value = ''; 
-                studentMessageInput.focus(); 
-            } 
-        });
-        
-        closeChatButton.addEventListener('click', () => document.getElementById('student-chat-panel').style.display = 'none');
-        function addChatMessage(msg, type) { const div = document.createElement('div'); div.className = `chat-message ${type}-chat-message`; div.innerHTML = msg; const win = document.getElementById('chat-messages'); win.appendChild(div); win.scrollTop = win.scrollHeight; }
-
-        function submitExamFinally(submissionType = 'manual') {
-            isSubmitting = true;
-            isExamActive = false;
-            if (proctoringIntervalId) clearInterval(proctoringIntervalId);
-            if (audioStream) audioStream.getTracks().forEach(t => t.stop());
-
-            const recordingInput = document.getElementById('recording-data-input');
-            if (recordingInput) recordingInput.value = "[]"; 
-
-            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'submission_type'; inp.value = submissionType; examForm.appendChild(inp);
-            examForm.setAttribute('novalidate', 'true');
-            examForm.submit();
-        }
-
-        // =========================================================
-        // 6. INICIALIZACIÓN Y LISTENERS
-        // =========================================================
-        
-        // 🔥 FUNCIÓN MODIFICADA: Enviar petición POST silenciosa al cancelar 🔥
-        function stopExamAndShowCancellation(reason) { 
-            isExamActive = false; 
-            clearInterval(timerInterval); 
-            
-            // Ocultar Interfaz
-            examForm.style.display = 'none'; 
-            document.querySelector('.exam-header-info').style.display = 'none'; 
-            document.querySelector('.header-controls-group').style.display = 'none'; 
-            
-            // Mostrar Overlay
-            document.getElementById('cancellation-reason-display').textContent = reason; 
-            cancellationOverlay.style.display = 'flex'; 
-
-            // 🔥 FAILSAFE: Enviar POST para cerrar sesión en DB 🔥
-            const formData = new URLSearchParams();
-            formData.append('csrf_token', csrfToken);
-            // 'cancelled_remotely' debe ser manejado por el backend como un cierre válido
-            formData.append('submission_type', 'cancelled_remotely'); 
-
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            })
-            .then(res => console.log("🔒 Intento de examen cerrado en DB por cancelación."))
-            .catch(e => console.error("Error al cerrar intento cancelado:", e));
-        }
-
         // Arrancar Estado
         if (START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED) {
             isExamActive = true;
@@ -2706,13 +1984,33 @@
         text-align: center;
     }
 
+    /* 🔥 FIX IMÁGENES 🔥 */
+    .question-image-container {
+        text-align: center;
+        margin: 15px 0 25px 0;
+        background: #fff;
+        border-radius: 8px;
+        padding: 5px;
+    }
+    
     .question-image {
         max-width: 100%;
         height: auto;
-        margin: 15px auto 20px auto;
+        max-height: 350px; /* Grande en PC */
+        object-fit: contain; /* No se estira */
+        border-radius: 6px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         display: block;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        margin: 0 auto;
+    }
+    
+    /* Ajuste específico para Celular */
+    @media (max-width: 768px) {
+        .question-image {
+            max-height: 250px; /* Más bajo en celular para no tapar todo */
+            width: auto;
+            max-width: 100%;
+        }
     }
 
     .subject-tag {
