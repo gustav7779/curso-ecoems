@@ -50,13 +50,16 @@
                     <h3>Verifica el Código</h3>
                 </div>
 
-                <form method="POST" action="{{ url_for('verify_2fa_setup') }}" class="verification-form">
+                <form method="POST" action="{{ url_for('setup_2fa') }}" class="verification-form">
+                    
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
                     <input type="hidden" name="secret" value="{{ secret }}">
 
                     <div class="input-group">
                         <label for="totp_code">Ingresa los 6 dígitos que ves en la app:</label>
-                        <input type="text" id="totp_code" name="token" maxlength="6" inputmode="numeric" required placeholder="000 000" autocomplete="off">
+                        
+                        <input type="text" id="totp_code" name="totp_code" maxlength="6" inputmode="numeric" required placeholder="000 000" autocomplete="off">
                     </div>
 
                     <button type="submit" class="btn-primary-pulse">
