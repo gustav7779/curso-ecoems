@@ -2789,58 +2789,74 @@ def import_csv(exam_id):
     return redirect(url_for("add_question", exam_id=exam_id))
 
 
-@app.route('/admin/question/edit/<int:question_id>', methods=['GET', 'POST'])
+# --- RUTA PARA EDITAR PREGUNTA (CORREGIDA PARA CLOUDINARY) ---
+@app.route("/admin/question/edit/<int:question_id>", methods=["GET", "POST"])
 @login_required
 def edit_question(question_id):
-    if current_user.role != 'admin':
-        return redirect(url_for('dashboard'))
-    
+    # Verificar permisos
+    if current_user.role not in ["admin", "ayudante"]:
+        flash("No autorizado", "danger")
+        return redirect(url_for("dashboard"))
+
     question = Question.query.get_or_404(question_id)
-    exam = Exam.query.get(question.exam_id)
+    exam = Exam.query.get(question.exam_id) # Para el botón de volver
 
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
-            # Actualizar textos
-            question.subject = request.form.get('subject')
-            question.text = request.form.get('text')
-            question.option_a = request.form.get('option_a')
-            question.option_b = request.form.get('option_b')
-            question.option_c = request.form.get('option_c')
-            question.option_d = request.form.get('option_d')
-            question.correct_option = request.form.get('correct_option')
+            # 1. Actualizar textos
+            question.subject = request.form.get("subject")
+            question.text = request.form.get("text")
+            question.option_a = request.form.get("option_a")
+            question.option_b = request.form.get("option_b")
+            question.option_c = request.form.get("option_c")
+            question.option_d = request.form.get("option_d")
+            question.correct_option = request.form.get("correct_option")
+            question.manual_difficulty = request.form.get("manual_difficulty")
 
-            # Manejar Nueva Imagen (si suben una, reemplaza la anterior)
-            if 'image_file' in request.files:
-                file = request.files['image_file']
-                if file and file.filename != '' and allowed_file(file.filename):
-                    # Borrar anterior si existe
-                    if question.image_filename:
-                        try:
-                            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], question.image_filename))
-                        except: pass
-                    
-                    # Guardar nueva
-                    filename = secure_filename(file.filename)
-                    unique_filename = f"exam_{exam.id}_{filename}"
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-                    question.image_filename = unique_filename
+            # 2. Actualizar imágenes (SOLO SI SE SUBIÓ UNA NUEVA)
+            # Usamos tu save_image_helper. Si devuelve URL, actualizamos. Si no, dejamos la vieja.
+            
+            # Imagen Principal
+            if request.files.get("image_file"):
+                new_url = save_image_helper(request.files["image_file"], "q_edit")
+                if new_url:
+                    question.image_filename = new_url 
 
+            # Imagen Opción A
+            if request.files.get("image_a"):
+                new_url_a = save_image_helper(request.files["image_a"], "opt_a_edit")
+                if new_url_a:
+                    question.image_a = new_url_a
+
+            # Imagen Opción B
+            if request.files.get("image_b"):
+                new_url_b = save_image_helper(request.files["image_b"], "opt_b_edit")
+                if new_url_b:
+                    question.image_b = new_url_b
+
+            # Imagen Opción C
+            if request.files.get("image_c"):
+                new_url_c = save_image_helper(request.files["image_c"], "opt_c_edit")
+                if new_url_c:
+                    question.image_c = new_url_c
+
+            # Imagen Opción D
+            if request.files.get("image_d"):
+                new_url_d = save_image_helper(request.files["image_d"], "opt_d_edit")
+                if new_url_d:
+                    question.image_d = new_url_d
+
+            # 3. Guardar cambios en la DB
             db.session.commit()
-            flash('Pregunta actualizada correctamente.', 'success')
-            # Al terminar, redirige al modo "Agregar" limpio
-            return redirect(url_for('add_question', exam_id=exam.id))
+            flash("✅ Pregunta actualizada correctamente.", "success")
+            return redirect(url_for("add_question", exam_id=question.exam_id))
 
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al editar: {str(e)}', 'danger')
+            app.logger.error(f"Error editando pregunta: {e}")
+            flash(f"Error al editar: {str(e)}", "danger")
 
-    # --- PARTE CORREGIDA DEL GET ---
-    
-    # 1. Recuperamos TODAS las preguntas para mostrarlas en la lista lateral
-    questions = Question.query.filter_by(exam_id=exam.id).all()
-    
-    # 2. Renderizamos 'add_question.html' pero le pasamos la 'question' a editar
-    return render_template('add_question.html', exam=exam, questions=questions, question=question)
+    return render_template("edit_question.html", question=question, exam=exam)
 # --- RUTA PARA VER LISTA DE EXÁMENES (ESTUDIANTE) ---
 @app.route('/exams') 
 @login_required
