@@ -994,9 +994,6 @@ def handle_student_help_request():
 # --- 🔥🔥 INICIO DE MODIFICACIÓN: RASTREO DE CALOR (Nuevo Socket Handler) 🔥🔥 ---
 @socketio.on("proctoring_update")
 def handle_proctoring_update(data):
-    """
-    Recibe data de timing y clicks del cliente cada 30 segundos y la guarda en la sesión.
-    """
     if not current_user.is_authenticated or current_user.role != "student":
         return
 
@@ -1007,39 +1004,34 @@ def handle_proctoring_update(data):
 
     session_key = f"proctoring_data_{exam_id}"
 
-    # 1. Recuperar datos existentes de la sesión
-    existing_data_json = session.get(session_key, "{}")
+    # 1. Recuperar datos existentes o crear estructura vacía SIEMPRE
+    existing_data_json = session.get(session_key)
 
     try:
         if existing_data_json:
             existing_data = json.loads(existing_data_json)
         else:
             existing_data = {"time_data": {}, "click_data": []}
-    except json.JSONDecodeError:
-        app.logger.error(
-            f"[PROCTORING] Error al decodificar sesión JSON para {current_user.username}. Reiniciando data."
-        )
-        existing_data = {"time_data": {}, "click_data": []}
+            
+        # 🔥 VALIDACIÓN CRÍTICA: Asegurar que las llaves existan antes de usarlas
+        if "time_data" not in existing_data: existing_data["time_data"] = {}
+        if "click_data" not in existing_data: existing_data["click_data"] = []
 
-    # 2. Agregar nueva data de tiempo (Agregación simple: q_id: total_time)
-    for qid, time_spent in time_data.items():
-        # Sumamos el tiempo reportado al total existente para esa pregunta
-        existing_data["time_data"][qid] = (
-            existing_data["time_data"].get(qid, 0) + time_spent
-        )
+        # 2. Agregar data de tiempo
+        for qid, time_spent in time_data.items():
+            existing_data["time_data"][qid] = (
+                existing_data["time_data"].get(qid, 0) + time_spent
+            )
 
-    # 3. Agregar nueva data de clics (Añadir al array existente)
-    # NOTA: En un entorno real, se debería sanear esta data.
-    existing_data["click_data"].extend(click_data)
+        # 3. Agregar data de clics (Ya no dará KeyError)
+        existing_data["click_data"].extend(click_data)
 
-    # 4. Guardar data agregada en la sesión
-    try:
+        # 4. Guardar
         session[session_key] = json.dumps(existing_data)
         session.modified = True
+
     except Exception as e:
-        app.logger.error(
-            f"[PROCTORING] Error al guardar data de sesión para {current_user.username}: {e}"
-        )
+        app.logger.error(f"[PROCTORING ERROR] {current_user.username}: {e}")
 
     if is_final:
         app.logger.info(
