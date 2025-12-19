@@ -1963,6 +1963,8 @@ def verify_2fa():
     return render_template("verify_2fa.html")
 
 
+# --- EN app.py (Sustituye la función setup_2fa completa) ---
+
 @app.route("/setup_2fa", methods=["GET", "POST"])
 @login_required
 def setup_2fa():
@@ -1972,66 +1974,73 @@ def setup_2fa():
 
     user = current_user
 
-    # --- LÓGICA DE VERIFICACIÓN (POST) MEJORADA ---
+    # ---------------------------------------------------------
+    # 1. SI ENVIAN EL CÓDIGO (POST) - Lógica de Verificación
+    # ---------------------------------------------------------
     if request.method == "POST":
-        # 1. Limpiar espacios (por si el usuario pone "123 456")
+        # Limpiar espacios
         totp_code = request.form.get("totp_code", "").replace(" ", "")
         
+        # Recuperar el secreto que está en memoria
         secret = session.get("new_2fa_secret")
 
         if not secret:
-            flash("Error de sesión. Intenta configurar de nuevo.", "danger")
+            flash("Error de sesión. Recarga la página.", "danger")
             return redirect(url_for("setup_2fa"))
 
         totp = pyotp.TOTP(secret)
 
-        # 2. Debug en logs (Para ver qué está pasando en Heroku)
+        # Logs para depurar en Heroku si falla
         expected = totp.now()
-        app.logger.info(f"DEBUG 2FA -> Input Usuario: '{totp_code}' | Esperado: '{expected}'")
+        app.logger.info(f"DEBUG 2FA -> Input: '{totp_code}' | Esperado: '{expected}'")
 
-        # 3. Mayor tolerancia (valid_window=2 son +/- 60 segundos)
+        # Verificamos con tolerancia de tiempo (valid_window=2)
         if totp.verify(totp_code, valid_window=2):
             user.two_factor_secret = secret
             db.session.commit()
-            session.pop("new_2fa_secret", None)
-            app.logger.info(
-                f"AUDIT LOG: Admin user {current_user.username} activated 2FA successfully."
-            )
+            session.pop("new_2fa_secret", None) # Limpiamos la sesión
+            
+            app.logger.info(f"AUDIT: Admin {user.username} activó 2FA.")
             flash("✅ Autenticación de Dos Factores activada correctamente.", "success")
             return redirect(url_for("admin_panel"))
         else:
-            # Mensaje de error con pista (Solo para debug, luego puedes quitar la variable expected)
-            flash(
-                f"Código incorrecto. El servidor esperaba: {expected}. Revisa la hora de tu celular.",
-                "danger",
-            )
+            flash(f"Código incorrecto. El servidor esperaba: {expected}", "danger")
 
-    # --- LÓGICA DE GENERACIÓN DE QR (GET) ---
-    if not user.two_factor_secret:
-        new_secret = pyotp.random_base32()
-        session["new_2fa_secret"] = new_secret
+    # ---------------------------------------------------------
+    # 2. SI ENTRAN A LA PÁGINA (GET) - Lógica de Generar QR
+    # ---------------------------------------------------------
+    
+    # Si ya lo tiene activado, lo sacamos
+    if user.two_factor_secret:
+        flash("El 2FA ya está configurado.", "info")
+        return redirect(url_for("admin_panel"))
 
-        service_name = "ECOMS_Admin"
-        uri = pyotp.totp.TOTP(new_secret).provisioning_uri(
-            name=user.username, issuer_name=service_name
-        )
+    # 🔥 CORRECCIÓN CRÍTICA: SOLO GENERAR SECRETO SI NO EXISTE 🔥
+    # Esto evita que el código QR cambie si recargas la página (F5)
+    if "new_2fa_secret" not in session:
+        session["new_2fa_secret"] = pyotp.random_base32()
+    
+    new_secret = session["new_2fa_secret"]
 
-        img = qrcode.make(uri)
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
-        qr_base64 = base64.b64encode(buf.read()).decode("utf-8")
+    # Generar URI y QR
+    service_name = "ECOMS_Admin"
+    uri = pyotp.totp.TOTP(new_secret).provisioning_uri(
+        name=user.username, issuer_name=service_name
+    )
 
-        return render_template(
-            "setup_2fa.html",
-            qr_base64=qr_base64,
-            secret=new_secret,
-            uri=uri,
-            username=user.username,
-        )
+    img = qrcode.make(uri)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    qr_base64 = base64.b64encode(buf.read()).decode("utf-8")
 
-    flash("El 2FA ya está configurado para este usuario.", "info")
-    return redirect(url_for("admin_panel"))
+    return render_template(
+        "setup_2fa.html",
+        qr_base64=qr_base64,
+        secret=new_secret,
+        uri=uri,
+        username=user.username,
+    )
 
 @app.route("/disable_2fa", methods=["POST"])
 @login_required
