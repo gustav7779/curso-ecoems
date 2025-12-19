@@ -1,126 +1,364 @@
 {% extends "base.html" %}
 
-{% block title %}Configurar 2FA{% endblock %}
+{% block title %}Configurar 2FA | Seguridad{% endblock %}
 
 {% block content %}
-    <div class="container setup-container">
-        <h1>🔐 Configuración de Autenticación de Dos Factores (2FA)</h1>
-        <p class="description-text">
-            Sigue estos pasos para proteger tu cuenta de Administrador. Necesitarás una aplicación de autenticación (como Google Authenticator o Authy).
-        </p>
+<div class="auth-wrapper">
+    <div class="setup-card fade-in">
+        <div class="header-section">
+            <div class="icon-circle">
+                🔐
+            </div>
+            <h1>Protege tu cuenta</h1>
+            <p class="subtitle">Configuración de Autenticación de Dos Factores (2FA)</p>
+        </div>
 
-        <div class="setup-steps">
-            <div class="step">
-                <h2>Paso 1: Escanea el Código QR</h2>
+        <div class="steps-container">
+            <div class="step-box">
+                <div class="step-header">
+                    <span class="step-number">1</span>
+                    <h3>Escanea el Código QR</h3>
+                </div>
+                
+                <p class="instruction">Abre tu app de autenticación (Google Auth, Authy) y escanea esto:</p>
+
                 {% if qr_base64 %}
-                <div class="qr-code-box">
-                    <img src="{{ question.image_filename }}">
+                <div class="qr-wrapper">
+                    <img src="data:image/png;base64,{{ qr_base64 }}" alt="Código QR 2FA">
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    ⚠️ No se pudo generar el QR.
                 </div>
                 {% endif %}
-                <p>O ingresa la clave manualmente:</p>
-                <code class="secret-key">{{ secret }}</code>
-                <p class="warning-text">Asegúrate de guardar la clave en tu aplicación antes de continuar.</p>
+
+                <div class="manual-entry">
+                    <p>¿No puedes escanear? Usa esta clave:</p>
+                    <div class="secret-key-container">
+                        <code id="secretKey">{{ secret }}</code>
+                        <button type="button" class="copy-btn" onclick="copySecret()" title="Copiar clave">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                    </div>
+                    <span id="copyFeedback" class="copy-feedback">¡Copiado!</span>
+                </div>
             </div>
 
-            <div class="step">
-                <h2>Paso 2: Verifica el Código</h2>
-                <form method="POST">
-                    
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="step-box">
+                <div class="step-header">
+                    <span class="step-number">2</span>
+                    <h3>Verifica el Código</h3>
+                </div>
 
-                    <label for="totp_code">Código de 6 dígitos de tu aplicación:</label>
-                    <input type="text" id="totp_code" name="totp_code" maxlength="6" required placeholder="Ej: 123456">
-                    <button type="submit" class="button submit-btn">
-                        Activar y Confirmar 2FA
+                <form method="POST" action="{{ url_for('verify_2fa_setup') }}" class="verification-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="secret" value="{{ secret }}">
+
+                    <div class="input-group">
+                        <label for="totp_code">Ingresa los 6 dígitos que ves en la app:</label>
+                        <input type="text" id="totp_code" name="token" maxlength="6" inputmode="numeric" required placeholder="000 000" autocomplete="off">
+                    </div>
+
+                    <button type="submit" class="btn-primary-pulse">
+                        Activar Seguridad
                     </button>
                 </form>
             </div>
         </div>
 
-        <a href="{{ url_for('admin_panel') }}" class="btn back-link">Volver al Panel</a>
+        <div class="footer-link">
+            <a href="{{ url_for('admin_panel') }}">← Volver al Panel</a>
+        </div>
     </div>
+</div>
 
-    <style>
-        .setup-container {
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 30px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-            text-align: center;
+<script>
+    function copySecret() {
+        const secretText = document.getElementById('secretKey').innerText;
+        navigator.clipboard.writeText(secretText).then(() => {
+            const feedback = document.getElementById('copyFeedback');
+            feedback.style.opacity = '1';
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+            }, 2000);
+        });
+    }
+</script>
+
+<style>
+    /* Variables de diseño */
+    :root {
+        --primary-color: #4f46e5; /* Índigo moderno */
+        --primary-hover: #4338ca;
+        --bg-color: #f3f4f6;
+        --card-bg: #ffffff;
+        --text-main: #1f2937;
+        --text-muted: #6b7280;
+        --border-color: #e5e7eb;
+    }
+
+    body {
+        background-color: var(--bg-color);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif; /* Fuente limpia */
+    }
+
+    .auth-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .setup-card {
+        background: var(--card-bg);
+        width: 100%;
+        max-width: 550px;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Header */
+    .header-section {
+        text-align: center;
+        margin-bottom: 35px;
+    }
+
+    .icon-circle {
+        background: #e0e7ff;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin: 0 auto 15px;
+    }
+
+    h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0;
+    }
+
+    .subtitle {
+        color: var(--text-muted);
+        margin-top: 5px;
+        font-size: 0.95rem;
+    }
+
+    /* Steps Styling */
+    .steps-container {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .step-box {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .step-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .step-number {
+        background: var(--primary-color);
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .step-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-main);
+    }
+
+    .instruction {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-bottom: 15px;
+    }
+
+    /* QR Area */
+    .qr-wrapper {
+        text-align: center;
+        background: #fff;
+        padding: 15px;
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: inline-block; /* Centra el borde dashed */
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .qr-wrapper img {
+        max-width: 180px;
+        height: auto;
+        border-radius: 8px;
+    }
+
+    /* Manual Entry & Copy */
+    .manual-entry p {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .secret-key-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f9fafb;
+        border: 1px solid var(--border-color);
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+
+    .secret-key-container code {
+        font-family: 'Monaco', monospace;
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: 1px;
+    }
+
+    .copy-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: color 0.2s;
+        padding: 4px;
+    }
+
+    .copy-btn:hover {
+        color: var(--primary-color);
+    }
+
+    .copy-feedback {
+        display: block;
+        text-align: right;
+        font-size: 0.75rem;
+        color: #10b981;
+        opacity: 0;
+        transition: opacity 0.3s;
+        height: 15px;
+    }
+
+    /* Form Input */
+    .input-group label {
+        display: block;
+        font-size: 0.9rem;
+        color: var(--text-main);
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+
+    .input-group input {
+        width: 100%;
+        padding: 12px;
+        font-size: 1.5rem;
+        letter-spacing: 8px;
+        text-align: center;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: monospace;
+        box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+    }
+
+    .input-group input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .input-group input::placeholder {
+        letter-spacing: 2px;
+        font-size: 1rem;
+        color: #d1d5db;
+    }
+
+    /* Button */
+    .btn-primary-pulse {
+        width: 100%;
+        margin-top: 20px;
+        padding: 14px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+
+    .btn-primary-pulse:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-primary-pulse:active {
+        transform: translateY(0);
+    }
+
+    /* Footer */
+    .footer-link {
+        text-align: center;
+        margin-top: 25px;
+    }
+
+    .footer-link a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+
+    .footer-link a:hover {
+        color: var(--primary-color);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+        .setup-card {
+            padding: 25px;
         }
-        h1 {
-            color: #000000;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+        .input-group input {
+            font-size: 1.2rem;
         }
-        .description-text {
-            color: #555;
-            margin-bottom: 30px;
-        }
-        .setup-steps {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-        .step h2 {
-            color: #000000;
-            font-size: 1.4em;
-        }
-        .qr-code-box {
-            padding: 15px;
-            border: 1px solid #ccc;
-            display: inline-block;
-            margin: 10px auto;
-            border-radius: 5px;
-            background: #f8f8f8;
-        }
-        .secret-key {
-            display: block;
-            background: #ecf0f1;
-            padding: 8px 15px;
-            border-radius: 4px;
-            font-size: 1.1em;
-            margin: 10px auto 20px;
-            font-weight: bold;
-        }
-        .warning-text {
-            color: #e74c3c;
-            font-weight: 500;
-        }
-        form input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            text-align: center;
-            font-size: 1.2em;
-        }
-        .submit-btn {
-            background: #2ecc71 !important;
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-        }
-        .submit-btn:hover {
-            background: #27ae60 !important;
-        }
-        .back-link {
-            display: block;
-            margin-top: 30px;
-            color: #3498db;
-            text-decoration: none;
-        }
-        
-        @media (max-width: 600px) {
-            .setup-container {
-                width: 95%;
-                padding: 20px;
-            }
-        }
-    </style>
+    }
+</style>
 {% endblock %}
