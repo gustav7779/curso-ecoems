@@ -205,7 +205,7 @@
                                     style="background: #c0392b; border-color: #e74c3c; color: white;">
                                     <i class="fas fa-trash-restore-alt"></i> Reset
                                 </button>
-                                <button onclick="unlockStudent('{{ data.user_id }}', '{{ exam.id }}')" ...>
+                                <button onclick="unlockStudent('{{ data.user_id }}', '{{ exam.id }}')"
                                     class="btn btn-warning btn-sm" title="Quitar pantalla roja y permitir reingreso">
                                     🔓 Desbloquear / Resetear
                                 </button>
@@ -345,60 +345,60 @@
             }
         });
     }
-function unlockStudent(userId, examId) {
-    // Comprobamos que SweetAlert2 esté cargado
-    if (typeof Swal === 'undefined') {
-        alert("Error: SweetAlert2 no está cargado. Recarga la página.");
-        return;
-    }
-
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: "¿Quieres desbloquear a este alumno? Esto borrará su estatus de 'Cancelado' y reiniciará sus advertencias a 0.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, desbloquear',
-        cancelButtonText: 'Cancelar',
-        background: '#f4f6f7',
-        backdrop: `rgba(0,0,123,0.4)`
-    }).then((result) => {
-        if (result.isConfirmed) {
-            fetch('/admin/api/unlock_student', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                    // Si usas CSRF token, descomenta:
-                    // 'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    user_id: userId,
-                    exam_id: examId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire(
-                        '¡Desbloqueado!',
-                        'El alumno ha sido rehabilitado.',
-                        'success'
-                    ).then(() => {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire('Error', data.message || 'Algo salió mal', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
-            });
+    function unlockStudent(userId, examId) {
+        // Comprobamos que SweetAlert2 esté cargado
+        if (typeof Swal === 'undefined') {
+            alert("Error: SweetAlert2 no está cargado. Recarga la página.");
+            return;
         }
-    });
-} 
-// ¡AQUÍ NO DEBE HABER NADA MÁS! La siguiente función es enviarMensajeGlobal
+
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "¿Quieres desbloquear a este alumno? Esto borrará su estatus de 'Cancelado' y reiniciará sus advertencias a 0.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, desbloquear',
+            cancelButtonText: 'Cancelar',
+            background: '#f4f6f7',
+            backdrop: `rgba(0,0,123,0.4)`
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/admin/api/unlock_student', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                        // Si usas CSRF token, descomenta:
+                        // 'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        exam_id: examId
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire(
+                                '¡Desbloqueado!',
+                                'El alumno ha sido rehabilitado.',
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', data.message || 'Algo salió mal', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                    });
+            }
+        });
+    }
+    // ¡AQUÍ NO DEBE HABER NADA MÁS! La siguiente función es enviarMensajeGlobal
     // 2. Llamada al Backend (Python)
     fetch('/admin/api/unlock_student', {
         method: 'POST',
@@ -412,25 +412,25 @@ function unlockStudent(userId, examId) {
             exam_id: examId
         })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Éxito visual
-            alert("✅ " + data.msg);
-            
-            // Opcional: Cambiar color de la tarjeta del alumno a verde
-            const card = document.getElementById(`student-card-${userId}`);
-            if(card) card.style.borderColor = "green";
-            
-        } else {
-            alert("❌ Error: " + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert("Error de conexión con el servidor.");
-    });
-}
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Éxito visual
+                alert("✅ " + data.msg);
+
+                // Opcional: Cambiar color de la tarjeta del alumno a verde
+                const card = document.getElementById(`student-card-${userId}`);
+                if (card) card.style.borderColor = "green";
+
+            } else {
+                alert("❌ Error: " + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Error de conexión con el servidor.");
+        });
+
 
     // --- 🔥 FUNCIÓN: MENSAJE GLOBAL (FAB) 🔥 ---
     function enviarMensajeGlobal() {
