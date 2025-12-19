@@ -205,7 +205,7 @@
                                     style="background: #c0392b; border-color: #e74c3c; color: white;">
                                     <i class="fas fa-trash-restore-alt"></i> Reset
                                 </button>
-                                <button onclick="unlockStudent('{{ student.id }}', '{{ exam.id }}')"
+                                <button onclick="unlockStudent('{{ data.user_id }}', '{{ exam.id }}')" ...>
                                     class="btn btn-warning btn-sm" title="Quitar pantalla roja y permitir reingreso">
                                     🔓 Desbloquear / Resetear
                                 </button>
@@ -368,9 +368,9 @@ function unlockStudent(userId, examId) {
             fetch('/admin/api/unlock_student', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    // Si usas CSRF token en Flask, descomenta la siguiente línea:
-                    // 'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value
+                    'Content-Type': 'application/json'
+                    // Si usas CSRF token, descomenta:
+                    // 'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     user_id: userId,
@@ -396,8 +396,9 @@ function unlockStudent(userId, examId) {
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             });
         }
-    }); // <--- OJO AQUÍ: Cierra el .then() y el punto y coma
-} // <--- OJO AQUÍ: Cierra la función
+    });
+} 
+// ¡AQUÍ NO DEBE HABER NADA MÁS! La siguiente función es enviarMensajeGlobal
     // 2. Llamada al Backend (Python)
     fetch('/admin/api/unlock_student', {
         method: 'POST',
