@@ -3020,7 +3020,7 @@ def delete_question(question_id):
     return redirect(url_for("add_question", exam_id=exam_id))
 
 
-@# --- EN app.py ---
+# --- EN app.py ---
 
 @app.route("/admin/exams/delete/<int:exam_id>", methods=["POST"])
 @login_required
