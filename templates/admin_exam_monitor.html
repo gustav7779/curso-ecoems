@@ -126,17 +126,17 @@
                             {% if is_active %}
                             <div class="time-controls">
                                 <button class="time-btn quick-add-btn"
-                                    onclick="adjustTime({{ data.user_id }}, 300, 5, true)">+5m</button>
+                                    onclick="adjustTime('{{ data.user_id }}', 300, 5, true)">+5m</button>
                                 <button class="time-btn quick-add-btn"
-                                    onclick="adjustTime({{ data.user_id }}, 600, 10, true)">+10m</button>
+                                    onclick="adjustTime('{{ data.user_id }}', 600, 10, true)">+10m</button>
                                 <button class="time-btn custom-btn"
-                                    onclick="showCustomTimeInput({{ data.user_id }})">Custom</button>
+                                    onclick="showCustomTimeInput('{{ data.user_id }}')">Custom</button>
 
                                 {# BOTONES DE RESTA #}
                                 <button class="time-btn quick-sub-btn"
-                                    onclick="adjustTime({{ data.user_id }}, -300, 5, false)">-5m</button>
+                                    onclick="adjustTime('{{ data.user_id }}', -300, 5, false)">-5m</button>
                                 <button class="time-btn quick-sub-btn"
-                                    onclick="adjustTime({{ data.user_id }}, -600, 10, false)">-10m</button>
+                                    onclick="adjustTime('{{ data.user_id }}', -600, 10, false)">-10m</button>
                                 {# ---------------- #}
 
                                 <span id="feedback-{{ data.user_id }}" class="time-feedback"></span>
@@ -146,7 +146,7 @@
                                 <input type="number" id="input-{{ data.user_id }}" min="-999"
                                     placeholder="minutos (+/-)" class="custom-time-input">
                                 <button class="time-btn confirm-btn"
-                                    onclick="confirmCustomTime({{ data.user_id }})">Confirmar</button>
+                                    onclick="confirmCustomTime('{{ data.user_id }}')">Confirmar</button>
                             </div>
                             {% else %}
                             <span class="no-action">N/A</span>
@@ -159,13 +159,13 @@
                             <div class="repair-grid-container">
 
                                 <button class="button repair-btn btn-reload"
-                                    onclick="sendRepairCommand({{ data.user_id }}, 'reload')"
+                                    onclick="sendRepairCommand('{{ data.user_id }}', 'reload')"
                                     title="Forzar recarga de página">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
 
                                 <button class="button repair-btn btn-unlock"
-                                    onclick="sendRepairCommand({{ data.user_id }}, 'unlock')"
+                                    onclick="sendRepairCommand('{{ data.user_id }}', 'unlock')"
                                     title="Desbloquear pantalla roja">
                                     <i class="fas fa-unlock"></i>
                                 </button>
@@ -178,25 +178,25 @@
                                 </button>
 
                                 <button class="button repair-btn btn-msg"
-                                    onclick="sendRepairCommand({{ data.user_id }}, 'ping')"
+                                    onclick="sendRepairCommand('{{ data.user_id }}', 'ping')"
                                     title="Enviar Ping Técnico (Silencioso)">
                                     <i class="fas fa-wifi"></i>
                                 </button>
 
                                 <button class="button repair-btn btn-voice"
-                                    onclick="sendRepairCommand({{ data.user_id }}, 'speak')"
+                                    onclick="sendRepairCommand('{{ data.user_id }}', 'speak')"
                                     title="Enviar mensaje de voz (TTS)">
                                     <i class="fas fa-bullhorn"></i>
                                 </button>
 
                                 <button class="button repair-btn btn-freeze"
-                                    onclick="sendRepairCommand({{ data.user_id }}, 'freeze')"
+                                    onclick="sendRepairCommand('{{ data.user_id }}', 'freeze')"
                                     title="Congelar/Descongelar pantalla">
                                     <i class="fas fa-snowflake"></i>
                                 </button>
 
                                 <button class="button repair-btn btn-paparazzi"
-                                    onclick="sendRepairCommand({{ data.user_id }}, 'snapshot')"
+                                    onclick="sendRepairCommand('{{ data.user_id }}', 'snapshot')"
                                     title="Tomar captura remota ahora">
                                     <i class="fas fa-camera-retro"></i>
                                 </button>
@@ -246,7 +246,7 @@
                             {% if is_active %}
                             <button class="button action-btn cancel-exam-btn" data-user-id="{{ data.user_id }}"
                                 data-username="{{ data.username }}" data-exam-id="{{ exam.id }}"
-                                onclick="showCancelModal({{ data.user_id }}, '{{ data.username }}', {{ exam.id }})">
+                                onclick="showCancelModal('{{ data.user_id }}', '{{ data.username }}', '{{ exam.id }}')">
                                 ❌ Cancelar
                             </button>
                             {% elif data.status == 'Cancelado (Bloqueado)' %}
@@ -345,30 +345,32 @@
             }
         });
     }
-    //--- 🔥 FUNCIÓN: DESBLOQUEAR ALUMNO 🔥 ---
-  function unlockStudent(userId, examId) {
-    // 🔥 AQUÍ EMPIEZA LA MAGIA DE SWEETALERT
+function unlockStudent(userId, examId) {
+    // Comprobamos que SweetAlert2 esté cargado
+    if (typeof Swal === 'undefined') {
+        alert("Error: SweetAlert2 no está cargado. Recarga la página.");
+        return;
+    }
+
     Swal.fire({
         title: '¿Estás seguro?',
         text: "¿Quieres desbloquear a este alumno? Esto borrará su estatus de 'Cancelado' y reiniciará sus advertencias a 0.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#28a745', // Verde éxito
-        cancelButtonColor: '#d33',    // Rojo cancelar
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33',
         confirmButtonText: 'Sí, desbloquear',
         cancelButtonText: 'Cancelar',
-        background: '#f4f6f7',        // Color de fondo suave
-        backdrop: `
-            rgba(0,0,123,0.4)
-        `
+        background: '#f4f6f7',
+        backdrop: `rgba(0,0,123,0.4)`
     }).then((result) => {
         if (result.isConfirmed) {
-            // --- AQUÍ VA TU LÓGICA DE FETCH ORIGINAL ---
             fetch('/admin/api/unlock_student', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}' // Asegúrate de tener el token si lo usas
+                    // Si usas CSRF token en Flask, descomenta la siguiente línea:
+                    // 'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value
                 },
                 body: JSON.stringify({
                     user_id: userId,
@@ -378,13 +380,12 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Mensaje de Éxito Bonito
                     Swal.fire(
                         '¡Desbloqueado!',
-                        'El alumno ha sido rehabilitado y sus advertencias borradas.',
+                        'El alumno ha sido rehabilitado.',
                         'success'
                     ).then(() => {
-                        location.reload(); // Recargar para ver cambios
+                        location.reload();
                     });
                 } else {
                     Swal.fire('Error', data.message || 'Algo salió mal', 'error');
@@ -395,8 +396,8 @@
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             });
         }
-    })
-}
+    }); // <--- OJO AQUÍ: Cierra el .then() y el punto y coma
+} // <--- OJO AQUÍ: Cierra la función
     // 2. Llamada al Backend (Python)
     fetch('/admin/api/unlock_student', {
         method: 'POST',
