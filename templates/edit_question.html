@@ -1,231 +1,304 @@
 {% extends "base.html" %}
 
-{% block title %}Editar Pregunta: Q{{ question.id }}{% endblock %}
+{% block title %}Editar Pregunta #{{ question.id }}{% endblock %}
 
 {% block content %}
-    <div class="container edit-question-container">
-        <div class="card form-card">
-            <h2 class="card-title">✏️ Editando Pregunta Q{{ question.id }}</h2>
-            <p class="exam-meta">Modifica el texto, imagen, opciones o la respuesta correcta.</p>
+<div class="layout-wrapper">
+    
+    <div class="main-column">
+        <div class="card-box fade-in">
+            <div class="card-header-custom">
+                <div class="header-text">
+                    <span class="badge-id">ID: {{ question.id }}</span>
+                    <h1>Editar Contenido</h1>
+                </div>
+                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="close-icon">×</a>
+            </div>
 
-            <form method="POST" class="question-form" action="{{ url_for('edit_question', question_id=question.id) }}" enctype="multipart/form-data">
-                
+            <form method="POST" enctype="multipart/form-data" class="modern-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="form-group">
-                    <label for="subject">Materia/Categoría:</label>
-                    <input type="text" id="subject" name="subject" value="{{ question.subject or '' }}" placeholder="Ej: Habilidad Matemática">
-                </div>
+                <div class="form-section">
+                    <h3 class="section-title">📝 Planteamiento de la Pregunta</h3>
+                    
+                    <div class="input-row">
+                        <div class="input-group full-width">
+                            <label class="label-bold">Materia / Tema</label>
+                            <input type="text" name="subject" class="styled-input" value="{{ question.subject }}" required placeholder="Ej: Biología Celular">
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="text">Texto de la Pregunta:</label>
-                    <textarea id="text" name="text" rows="4" required>{{ question.text }}</textarea>
-                </div>
+                    <div class="input-group">
+                        <label class="label-bold">Texto de la Pregunta</label>
+                        <textarea name="text" class="styled-input" rows="4" required>{{ question.text }}</textarea>
+                    </div>
 
-                <div class="form-group image-upload-group">
-                    <label for="image_file">Imagen de Apoyo:</label>
-                    <div class="image-input-wrapper">
-                        {% if question.image_filename %}
-                            <div class="current-image-preview">
-                                <p class="small-text"><em>Imagen Actual:</em></p>
-                               <img src="{{ question.image_filename }}">
+                    <div class="upload-box main-upload">
+                        <label class="label-bold">🖼️ Imagen Principal (Opcional)</label>
+                        <div class="upload-content">
+                            {% if question.image_filename %}
+                            <div class="preview-container">
+                                <span class="badge-img">Actual</span>
+                                <img src="{{ question.image_filename }}" alt="Imagen Pregunta">
                             </div>
-                        {% endif %}
-                        
-                        <input type="file" id="image_file" name="image_file" accept="image/*" class="file-input">
-                        <p class="small-text hint">Sube una nueva imagen para reemplazar la anterior (opcional).</p>
+                            {% endif %}
+                            <input type="file" name="image_file" class="file-control">
+                        </div>
+                        <small class="hint">Sube una nueva solo si deseas reemplazar la actual.</small>
                     </div>
                 </div>
 
-                <h3 class="options-header">Opciones de Respuesta:</h3>
-                
-                <div class="form-group">
-                    <label for="option_a">A)</label>
-                    <input type="text" id="option_a" name="option_a" value="{{ question.option_a or '' }}" required>
+                <div class="form-section bg-gray">
+                    <h3 class="section-title">✅ Opciones de Respuesta</h3>
+                    
+                    <div class="options-grid">
+                        <div class="option-card">
+                            <div class="option-header">
+                                <span class="letter-badge">A</span>
+                                <input type="text" name="option_a" class="styled-input" value="{{ question.option_a }}" required>
+                            </div>
+                            <div class="mini-upload">
+                                <label>📷 Img Inciso A:</label>
+                                {% if question.image_a %}
+                                    <img src="{{ question.image_a }}" class="mini-preview">
+                                {% endif %}
+                                <input type="file" name="image_a" class="file-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="option-card">
+                            <div class="option-header">
+                                <span class="letter-badge">B</span>
+                                <input type="text" name="option_b" class="styled-input" value="{{ question.option_b }}" required>
+                            </div>
+                            <div class="mini-upload">
+                                <label>📷 Img Inciso B:</label>
+                                {% if question.image_b %}
+                                    <img src="{{ question.image_b }}" class="mini-preview">
+                                {% endif %}
+                                <input type="file" name="image_b" class="file-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="option-card">
+                            <div class="option-header">
+                                <span class="letter-badge">C</span>
+                                <input type="text" name="option_c" class="styled-input" value="{{ question.option_c }}" required>
+                            </div>
+                            <div class="mini-upload">
+                                <label>📷 Img Inciso C:</label>
+                                {% if question.image_c %}
+                                    <img src="{{ question.image_c }}" class="mini-preview">
+                                {% endif %}
+                                <input type="file" name="image_c" class="file-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="option-card">
+                            <div class="option-header">
+                                <span class="letter-badge">D</span>
+                                <input type="text" name="option_d" class="styled-input" value="{{ question.option_d }}" required>
+                            </div>
+                            <div class="mini-upload">
+                                <label>📷 Img Inciso D:</label>
+                                {% if question.image_d %}
+                                    <img src="{{ question.image_d }}" class="mini-preview">
+                                {% endif %}
+                                <input type="file" name="image_d" class="file-control-sm">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="option_b">B)</label>
-                    <input type="text" id="option_b" name="option_b" value="{{ question.option_b or '' }}" required>
-                </div>
+                <div class="form-section final-settings">
+                    <div class="settings-grid">
+                        <div class="setting-item correct-answer-box">
+                            <label class="label-bold text-success">Respuesta Correcta</label>
+                            <select name="correct_option" class="styled-select success-border" required>
+                                <option value="A" {% if question.correct_option == 'A' %}selected{% endif %}>Opción A</option>
+                                <option value="B" {% if question.correct_option == 'B' %}selected{% endif %}>Opción B</option>
+                                <option value="C" {% if question.correct_option == 'C' %}selected{% endif %}>Opción C</option>
+                                <option value="D" {% if question.correct_option == 'D' %}selected{% endif %}>Opción D</option>
+                            </select>
+                        </div>
 
-                <div class="form-group">
-                    <label for="option_c">C)</label>
-                    <input type="text" id="option_c" name="option_c" value="{{ question.option_c or '' }}" placeholder="Opción C">
-                </div>
+                        <div class="setting-item">
+                            <label class="label-bold">Dificultad</label>
+                            <select name="manual_difficulty" class="styled-select">
+                                <option value="Easy" {% if question.manual_difficulty == 'Easy' %}selected{% endif %}>🟢 Fácil</option>
+                                <option value="Medium" {% if question.manual_difficulty == 'Medium' %}selected{% endif %}>🟡 Media</option>
+                                <option value="Hard" {% if question.manual_difficulty == 'Hard' %}selected{% endif %}>🔴 Difícil</option>
+                            </select>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="option_d">D)</label>
-                    <input type="text" id="option_d" name="option_d" value="{{ question.option_d or '' }}" placeholder="Opción D">
+                    <div class="action-buttons">
+                        <button type="submit" class="btn-primary-pulse">
+                            💾 Guardar Cambios
+                        </button>
+                        <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn-secondary">
+                            Cancelar
+                        </a>
+                    </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="correct_option">Respuesta Correcta:</label>
-                    <select id="correct_option" name="correct_option" required>
-                        <option value="">-- Seleccionar --</option>
-                        {% for letter in ['A', 'B', 'C', 'D'] %}
-                            <option value="{{ letter }}" {% if question.correct_option == letter %}selected{% endif %}>{{ letter }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <button type="submit" class="button submit-btn-custom">Guardar Cambios</button>
             </form>
         </div>
-
-        <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn back-btn">⬅ Volver a la Lista de Preguntas</a>
     </div>
+
+    <div class="sidebar-column">
+        <div class="card-box sidebar-card">
+            <div class="sidebar-header">
+                <h5>Navegación</h5>
+                <small>Otras preguntas de este examen</small>
+            </div>
+            <div class="question-list-wrapper">
+                <ul class="question-list">
+                    {% for q in questions %}
+                    <li class="list-item {% if q.id == question.id %}active{% endif %}">
+                        <a href="{{ url_for('edit_question', question_id=q.id) }}" class="list-link">
+                            <span class="q-number">#{{ loop.index }}</span>
+                            <span class="q-text">{{ q.text | truncate(40) }}</span>
+                            {% if q.id != question.id %}
+                                <span class="edit-icon">✏️</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* VARIABLES (Mismo tema que setup_2fa) */
+    :root {
+        --primary: #4f46e5;
+        --primary-dark: #4338ca;
+        --bg-page: #f3f4f6;
+        --card-bg: #ffffff;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+        --border: #e5e7eb;
+        --success: #10b981;
+    }
+
+    body { background-color: var(--bg-page); font-family: 'Inter', system-ui, sans-serif; }
+
+    /* LAYOUT GENERAL (GRID 2/3 - 1/3) */
+    .layout-wrapper {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 25px;
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 0 20px;
+    }
+
+    /* TARJETAS GENERALES */
+    .card-box {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    /* HEADER */
+    .card-header-custom {
+        padding: 20px 30px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+    }
+    .badge-id { 
+        background: #e0e7ff; color: var(--primary); 
+        padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; 
+    }
+    .header-text h1 { margin: 5px 0 0; font-size: 1.4rem; color: var(--text-dark); }
+    .close-icon { text-decoration: none; font-size: 1.5rem; color: #9ca3af; }
+
+    /* FORMULARIO */
+    .form-section { padding: 25px 30px; border-bottom: 1px solid var(--border); }
+    .bg-gray { background-color: #f9fafb; }
+    .section-title { font-size: 1.1rem; color: var(--text-dark); margin-bottom: 20px; font-weight: 600; }
     
-    <style>
-        /* --- ESTILOS GENERALES --- */
-        .edit-question-container {
-            max-width: 700px;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin: 20px auto;
-        }
+    .label-bold { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; color: var(--text-dark); }
+    .text-success { color: #059669; }
 
-        .card-title {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #34495e;
-        }
+    .styled-input, .styled-select {
+        width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;
+        font-size: 0.95rem; box-sizing: border-box; transition: 0.2s;
+    }
+    .styled-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
 
-        /* Estructura de los campos */
-        .form-group {
-            display: flex;
-            align-items: flex-start; /* Alineación superior para textareas e imágenes */
-            margin-bottom: 15px;
-        }
+    /* UPLOAD BOXES */
+    .upload-box { border: 2px dashed #d1d5db; padding: 15px; border-radius: 8px; background: #fff; }
+    .upload-content { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .preview-container img { height: 80px; border-radius: 4px; border: 1px solid #eee; }
+    .badge-img { display: block; font-size: 0.7rem; color: var(--text-light); margin-bottom: 2px; }
+    .hint { font-size: 0.8rem; color: var(--text-light); display: block; margin-top: 5px; }
 
-        .form-group label {
-            width: 180px; 
-            text-align: right;
-            padding-right: 15px;
-            font-weight: bold;
-            color: #555;
-            flex-shrink: 0; 
-            margin-top: 10px; /* Ajuste vertical */
-        }
-        
-        .form-group input[type="text"], 
-        .form-group textarea, 
-        .form-group select {
-            flex-grow: 1; 
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-            margin: 0; 
-        }
-        
-        .form-group input:focus, 
-        .form-group textarea:focus, 
-        .form-group select:focus {
-            border-color: #3498db;
-            outline: none;
-        }
+    /* GRID RESPUESTAS */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .option-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
+    
+    .option-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .letter-badge { 
+        background: var(--primary); color: white; width: 28px; height: 28px; 
+        display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; flex-shrink: 0;
+    }
 
-        /* --- ESTILOS ESPECÍFICOS PARA LA IMAGEN --- */
-        .image-upload-group {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px dashed #bdc3c7;
-        }
+    .mini-upload { background: #f3f4f6; padding: 8px; border-radius: 6px; font-size: 0.85rem; }
+    .mini-upload label { display: block; margin-bottom: 4px; color: var(--text-light); }
+    .mini-preview { height: 40px; display: block; margin-bottom: 5px; border-radius: 3px; }
+    .file-control-sm { font-size: 0.8rem; width: 100%; }
 
-        .image-input-wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
+    /* SETTINGS FINALES */
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+    .success-border { border-color: #34d399; background-color: #ecfdf5; }
 
-        .current-image-preview img {
-            max-width: 200px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            margin-bottom: 10px;
-            border: 2px solid white;
-        }
+    .action-buttons { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
+    .btn-primary-pulse { 
+        background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; 
+        font-weight: 600; cursor: pointer; font-size: 1rem; transition: 0.2s;
+    }
+    .btn-primary-pulse:hover { background: var(--primary-dark); }
+    .btn-secondary {
+        background: #fff; border: 1px solid #d1d5db; color: var(--text-dark); padding: 12px; border-radius: 6px;
+        text-align: center; text-decoration: none; font-weight: 500; display: block;
+    }
+    .btn-secondary:hover { background: #f3f4f6; }
 
-        .file-input {
-            padding: 5px 0;
-        }
+    /* SIDEBAR */
+    .sidebar-header { background: #1f2937; color: white; padding: 15px 20px; }
+    .sidebar-header h5 { margin: 0; font-size: 1rem; }
+    .sidebar-header small { color: #9ca3af; font-size: 0.8rem; }
+    
+    .question-list-wrapper { max-height: 600px; overflow-y: auto; }
+    .question-list { list-style: none; padding: 0; margin: 0; }
+    .list-item { border-bottom: 1px solid var(--border); }
+    .list-item.active { background: #fffbeb; border-left: 4px solid #f59e0b; }
+    
+    .list-link { 
+        display: flex; align-items: center; padding: 12px 15px; text-decoration: none; color: var(--text-dark); 
+        transition: background 0.2s; gap: 10px;
+    }
+    .list-link:hover { background: #f9fafb; }
+    .q-number { font-weight: bold; font-size: 0.85rem; color: var(--primary); }
+    .q-text { font-size: 0.9rem; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .edit-icon { font-size: 0.9rem; opacity: 0.5; }
 
-        .small-text {
-            font-size: 0.85em;
-            color: #7f8c8d;
-            margin: 5px 0;
-        }
-
-        /* --- BOTONES Y HEADERS --- */
-        .submit-btn-custom {
-            padding: 12px 20px;
-            margin-top: 25px;
-            background: #3498db; 
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1.1em;
-            transition: background 0.3s;
-            width: 100%; /* Botón ancho */
-        }
-        .submit-btn-custom:hover {
-            background: #2980b9;
-        }
-
-        .options-header {
-            font-size: 1.2em;
-            color: #2ecc71;
-            margin-top: 30px;
-            border-top: 1px dashed #eee;
-            padding-top: 20px;
-            margin-bottom: 15px;
-        }
-
-        .back-btn {
-            display: inline-block;
-            margin-top: 20px;
-            text-decoration: none;
-            color: #7f8c8d;
-            font-weight: 600;
-        }
-        .back-btn:hover {
-            color: #34495e;
-        }
-
-        /* --- MEDIA QUERY PARA MÓVILES --- */
-        @media (max-width: 768px) {
-            .edit-question-container {
-                padding: 15px;
-                margin: 10px auto;
-            }
-
-            .form-group {
-                flex-direction: column;
-                align-items: flex-start;
-                margin-bottom: 15px;
-            }
-
-            .form-group label {
-                width: 100%;
-                text-align: left;
-                padding: 0;
-                margin-bottom: 5px;
-                margin-top: 0;
-            }
-            
-            .form-group input[type="text"], 
-            .form-group textarea, 
-            .form-group select {
-                width: 100%;
-            }
-        }
-    </style>
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+        .layout-wrapper { grid-template-columns: 1fr; }
+        .sidebar-column { order: 2; }
+        .options-grid { grid-template-columns: 1fr; }
+    }
+    
+    /* ANIMACIÓN */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+</style>
 {% endblock %}
