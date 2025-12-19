@@ -365,7 +365,7 @@ class Question(db.Model):
     correct_answers = db.Column(db.Integer, default=0, nullable=False)
     difficulty_score = db.Column(db.Float, default=0.5, nullable=False)
     manual_difficulty = db.Column(db.String(20), default="Medium", nullable=False)
-    )  # <--- NUEVO CAMPO MANUAL
+    # <--- NUEVO CAMPO MANUAL
     # --- 🔥 FIN DE MODIFICACIÓN: SIMULADOR DE RENDIMIENTO 🔥 ---
 
 
