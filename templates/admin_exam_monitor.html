@@ -345,69 +345,59 @@
             }
         });
     }
-// --- FUNCIÓN CORREGIDA: DESBLOQUEAR ALUMNO ---
-function unlockStudent(userId, examId) {
-    // 1. Verificamos que los datos lleguen bien
-    if (!userId || !examId) {
-        console.error("Error: Faltan IDs", userId, examId);
-        Swal.fire('Error', 'No se pudo identificar al alumno o examen.', 'error');
-        return;
-    }
-
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: "Esto quitará el estado de 'Cancelado' y reiniciará sus advertencias a 0.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, desbloquear'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // 2. Usamos el token global que definiste arriba en el script
-            // (Asegúrate de que 'csrfToken' exista, si no, busca el input hidden)
-            const token = typeof csrfToken !== 'undefined' ? csrfToken : 
-                          document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
-                          document.querySelector('input[name="csrf_token"]')?.value;
-
-            fetch('/admin/api/unlock_student', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': token // 🔥 ESTO SOLUCIONA EL ERROR 400
-                },
-                body: JSON.stringify({
-                    user_id: userId, // Enviamos con el nombre que espera Python
-                    exam_id: examId
-                })
-            })
-            .then(response => {
-                // 3. Manejo inteligente de errores (evita el Unexpected token <)
-                if (!response.ok) {
-                    throw new Error(`Error del servidor: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    Swal.fire(
-                        '¡Desbloqueado!',
-                        'El alumno ha sido rehabilitado.',
-                        'success'
-                    ).then(() => {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire('Error', data.message || 'Error desconocido', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire('Error', 'No se pudo conectar con el servidor (Revisa la consola)', 'error');
-            });
+    function unlockStudent(userId, examId) {
+        // Comprobamos que SweetAlert2 esté cargado
+        if (typeof Swal === 'undefined') {
+            alert("Error: SweetAlert2 no está cargado. Recarga la página.");
+            return;
         }
-    });
-}
+
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "¿Quieres desbloquear a este alumno? Esto borrará su estatus de 'Cancelado' y reiniciará sus advertencias a 0.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, desbloquear',
+            cancelButtonText: 'Cancelar',
+            background: '#f4f6f7',
+            backdrop: `rgba(0,0,123,0.4)`
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/admin/api/unlock_student', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                        // Si usas CSRF token, descomenta:
+                        // 'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        exam_id: examId
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire(
+                                '¡Desbloqueado!',
+                                'El alumno ha sido rehabilitado.',
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', data.message || 'Algo salió mal', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                    });
+            }
+        });
+    }
     // ¡AQUÍ NO DEBE HABER NADA MÁS! La siguiente función es enviarMensajeGlobal
     // 2. Llamada al Backend (Python)
     fetch('/admin/api/unlock_student', {

@@ -1617,7 +1617,7 @@ def reset_attempt_by_user(exam_id, user_id):
         db.session.rollback()
         app.logger.error(f"Error reset: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
-# --- EN app.py ---
+# --- EN app.py (Reemplaza la función unlock_student_exam completa) ---
 
 @app.route('/admin/api/unlock_student', methods=['POST'])
 @login_required
@@ -1628,40 +1628,52 @@ def unlock_student_exam():
 
     try:
         data = request.json
-        # 1. Asegurar que sean enteros (evita errores de tipo)
+        # Convertimos a enteros por seguridad
         user_id = int(data.get('user_id'))
         exam_id = int(data.get('exam_id'))
 
-        # 2. BUSCAR Y RESETEAR EL RESULTADO (Quitar el -1.0)
+        # 1. BUSCAR EL RESULTADO (NO LO BORRAMOS, SOLO LO EDITAMOS)
         result = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
         
         if result:
-            # Lo regresamos a estado "Iniciando" (-2.0)
+            # 🔥 LA CLAVE: No borramos el resultado. Solo quitamos la marca de "Cancelado".
+            # Al poner submission_type en None, el sistema piensa que sigue haciéndolo.
+            result.submission_type = None 
+            
+            # Si usas el score para marcar estado, lo ponemos en -2.0 (Iniciando/En curso)
+            # o en None, dependiendo de tu lógica. -2.0 suele ser seguro para "no calificado".
+            # (Si tenías una nota parcial, esto no borra las respuestas, solo la nota final).
             result.score = -2.0 
-            result.submission_type = None # Limpiamos la marca de cancelación
-            # Opcional: Limpiar fecha para que no cuente como intento gastado hoy
-            # result.date_taken = datetime.utcnow() 
-        
-        # 3. LIMPIAR SESIÓN ACTIVA (Esto reinicia el contador de la sesión actual)
+            
+            # Opcional: Si quieres que el cronómetro "recupere" el tiempo perdido,
+            # tendrías que sumar tiempo extra manualmente. Por defecto, el reloj
+            # sigue corriendo desde que inició. Esta función solo le abre la puerta.
+
+        # 2. BORRAR ADVERTENCIAS (Logs de Violaciones)
+        # Esto sí lo borramos para que quede "limpio" de pecados.
+        db.session.query(ViolationLog).filter_by(user_id=user_id, exam_id=exam_id).delete()
+
+        # 3. ¿Y LAS RESPUESTAS (Answers)? 
+        # ¡NO LAS TOCAMOS! Así, cuando el alumno recargue, sus respuestas seguirán ahí.
+
+        # 4. LIMPIAR SESIÓN ACTIVA (Opcional, pero recomendado resetearla)
+        # Esto ayuda a que el sistema de monitoreo no se confunda con sockets viejos.
         active_session = ActiveExamSession.query.filter_by(user_id=user_id, exam_id=exam_id).first()
         if active_session:
             db.session.delete(active_session)
 
-        # 4. 🔥 BORRAR EL HISTORIAL DE VIOLACIONES (Logs) 🔥
-        # Esto elimina las advertencias previas de la base de datos para este examen
-        db.session.query(ViolationLog).filter_by(user_id=user_id, exam_id=exam_id).delete()
-
         db.session.commit()
 
-        # 5. MAGIA: Avisar al alumno que refresque su página automáticamente
+        # 5. AVISAR AL ALUMNO (SocketIO)
+        # Le enviamos la orden de "unlock" para que su pantalla roja desaparezca
+        # y recargue la página. Al recargar, Flask cargará sus respuestas guardadas.
         socketio.emit('execute_repair', {'command': 'unlock'}, room=str(user_id))
 
-        return jsonify({'success': True, 'msg': 'Alumno desbloqueado y advertencias borradas.'})
+        return jsonify({'success': True, 'msg': 'Alumno desbloqueado. Respuestas conservadas.'})
 
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error al desbloquear: {e}")
-        # Esto hará que el mensaje de error sea visible en la consola del navegador si falla
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route("/admin/exam_simulator/<int:exam_id>")
