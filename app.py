@@ -2895,37 +2895,28 @@ def edit_question(question_id):
 @app.route('/exams') 
 @login_required
 def student_exams(): 
-    # 1. Obtenemos la hora actual CORRECTA (Local)
-    current_time = datetime.now()
+    # 1. Seguridad básica: solo estudiantes
+    if current_user.role != "student":
+        return redirect(url_for("admin_panel"))
 
-    # 2. Obtenemos todos los exámenes
-    exams = Exam.query.all()
+    # 2. Obtenemos IDs de exámenes YA TERMINADOS (score >= 0)
+    # (Para no mostrarlos en la lista)
+    completed_exam_ids = [r.exam_id for r in ExamResult.query.filter(
+        ExamResult.user_id == current_user.id,
+        ExamResult.score >= 0.0
+    ).all()]
+
+    # 3. CONSULTA CORRECTA Y FILTRADA
+    # - Filtramos que el estudiante esté asignado (.any)
+    # - Filtramos que NO esté completado (NOT IN)
+    exams = Exam.query.filter(
+        Exam.assigned_students.any(id=current_user.id), 
+        ~Exam.id.in_(completed_exam_ids)
+    ).all()
     
-    # 3. Creamos una lista mejorada con datos extra para el bloqueo
-    enhanced_exams = []
-    for exam in exams:
-        # Cálculo de bloqueo
-        is_locked = False
-        seconds_until_start = 0
-        
-        if exam.start_datetime and exam.start_datetime > current_time:
-            is_locked = True
-            # Calculamos la diferencia en segundos
-            seconds_until_start = int((exam.start_datetime - current_time).total_seconds())
-
-        # Guardamos el objeto examen original + los datos nuevos
-        enhanced_exams.append({
-            'exam_obj': exam, 
-            'is_locked': is_locked,
-            'seconds_to_start': seconds_until_start
-        })
-
-    # 4. Renderizamos pasando la lista mejorada a 'exams.html'
-    # OJO: Aquí puse el nombre que me dijiste 👇
-    return render_template('exams.html', exams=enhanced_exams)
-import io  # Asegúrate de que esto esté al principio del archivo app.py o dentro de la función
-import csv
-from flask import make_response
+    # 4. Renderizamos pasando la lista directa de objetos
+    # El HTML nuevo se encarga de calcular los bloqueos de tiempo con JavaScript
+    return render_template('exams.html', exams=exams)
 
 @app.route('/admin/exam/<int:exam_id>/download_failure_stats')
 @login_required
