@@ -3219,8 +3219,21 @@ def review_student_exam(exam_id, user_id):
 
     exam = Exam.query.get_or_404(exam_id)
     student = User.query.get_or_404(user_id)
-
     result = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
+
+    # Si no hay resultado, no podemos revisar
+    if not result:
+        flash("No hay resultados para este alumno.", "warning")
+        return redirect(url_for("view_answers", exam_id=exam_id))
+
+    # --- CARGA SEGURA DE DATOS DE PROCTORING ---
+    proctoring_viz_data = None
+    if result.proctoring_data:
+        try:
+            proctoring_viz_data = json.loads(result.proctoring_data)
+        except Exception as e:
+            app.logger.error(f"Error cargando proctoring para {student.username}: {e}")
+            proctoring_viz_data = {"time_data": {}, "click_data": []} # Fallback vacío
 
     review_data_query = (
         db.session.query(Question, Answer)
@@ -3238,6 +3251,7 @@ def review_student_exam(exam_id, user_id):
         student=student,
         review_data=review_data_query,
         result=result,
+        proctoring_viz_data=proctoring_viz_data # Asegúrate de pasarlo
     )
 
 
