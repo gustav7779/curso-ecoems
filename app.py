@@ -3823,23 +3823,24 @@ def mark_announcement_read(announcement_id):
 @app.route("/exams")
 @login_required
 def exams_list():
-    # 1. Seguridad: Solo alumnos entran aquí
+    # 1. Seguridad
     if current_user.role != "student":
         return redirect(url_for("admin_panel"))
 
-    # 2. Buscamos los IDs de los exámenes que el alumno YA terminó (score >= 0)
+    # 2. Obtener IDs completados
     completed_exam_ids = [r.exam_id for r in ExamResult.query.filter(
         ExamResult.user_id == current_user.id,
         ExamResult.score >= 0.0
     ).all()]
 
-    # 3. FILTRADO RESTRICTIVO (El gran cambio)
-    # Traemos solo exámenes donde el alumno está asignado Y no los ha terminado
+    # 3. FILTRO CORREGIDO (Objetos Exam directos)
+    # Esto devuelve una lista de objetos [Exam1, Exam2], NO diccionarios.
     available_exams = Exam.query.filter(
         Exam.assigned_students.any(id=current_user.id), 
         ~Exam.id.in_(completed_exam_ids)
     ).all()
 
+    # 4. Enviar al HTML
     return render_template("exams.html", exams=available_exams)
 @app.route("/exam/save_answer", methods=["POST"])
 @login_required
