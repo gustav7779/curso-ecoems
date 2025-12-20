@@ -431,31 +431,30 @@ document.addEventListener('DOMContentLoaded', function() {
             
             {# 🔥 FIX IMÁGENES: Corregido error de sintaxis y añadido contenedor responsivo #}
            {# Ejemplo para la imagen de la pregunta #}
-{# --- IMAGEN PRINCIPAL DE LA PREGUNTA CON ZOOM --- #}
-{% if question.image_filename %}
-    {# 1. Contenedor con ID único para que el JS sepa cuál agrandar #}
-    <div class="question-image-container" 
-         id="img-container-{{ question.id }}"
-         style="min-height: 150px; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s ease;">
-         
-        <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
-             class="question-image" 
-             loading="lazy" 
-             onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();"
-             draggable="false" 
-             alt="Imagen de la pregunta">
-    </div>
+{# --- IMAGEN PRINCIPAL DE LA PREGUNTA --- #}
+                    {% if question.image_filename %}
+                        <div class="question-image-container" 
+                             id="img-container-{{ question.id }}"
+                             style="min-height: 150px; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s ease;">
+                             
+                            <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
+                                 class="question-image" 
+                                 loading="lazy" 
+                                 onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();"
+                                 draggable="false" 
+                                 alt="Imagen de la pregunta">
+                        </div>
 
-    {# 2. Botón para activar/desactivar modo lectura #}
-    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-        <button type="button" 
-                class="button" 
-                style="background: #34495e; padding: 8px 20px; font-size: 0.9em; border-radius: 20px; border: 1px solid #2c3e50;"
-                onclick="toggleReadingMode('{{ question.id }}')">
-            🔍 📄 Ampliar / Reducir Lectura
-        </button>
-    </div>
-{% endif %}
+                        {# Botón Zoom #}
+                        <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                            <button type="button" 
+                                    class="btn btn-sm btn-secondary" 
+                                    style="border-radius: 20px;"
+                                    onclick="toggleReadingMode('{{ question.id }}')">
+                                🔍 📄 Ampliar / Reducir Lectura
+                            </button>
+                        </div>
+                    {% endif %}
             
             <div class="options-group">
                 
