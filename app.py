@@ -3827,7 +3827,7 @@ def exams_list():
     if current_user.role != "student":
         return redirect(url_for("admin_panel"))
 
-    # 2. Obtener IDs completados
+    # 2. IDs de exámenes ya terminados (para ocultarlos)
     completed_exam_ids = [r.exam_id for r in ExamResult.query.filter(
         ExamResult.user_id == current_user.id,
         ExamResult.score >= 0.0
