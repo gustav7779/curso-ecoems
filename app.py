@@ -2919,6 +2919,10 @@ def student_exams():
     # 4. Renderizamos pasando la lista mejorada a 'exams.html'
     # OJO: Aquí puse el nombre que me dijiste 👇
     return render_template('exams.html', exams=enhanced_exams)
+import io  # Asegúrate de que esto esté al principio del archivo app.py o dentro de la función
+import csv
+from flask import make_response
+
 @app.route('/admin/exam/<int:exam_id>/download_failure_stats')
 @login_required
 def download_failure_stats(exam_id):
@@ -2927,95 +2931,60 @@ def download_failure_stats(exam_id):
 
     exam = Exam.query.get_or_404(exam_id)
     
-    # 1. Definir las materias y sus contadores iniciales en 0
-    # Usamos los nombres EXACTOS que usas en tus preguntas
     stats = {
-        'Habilidad verbal': 0,
-        'Habilidad matemática': 0,
-        'Español': 0,
-        'Matemáticas': 0,
-        'Biología': 0,
-        'Física': 0,
-        'Química': 0,
-        'Historia': 0,
-        'Geografía': 0,
-        'Formación Cívica y Ética': 0
+        'Habilidad verbal': 0, 'Habilidad matemática': 0, 'Español': 0,
+        'Matemáticas': 0, 'Biología': 0, 'Física': 0, 'Química': 0,
+        'Historia': 0, 'Geografía': 0, 'Formación Cívica y Ética': 0
     }
 
-    # 2. Obtener todos los resultados de alumnos que ya terminaron
     results = ExamResult.query.filter_by(exam_id=exam_id).all()
-    
-    # Mapa rápido de Pregunta ID -> Materia
     questions = Question.query.filter_by(exam_id=exam_id).all()
+    
+    # Mapa de Pregunta -> Materia y Pregunta -> Respuesta Correcta
     qid_to_subject = {q.id: q.subject for q in questions}
+    qid_to_correct = {q.id: q.correct_option for q in questions}
 
-    # 3. Analizar alumno por alumno
     for result in results:
         user_id = result.user_id
         
-        # Obtener respuestas de ESTE alumno para ESTE examen
-        # Hacemos un join para filtrar solo las respuestas de este examen
-        student_answers = db.session.query(Answer).filter(
-            Answer.user_id == user_id
-        ).join(Question).filter(
-            Question.exam_id == exam_id
-        ).all()
+        # Obtenemos las respuestas directamente
+        student_answers = Answer.query.filter_by(user_id=user_id).join(Question).filter(Question.exam_id == exam_id).all()
 
-        # Conteo temporal de aciertos del alumno actual por materia
-        # Inicializamos en 0 para todas las materias del diccionario stats
         aciertos_alumno = {key: 0 for key in stats.keys()}
 
-        # Contar aciertos
         for ans in student_answers:
-            # Si la respuesta es correcta (grade == 1.0)
-            if ans.grade == 1.0:
+            # En lugar de confiar en 'grade', comparamos respuesta vs correcta
+            correcta = qid_to_correct.get(ans.question_id)
+            if ans.response == correcta and correcta is not None:
                 materia = qid_to_subject.get(ans.question_id)
-                
-                # Normalización simple por si en la BD dice "Matematicas" sin acento
-                # Esto es opcional, pero ayuda a evitar errores de dedo
-                if materia:
-                    if materia in aciertos_alumno:
-                        aciertos_alumno[materia] += 1
-                    else:
-                        # Intento de fallback o log si la materia no coincide exacto
-                        pass 
+                if materia in aciertos_alumno:
+                    aciertos_alumno[materia] += 1
 
-        # 4. Aplicar Reglas de Reprobación
         for materia, aciertos in aciertos_alumno.items():
             es_reprobado = False
-            
-            # REGLA A: Habilidades (16 preguntas) -> Reprueba con 7 o menos
             if materia in ['Habilidad verbal', 'Habilidad matemática']:
-                if aciertos <= 7:
-                    es_reprobado = True
-            
-            # REGLA B: Resto de materias (12 preguntas) -> Reprueba con 6 o menos
+                if aciertos <= 7: es_reprobado = True
             else:
-                if aciertos <= 6:
-                    es_reprobado = True
+                if aciertos <= 6: es_reprobado = True
             
-            # Si reprobó, sumamos al contador general
             if es_reprobado:
                 stats[materia] += 1
 
-    # 5. Generar CSV
-    si = io.StringIO()
-    cw = csv.writer(si)
+    # AQUÍ ESTABA EL ERROR: Usaremos io directamente o importaremos StringIO
+    output_stream = io.StringIO()
+    cw = csv.writer(output_stream)
     
-    # Cabeceras
     cw.writerow(['Materia', 'Total Alumnos Reprobados', 'Criterio de Reprobación'])
     
-    # Filas
     for materia, total_reprobados in stats.items():
         criterio = "7 aciertos o menos" if "Habilidad" in materia else "6 aciertos o menos"
         cw.writerow([materia, total_reprobados, criterio])
 
-    # 6. Preparar respuesta de descarga
-    output = make_response(si.getvalue())
-    output.headers["Content-Disposition"] = f"attachment; filename=Reprobacion_Por_Materia_{exam_id}.csv"
-    output.headers["Content-type"] = "text/csv"
+    response = make_response(output_stream.getvalue())
+    response.headers["Content-Disposition"] = f"attachment; filename=Reprobacion_materia_{exam_id}.csv"
+    response.headers["Content-type"] = "text/csv"
     
-    return output
+    return response
 
 @app.route("/admin/questions/move/<int:question_id>/<direction>")
 @login_required
@@ -3189,23 +3158,27 @@ def view_answers(exam_id):
         flash("Acceso denegado", "danger")
         return redirect(url_for("dashboard"))
 
-    session.pop("just_logged_in", None)
-
     exam = Exam.query.get_or_404(exam_id)
 
-    results = (
-        db.session.query(
-            User.username,
-            ExamResult.score,
-            ExamResult.date_taken,
-            User.id.label("user_id"),
-            ExamResult.submission_type,
+    # Usamos un bloque try/except general para capturar fallos de base de datos
+    try:
+        results = (
+            db.session.query(
+                User.username,
+                ExamResult.score,
+                ExamResult.date_taken,
+                User.id.label("user_id"),
+                ExamResult.submission_type,
+            )
+            .join(ExamResult, User.id == ExamResult.user_id)
+            .filter(ExamResult.exam_id == exam_id)
+            .order_by(ExamResult.date_taken.desc())
+            .all()
         )
-        .join(ExamResult, User.id == ExamResult.user_id)
-        .filter(ExamResult.exam_id == exam_id)
-        .order_by(ExamResult.date_taken.desc())
-        .all()
-    )
+    except Exception as e:
+        app.logger.error(f"Error crítico en base de datos al ver respuestas: {e}")
+        flash("Hay un error con los datos de algunos alumnos. Contacta a soporte.", "danger")
+        results = []
 
     return render_template("review_results.html", exam=exam, results=results)
 
