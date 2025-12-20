@@ -11,316 +11,236 @@
 <div class="container exam-list-container">
 
     <div class="exams-grid">
-        {% for item in exams %}
-        {# Asumimos que 'item' viene con la estructura del código 2 #}
-        {% set exam = item.exam_obj %}
-        {% set locked = item.is_locked %}
-        {% set seconds = item.seconds_to_start %}
+        {# INICIO DEL BUCLE PRINCIPAL #}
+        {% for exam in exams %}
+            
+            <div class="exam-card" 
+                 id="exam-card-{{ exam.id }}"
+                 data-start="{{ exam.start_datetime.isoformat() if exam.start_datetime else '' }}"
+                 data-end="{{ exam.end_datetime.isoformat() if exam.end_datetime else '' }}">
 
-        {# Calculamos si está expirado usando fecha actual (lógica del código 1) #}
-        {% set now_iso = now.isoformat() if now else None %} <div
-            class="exam-card {% if locked %}locked-card{% endif %}" id="exam-card-{{ exam.id }}"
-            data-seconds="{{ seconds }}">
-
-            {% if locked %}
-            <div class="locked-overlay" id="overlay-{{ exam.id }}">
-                <div class="overlay-content">
-                    <div class="lock-icon">🔒</div>
-                    <h3>Programado</h3>
-                    <p>Disponible en:</p>
-                    <div class="countdown-timer" id="timer-{{ exam.id }}">
-                        <span class="cd-d">00</span>d :
-                        <span class="cd-h">00</span>h :
-                        <span class="cd-m">00</span>m :
-                        <span class="cd-s">00</span>s
+                {# --- OVERLAY DE BLOQUEO (Oculto por defecto, JS lo activa si hace falta) --- #}
+                <div class="locked-overlay hidden" id="overlay-{{ exam.id }}">
+                    <div class="overlay-content">
+                        <div class="lock-icon">🔒</div>
+                        <h3>Programado</h3>
+                        <p>Disponible en:</p>
+                        <div class="countdown-timer" id="timer-{{ exam.id }}">
+                            <span class="cd-d">00</span>d :
+                            <span class="cd-h">00</span>h :
+                            <span class="cd-m">00</span>m :
+                            <span class="cd-s">00</span>s
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
 
-            <div class="card-body">
-                <h5 class="card-title">{{ exam.title }}</h5>
-                <div class="exam-meta">
-                    <span class="badge-questions">📝 {{ exam.questions | length | default(0) }} Preguntas</span>
+                <div class="card-body">
+                    <h5 class="card-title">{{ exam.title }}</h5>
+                    <div class="exam-meta">
+                        <span class="badge-questions">📝 {{ exam.questions | length }} Preguntas</span>
+                    </div>
+                    <p class="card-text">{{ exam.description | truncate(90) }}</p>
                 </div>
-                <p class="card-text">{{ exam.description | truncate(90) }}</p>
-            </div>
 
-            <div class="card-footer">
-                {% if locked %}
-                <button class="btn btn-secondary btn-block disabled-btn" disabled>
-                    ⏳ Esperando inicio...
-                </button>
-                {% else %}
-                <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn present-btn btn-block">
-                    🚀 Presentar Examen
-                </a>
-                {% endif %}
+                <div class="card-footer">
+                    {# El botón se deshabilita vía JS si está bloqueado #}
+                    <a href="{{ url_for('take_exam', exam_id=exam.id) }}" 
+                       class="btn present-btn btn-block"
+                       id="btn-{{ exam.id }}">
+                        🚀 Presentar Examen
+                    </a>
+                </div>
             </div>
-        </div>
-
-        {% for exam in exams %}
-        <div class="exam-card">
-            <h3>{{ exam.title }}</h3>
-            <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn">🚀 Presentar Examen</a>
-        </div>
 
         {% else %}
-        <div class="alert alert-info text-center" style="grid-column: 1 / -1; padding: 40px;">
-            <h2 style="font-size: 3rem;">🎉</h2>
-            <h3>¡Felicidades!</h3>
-            <p>Has completado todos los exámenes disponibles por ahora o no tienes exámenes asignados.</p>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Volver al Inicio</a>
-        </div>
-        {% endfor %}
+            {# --- MENSAJE SI NO HAY EXÁMENES --- #}
+            <div class="alert alert-info text-center" style="grid-column: 1 / -1; padding: 40px; background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h2 style="font-size: 3rem;">🎉</h2>
+                <h3 style="color: #2c3e50; margin-top: 10px;">¡Todo listo!</h3>
+                <p style="font-size: 1.1em; color: #7f8c8d;">
+                    No tienes exámenes pendientes por ahora.<br>
+                    Has completado todo o aún no se te asignan nuevas pruebas.
+                </p>
+                <a href="{{ url_for('dashboard') }}" class="btn back-btn" style="margin-top: 15px;">
+                    Volver al Inicio
+                </a>
+            </div>
+        {% endfor %} 
+        {# FIN DEL BUCLE (Aquí estaba el error antes) #}
     </div>
 
-    <div style="margin-top: 30px; text-align: center;">
+    <div style="margin-top: 40px; text-align: center;">
         <a href="{{ url_for('dashboard') }}" class="btn back-btn">⬅ Volver al Dashboard</a>
     </div>
 </div>
 
 <style>
-    /* --- HEADER DEL CÓDIGO 1 --- */
+    /* --- HEADER --- */
     .exam-header {
-        background: linear-gradient(90deg, #3498db, #2980b9);
+        background: linear-gradient(135deg, #3498db, #2980b9);
         color: white;
-        padding: 25px;
+        padding: 40px 20px;
         text-align: center;
-        border-radius: 0 0 10px 10px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        border-radius: 0 0 20px 20px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
     }
+    .exam-header h1 { margin: 0; font-size: 2.2em; font-weight: 800; }
+    .exam-header p { margin-top: 10px; font-size: 1.1em; opacity: 0.9; }
 
-    .exam-header h1 {
-        margin: 0;
-        font-size: 2em;
-    }
-
-    .exam-header p {
-        margin: 5px 0 0;
-        opacity: 0.9;
-    }
-
-    /* --- GRID SYSTEM (CÓDIGO 2) --- */
+    /* --- GRID --- */
     .exam-list-container {
-        max-width: 1000px;
+        max-width: 1100px;
         margin: 0 auto;
-        padding-bottom: 50px;
+        padding: 0 20px 50px;
     }
-
     .exams-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 25px;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 30px;
     }
 
-    /* --- TARJETAS (CÓDIGO 2 MEJORADO) --- */
+    /* --- TARJETA --- */
     .exam-card {
-        border: 1px solid #eee;
-        border-radius: 12px;
+        background: white;
+        border: 1px solid #eef2f7;
+        border-radius: 16px;
         overflow: hidden;
         transition: all 0.3s;
-        position: relative;
-        background: white;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
         display: flex;
         flex-direction: column;
+        height: 100%;
+        position: relative; /* Para el overlay */
+    }
+    .exam-card:hover:not(.locked) {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        border-color: #3498db;
     }
 
-    .exam-card:hover:not(.locked-card) {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-    }
-
-    .card-body {
-        padding: 20px;
-        flex-grow: 1;
-    }
-
-    .card-title {
-        font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 10px;
-        font-size: 1.25rem;
-    }
-
-    .card-text {
-        color: #7f8c8d;
-        font-size: 0.95em;
-        line-height: 1.5;
-    }
-
+    .card-body { padding: 25px; flex-grow: 1; }
+    .card-title { font-weight: 800; color: #2c3e50; margin-bottom: 15px; font-size: 1.3rem; }
+    .exam-meta { margin-bottom: 15px; }
     .badge-questions {
-        background: #eaf2f8;
+        background: #eaf6ff;
         color: #3498db;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.85em;
-        font-weight: 600;
-        margin-bottom: 10px;
-        display: inline-block;
+        padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85em;
     }
+    .card-text { color: #636e72; font-size: 0.95em; line-height: 1.6; }
 
     .card-footer {
-        background: #f8f9fa;
-        padding: 15px;
-        border-top: 1px solid #eee;
+        background: #f8f9fa; padding: 20px; border-top: 1px solid #f1f1f1; text-align: center;
     }
 
     /* --- BOTONES --- */
     .present-btn {
-        background: #2ecc71;
-        color: white;
-        font-weight: bold;
-        border: none;
-        padding: 10px;
-        width: 100%;
-        display: block;
-        text-align: center;
-        text-decoration: none;
-        border-radius: 5px;
+        background: linear-gradient(90deg, #2ecc71, #27ae60);
+        color: white; font-weight: bold; border: none; padding: 12px 25px;
+        width: 100%; display: inline-block; border-radius: 8px; text-decoration: none;
     }
-
-    .present-btn:hover {
-        background: #27ae60;
-        color: white;
-        text-decoration: none;
-    }
+    .present-btn:hover { transform: scale(1.02); color: white; box-shadow: 0 6px 12px rgba(46, 204, 113, 0.3); }
+    .present-btn.disabled { background: #95a5a6; pointer-events: none; cursor: not-allowed; }
 
     .back-btn {
-        background: #7f8c8d;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        text-decoration: none;
-        display: inline-block;
+        background: #95a5a6; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600;
     }
+    .back-btn:hover { background: #7f8c8d; color: white; }
 
-    .back-btn:hover {
-        background: #616f70;
-        color: white;
-    }
-
-    /* --- OVERLAY BLOQUEADO (CÓDIGO 2) --- */
+    /* --- OVERLAY BLOQUEADO (Lógica recuperada) --- */
     .locked-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(44, 62, 80, 0.9);
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(44, 62, 80, 0.95);
         backdrop-filter: blur(4px);
         color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        display: flex; justify-content: center; align-items: center;
         z-index: 10;
         transition: opacity 0.5s ease-out;
     }
-
-    .locked-overlay.hidden {
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    .overlay-content {
-        text-align: center;
-    }
-
-    .lock-icon {
-        font-size: 2.5rem;
-        margin-bottom: 10px;
-        animation: bounce 2s infinite;
-    }
-
+    .locked-overlay.hidden { opacity: 0; pointer-events: none; display: none; }
+    
+    .overlay-content { text-align: center; }
+    .lock-icon { font-size: 2.5rem; margin-bottom: 10px; animation: bounce 2s infinite; }
+    
     .countdown-timer {
-        font-family: 'Courier New', monospace;
-        font-size: 1.2rem;
-        font-weight: bold;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 8px 15px;
-        border-radius: 50px;
-        margin-top: 10px;
-    }
-
-    .no-exams-message {
-        background: #fff3cd;
-        color: #856404;
-        padding: 20px;
-        text-align: center;
-        border-radius: 8px;
-        font-weight: bold;
+        font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold;
+        background: rgba(0, 0, 0, 0.3); padding: 8px 15px; border-radius: 50px; margin-top: 10px;
     }
 
     @keyframes bounce {
-
-        0%,
-        100% {
-            transform: translateY(0);
-        }
-
-        50% {
-            transform: translateY(-10px);
-        }
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
     }
 
-    /* Responsive */
-    @media (max-width: 600px) {
-        .exam-header {
-            padding: 15px;
-        }
-
-        .exam-header h1 {
-            font-size: 1.5em;
-        }
+    @media (max-width: 768px) {
+        .exams-grid { grid-template-columns: 1fr; }
     }
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const lockedCards = document.querySelectorAll('.locked-card');
+        const cards = document.querySelectorAll('.exam-card');
+        const now = new Date();
 
-        lockedCards.forEach(card => {
+        cards.forEach(card => {
+            const startStr = card.dataset.start;
+            // Si no tiene fecha de inicio, no hacemos nada (está abierto)
+            if (!startStr) return;
+
+            // Convertir fecha del servidor (ISO) a objeto Date local
+            // Nota: El backend envía UTC o local, el navegador se ajusta
+            let startTime = new Date(startStr);
+            
+            // Si la fecha es inválida, ignoramos
+            if (isNaN(startTime.getTime())) return;
+
             const examId = card.id.split('-')[2];
-            let timeLeft = parseInt(card.dataset.seconds);
-            const timerDisplay = document.getElementById('timer-' + examId);
             const overlay = document.getElementById('overlay-' + examId);
+            const btn = document.getElementById('btn-' + examId);
+            const timerDisplay = document.getElementById('timer-' + examId);
 
-            function updateCardTimer() {
-                if (timeLeft <= 0) {
+            function updateTimer() {
+                const currentTime = new Date();
+                const diff = startTime - currentTime;
+
+                if (diff <= 0) {
+                    // YA EMPEZÓ: Desbloquear
+                    if (overlay) overlay.classList.add('hidden');
+                    if (btn) {
+                        btn.classList.remove('disabled');
+                        btn.textContent = "🚀 Presentar Examen";
+                    }
                     clearInterval(interval);
-                    overlay.classList.add('hidden');
+                } else {
+                    // FALTA TIEMPO: Bloquear
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                        overlay.style.display = 'flex'; // Forzar display flex
+                    }
+                    if (btn) {
+                        btn.classList.add('disabled');
+                        btn.textContent = "⏳ Esperando inicio...";
+                    }
 
-                    setTimeout(() => {
-                        const footer = card.querySelector('.card-footer');
-                        // Usamos JS para inyectar el botón correcto
-                        // NOTA: Asegúrate que la ruta coincida con tu Flask
-                        footer.innerHTML = `
-                            <a href="/exam/${examId}/take" class="btn present-btn">
-                                🚀 Presentar Examen
-                            </a>
-                        `;
-                        card.classList.remove('locked-card');
-                    }, 500);
-                    return;
+                    // Calcular días, horas, minutos, segundos
+                    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    // Actualizar HTML del contador
+                    if (timerDisplay) {
+                        timerDisplay.querySelector('.cd-d').textContent = d < 10 ? '0' + d : d;
+                        timerDisplay.querySelector('.cd-h').textContent = h < 10 ? '0' + h : h;
+                        timerDisplay.querySelector('.cd-m').textContent = m < 10 ? '0' + m : m;
+                        timerDisplay.querySelector('.cd-s').textContent = s < 10 ? '0' + s : s;
+                    }
                 }
-
-                const d = Math.floor(timeLeft / (3600 * 24));
-                const h = Math.floor((timeLeft % (3600 * 24)) / 3600);
-                const m = Math.floor((timeLeft % 3600) / 60);
-                const s = Math.floor(timeLeft % 60);
-
-                timerDisplay.querySelector('.cd-d').textContent = d < 10 ? '0' + d : d;
-                timerDisplay.querySelector('.cd-h').textContent = h < 10 ? '0' + h : h;
-                timerDisplay.querySelector('.cd-m').textContent = m < 10 ? '0' + m : m;
-                timerDisplay.querySelector('.cd-s').textContent = s < 10 ? '0' + s : s;
-
-                timeLeft--;
             }
 
-            updateCardTimer();
-            const interval = setInterval(updateCardTimer, 1000);
+            // Ejecutar inmediatamente y luego cada segundo
+            updateTimer();
+            const interval = setInterval(updateTimer, 1000);
         });
     });
 </script>
