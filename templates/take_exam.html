@@ -431,22 +431,31 @@ document.addEventListener('DOMContentLoaded', function() {
             
             {# 🔥 FIX IMÁGENES: Corregido error de sintaxis y añadido contenedor responsivo #}
            {# Ejemplo para la imagen de la pregunta #}
-{# --- IMAGEN PRINCIPAL --- #}
-                    {% if question.image_filename %}
-                        <div class="question-image-container" id="img-container-{{ question.id }}" style="text-align:center;">
-                            <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
-                                 class="question-image" 
-                                 loading="lazy"
-                                 style="max-width:100%; border-radius:8px;"
-                                 onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();">
-                        </div>
-                        {# Botón Zoom #}
-                        <div style="text-align: center; margin: 10px 0;">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleReadingMode('{{ question.id }}')">
-                                🔍 Ampliar Lectura
-                            </button>
-                        </div>
-                    {% endif %}
+{# --- IMAGEN PRINCIPAL DE LA PREGUNTA CON ZOOM --- #}
+{% if question.image_filename %}
+    {# 1. Contenedor con ID único para que el JS sepa cuál agrandar #}
+    <div class="question-image-container" 
+         id="img-container-{{ question.id }}"
+         style="min-height: 150px; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s ease;">
+         
+        <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
+             class="question-image" 
+             loading="lazy" 
+             onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();"
+             draggable="false" 
+             alt="Imagen de la pregunta">
+    </div>
+
+    {# 2. Botón para activar/desactivar modo lectura #}
+    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+        <button type="button" 
+                class="button" 
+                style="background: #34495e; padding: 8px 20px; font-size: 0.9em; border-radius: 20px; border: 1px solid #2c3e50;"
+                onclick="toggleReadingMode('{{ question.id }}')">
+            🔍 📄 Ampliar / Reducir Lectura
+        </button>
+    </div>
+{% endif %}
             
             <div class="options-group">
                 
@@ -487,39 +496,45 @@ document.addEventListener('DOMContentLoaded', function() {
                             {# Imagen de la opción (Si existe) #}
                             {# 🔥 FIX: Usamos img_file en lugar de question.image_filename aquí #}
                            {# Busca esta parte en tu bucle de opciones #}
-{# --- IMAGEN DE LA OPCIÓN (Si existe) --- #}
-{% if img_file %}
-    <div style="margin-top: 8px; min-height: 100px; background: #fafafa; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
-        <img src="{{ img_file.replace('/upload/', '/upload/f_auto,q_auto/') }}"
-             alt="Opción {{ letter }}" 
-             class="img-fluid"
-             loading="lazy"
-             onerror="this.onerror=null; this.src='{{ img_file }}?t=' + new Date().getTime();"
-             style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
-    </div>
-{% endif %}
-                                </div>
-                            {% endif %}
+{# --- IMAGEN DE LA OPCIÓN (Optimizado y Corregido) --- #}
+                    {% if img_file %}
+                        <div style="margin-top: 8px; min-height: 100px; background: #fafafa; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+                            <img src="{{ img_file.replace('/upload/', '/upload/f_auto,q_auto/') }}"
+                                 alt="Opción {{ letter }}" 
+                                 class="img-fluid"
+                                 loading="lazy"
+                                 onerror="this.onerror=null; this.src='{{ img_file }}?t=' + new Date().getTime();"
+                                 style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
                         </div>
-            
-                    </label>
                     {% endif %}
-                {% endfor %}
-            </div>
+                    
+                </div> {# Cierre del div que contiene texto e imagen #}
+            </label>
+        {% endif %} {# Cierre del if que verifica si la opción existe #}
+    {% endfor %} {# Cierre del bucle de opciones (A, B, C, D) #}
+</div> {# Cierre del contenedor de opciones #}
 
-            <div class="question-nav-buttons">
-                {% if not loop.last %}
-                <button type="button" class="button flag-and-next-btn" data-qid="{{ question.id }}">🚩 Marcar y
-                    Siguiente</button>
-                <button type="button" class="button next-question-btn">Siguiente Pregunta →</button>
-                {% else %}
-                <button type="button" class="button review-mode-btn">🔄 Ir a Revisión (🚩)</button>
-                <button type="button" class="button finish-directly-btn">✅ Finalizar y Entregar Ahora</button>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
+{# --- BOTONES DE NAVEGACIÓN --- #}
+<div class="question-nav-buttons">
+    {% if not loop.last %}
+        <button type="button" class="button flag-and-next-btn" data-qid="{{ question.id }}">
+            🚩 Marcar y Siguiente
+        </button>
+        <button type="button" class="button next-question-btn">
+            Siguiente Pregunta →
+        </button>
+    {% else %}
+        <button type="button" class="button review-mode-btn">
+            🔄 Ir a Revisión (🚩)
+        </button>
+        <button type="button" class="button finish-directly-btn">
+            ✅ Finalizar y Entregar Ahora
+        </button>
+    {% endif %}
+</div>
 
+</div> {# Cierre del contenedor de la pregunta #}
+{% endfor %} {# Cierre del bucle principal de preguntas #}
         <div id="review-mode-info" style="display: none;">
             <h3>Modo de Revisión</h3>
             <p>Estás en modo de revisión. Usa el "Mapa del Examen" para saltar a las preguntas marcadas (🚩). Presiona
