@@ -184,18 +184,38 @@
 </style>
 
 <script>
-    // Lógica del contador para la sala de espera
-    document.addEventListener('DOMContentLoaded', function() {
-        let startTime = parseInt("{{ start_time_utc | default('0') }}");
-        
-        function updateWaitTimer() {
-            const now = Math.floor(Date.now() / 1000);
-            const distance = startTime - now;
+   const savedAnswers = {{ saved_answers_dict | tojson | safe }} || {};
 
-            if (distance < 0) {
-                location.reload(); 
-                return;
-            }
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Lógica del contador (Sala de espera)
+    let startTime = parseInt("{{ start_time_utc | default('0') }}");
+    
+    function updateWaitTimer() {
+        const now = Math.floor(Date.now() / 1000);
+        const distance = startTime - now;
+        if (distance < 0) {
+            location.reload(); 
+            return;
+        }
+        // ... aquí va el resto de tu función updateWaitTimer si tiene más lógica ...
+    }
+
+    // 2. CICLO DE RE-PINTADO INICIAL (Mapa de preguntas)
+    // Esto se ejecuta apenas carga la página para marcar lo que ya se contestó
+    Object.keys(savedAnswers).forEach(qid => {
+        const btn = document.getElementById('map-btn-' + qid);
+        if (btn && savedAnswers[qid]) {
+            btn.classList.add('answered');
+            btn.classList.remove('flagged');
+        }
+    });
+
+    // 3. Si hay un timer activo, iniciarlo
+    if(startTime > 0) {
+        setInterval(updateWaitTimer, 1000);
+        updateWaitTimer();
+    }
+});
 
             const days = Math.floor(distance / (60 * 60 * 24));
             const hours = Math.floor((distance % (60 * 60 * 24)) / (60 * 60));
@@ -410,11 +430,32 @@
             <p class="question-text question-centered">{{ question.text }}</p>
             
             {# 🔥 FIX IMÁGENES: Corregido error de sintaxis y añadido contenedor responsivo #}
-            {% if question.image_filename %}
-            <div class="question-image-container">
-                <img src="{{ question.image_filename }}" class="question-image" draggable="false" alt="Imagen de la pregunta">
-            </div>
-            {% endif %}
+           {# Ejemplo para la imagen de la pregunta #}
+{# --- IMAGEN PRINCIPAL DE LA PREGUNTA CON ZOOM --- #}
+{% if question.image_filename %}
+    {# 1. Contenedor con ID único para que el JS sepa cuál agrandar #}
+    <div class="question-image-container" 
+         id="img-container-{{ question.id }}"
+         style="min-height: 150px; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s ease;">
+         
+        <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
+             class="question-image" 
+             loading="lazy" 
+             onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();"
+             draggable="false" 
+             alt="Imagen de la pregunta">
+    </div>
+
+    {# 2. Botón para activar/desactivar modo lectura #}
+    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+        <button type="button" 
+                class="button" 
+                style="background: #34495e; padding: 8px 20px; font-size: 0.9em; border-radius: 20px; border: 1px solid #2c3e50;"
+                onclick="toggleReadingMode('{{ question.id }}')">
+            🔍 📄 Ampliar / Reducir Lectura
+        </button>
+    </div>
+{% endif %}
             
             <div class="options-group">
                 
@@ -454,15 +495,18 @@
             
                             {# Imagen de la opción (Si existe) #}
                             {# 🔥 FIX: Usamos img_file en lugar de question.image_filename aquí #}
-                            {% if img_file %}
-                                <div style="margin-top: 8px;">
-                                    <img src="{{ img_file }}"
-                                         alt="Opción {{ letter }}" 
-                                         class="img-fluid"
-                                         style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
-                                    {% if not text %}
-                                        <span style="display:block; font-size: 0.8em; color: #666;">(Opción {{ letter }})</span>
-                                    {% endif %}
+                           {# Busca esta parte en tu bucle de opciones #}
+{# --- IMAGEN DE LA OPCIÓN (Si existe) --- #}
+{% if img_file %}
+    <div style="margin-top: 8px; min-height: 100px; background: #fafafa; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+        <img src="{{ img_file.replace('/upload/', '/upload/f_auto,q_auto/') }}"
+             alt="Opción {{ letter }}" 
+             class="img-fluid"
+             loading="lazy"
+             onerror="this.onerror=null; this.src='{{ img_file }}?t=' + new Date().getTime();"
+             style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
+    </div>
+{% endif %}
                                 </div>
                             {% endif %}
                         </div>
@@ -518,29 +562,49 @@
 <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
 
 <script>
-    // 🔥 1. ESTO VA HASTA ARRIBA (Global) 🔥
     window.showFloatingNotification = function(msg, type) {
-        let container = document.getElementById('exam-toast-container');
-        if (!container) {
-            // Si no existe, lo creamos al vuelo para que no falle
-            container = document.createElement('div');
-            container.id = 'exam-toast-container';
-            container.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;";
-            document.body.appendChild(container);
-        }
-        
-        const toast = document.createElement('div');
-        let bg = type==='danger'?'#e74c3c':(type==='success'?'#2ecc71':'#3498db');
-        toast.style.cssText = `background:white; border-left:5px solid ${bg}; padding:15px; border-radius:5px; box-shadow:0 5px 15px rgba(0,0,0,0.2); margin-top:10px; font-family:sans-serif; min-width:250px; opacity:0; transition:opacity 0.5s; transform: translateX(20px);`;
-        toast.innerHTML = `<strong>${type === 'danger' ? '⚠️' : 'ℹ️'}</strong> ${msg}`;
-        container.appendChild(toast);
-        
-        requestAnimationFrame(() => { 
-            toast.style.opacity = '1'; 
-            toast.style.transform = 'translateX(0)'; 
-        });
-        setTimeout(() => { if(toast.parentNode) toast.remove(); }, 5000);
-    };
+    let container = document.getElementById('exam-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'exam-toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `modern-toast toast-${type}`;
+    
+    // Configuración según el tipo
+    let icon = 'ℹ️';
+    let title = 'Información';
+    
+    if (type === 'danger') { icon = '🛑'; title = 'Error Crítico'; }
+    else if (type === 'warning') { icon = '⚠️'; title = 'Advertencia'; }
+    else if (type === 'success') { icon = '✅'; title = 'Éxito'; }
+
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+            <span class="toast-title">${title}</span>
+            <div class="toast-msg">${msg}</div>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    // Animación de entrada
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    // Auto-eliminar después de 6 segundos
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.style.transform = 'translateX(-120%)';
+        setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+        }, 500);
+    }, 6000);
+};
 
     // 🔥 CORRECCIÓN: SOLO UN DOMContentLoaded AQUÍ 🔥
     document.addEventListener('DOMContentLoaded', function () {
@@ -697,20 +761,34 @@
             if (!isExamActive) return; 
             proctoringClicks.push({ x: e.clientX, y: e.clientY, t: Date.now() }); 
         }
+function autoSave(qid, val, intentos = 0) {
+    if (!isExamActive) return;
 
-        function autoSave(qid, val) { 
-            if (!isExamActive) return; 
-            fetch(SAVE_ANSWER_URL, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }, 
-                body: JSON.stringify({ question_id: qid, response: val }) 
-            }).then(response => {
-                if (response.ok) {
-                    const b = document.getElementById('map-btn-' + qid); 
-                    if (b) { b.classList.add('answered'); b.classList.remove('flagged'); } 
-                }
-            }).catch(err => console.error("Error autosave:", err)); 
+    // Pintamos el cuadrito de una vez para dar fluidez
+    const mapBtn = document.getElementById('map-btn-' + qid);
+    if (mapBtn) {
+        mapBtn.classList.add('answered');
+        mapBtn.classList.remove('flagged'); // <--- Agregamos esto
+    }
+
+    fetch(SAVE_ANSWER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ question_id: qid, response: val })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Servidor ocupado");
+        console.log(`✅ Pregunta ${qid} guardada.`);
+    })
+    .catch(err => {
+        if (intentos < 3) {
+            console.warn(`Sincronizando pregunta ${qid}... reintento ${intentos + 1}`);
+            setTimeout(() => autoSave(qid, val, intentos + 1), 2000);
+        } else {
+            showFloatingNotification("⚠️ Error de conexión persistente. No cierres el examen.", "danger");
         }
+    });
+}
 
         // =========================================================
         // 4. FUNCIONES DE IA
@@ -810,77 +888,109 @@
         }
 
         async function runObjectDetection() {
-            const video = document.getElementById('ai-video-feed');
-            try {
-                const modelConfig = isMobile ? { base: 'lite_mobilenet_v2' } : undefined;
-                objectDetector = await cocoSsd.load(modelConfig);
-                isObjectProcessing = true;
+    const video = document.getElementById('ai-video-feed');
+    try {
+        const modelConfig = isMobile ? { base: 'lite_mobilenet_v2' } : { base: 'mobilenet_v2' }; // Usar modelo más pesado en PC
+        objectDetector = await cocoSsd.load(modelConfig);
+        isObjectProcessing = true;
 
-                setInterval(async () => {
-                    if (!isExamActive || !isObjectProcessing || video.paused || video.readyState < 2) return;
-                    const preds = await objectDetector.detect(video);
-                    const phone = preds.find(p => (p.class === 'cell phone' || p.class === 'remote') && p.score > PHONE_CONFIDENCE);
+        setInterval(async () => {
+            if (!isExamActive || !isObjectProcessing || video.paused || video.readyState < 2) return;
+            
+            const preds = await objectDetector.detect(video);
+            
+            // 🚨 AJUSTE 1: Subimos la confianza de 0.30 a 0.65 para evitar "manos"
+            const phone = preds.find(p => 
+                (p.class === 'cell phone') && 
+                p.score > 0.65 // Solo si está +65% seguro
+            );
 
-                    if (phone) {
-                        phoneDetectedStrike++;
-                        if (phoneDetectedStrike >= (isMobile ? 1 : 2)) {
-                            window.reportViolation('AI_PROHIBITED_OBJECT_PHONE');
-                            phoneDetectedStrike = 0;
-                        }
-                    } else { phoneDetectedStrike = 0; }
-                }, OBJECT_CHECK_INTERVAL);
-            } catch (e) { console.error("CocoSSD Error:", e); }
-        }
+            if (phone) {
+                // 🚨 AJUSTE 2: Filtro de Área (Un celular no puede ser del tamaño de toda la pantalla)
+                // Si el objeto detectado es gigante (como una mano pegada a la cámara), lo ignoramos.
+                const area = p.bbox[2] * p.bbox[3];
+                const videoArea = video.width * video.height;
+                if (area > videoArea * 0.5) return; 
+
+                phoneDetectedStrike++;
+                
+                // 🚨 AJUSTE 3: Confirmación Visual (Debe verlo 3 veces seguidas para avisar)
+                if (phoneDetectedStrike >= 3) { 
+                    window.reportViolation('AI_PROHIBITED_OBJECT_PHONE');
+                    phoneDetectedStrike = 0;
+                }
+            } else {
+                if (phoneDetectedStrike > 0) phoneDetectedStrike--; // Si deja de verlo, bajamos el strike poco a poco
+            }
+        }, 600); // Bajamos un poco la frecuencia para que el procesador no se sature y lea mejor
+    } catch (e) { console.error("CocoSSD Error:", e); }
+}
 
         // --- FUNCIONES EXPUESTAS A WINDOW (Para que el HTML las vea) ---
 
         window.reportViolation = function(type) {
-            if (isReportingError || isRequestingPermissions || !isExamActive || violationReported) return;
-            violationReported = true;
-            
-            let msg = "Anomalía detectada.";
-            let isWarningOnly = false; 
-            
-            const sign = " ATTE: Gus";
+    if (isReportingError || isRequestingPermissions || !isExamActive || violationReported) return;
+    violationReported = true;
+    
+    let msg = "Anomalía detectada.";
+    let notificationType = "warning"; // Por defecto amarillo
+    let isWarningOnly = false; 
+    
+    const sign = " ATTE: Gus";
 
-            if (type === 'AI_PROHIBITED_OBJECT_PHONE') {
-                msg = "⚠️ ¡ADVERTENCIA! Uso de celular detectado. Guarda el dispositivo.";
-            }
-            else if (type === 'AI_NO_FACE') {
-                msg = "⚠️ No te veo. Por favor, mantente frente a la cámara (Advertencia).";
-                isWarningOnly = true; 
-            }
-            else if (type === 'AI_GAZE_DESVIATED') {
-                msg = "👀 Mira a la pantalla. Desviar la mirada mucho tiempo es sospechoso (Advertencia).";
-                isWarningOnly = true; 
-            }
-            else if (type === 'AI_VOICE_DETECTED') {
-                msg = "🤫 Se detecta mucho ruido. Por favor guarda silencio (Advertencia).";
-                isWarningOnly = true; 
-            }
-            else if (type === 'TAB_CHANGE') msg = "Deja de cambiar de pestaña, si no el examen se te va a cancelar.";
-            else if (type === 'WINDOW_BLUR') msg = "No salgas de la ventana.";
-            else if (type === 'AI_MULTIPLE_FACES') msg = "Se detectaron múltiples personas. Solo tú puedes estar." + sign;
+    // --- LÓGICA DE MENSAJES Y COLORES ---
+    if (type === 'AI_PROHIBITED_OBJECT_PHONE') {
+        msg = "⚠️ ¡ADVERTENCIA! Uso de celular detectado. Guarda el dispositivo.";
+        notificationType = "danger"; // Rojo
+    }
+    else if (type === 'AI_NO_FACE') {
+        msg = "⚠️ No te veo. Por favor, mantente frente a la cámara.";
+        notificationType = "warning"; // Amarillo
+        isWarningOnly = true; 
+    }
+    else if (type === 'AI_GAZE_DESVIATED') {
+        msg = "👀 Mira a la pantalla. Desviar la mirada mucho tiempo es sospechoso.";
+        notificationType = "warning"; // Amarillo
+        isWarningOnly = true; 
+    }
+    else if (type === 'AI_VOICE_DETECTED') {
+        msg = "🤫 Se detecta mucho ruido. Por favor guarda silencio.";
+        notificationType = "info"; // Azul
+        isWarningOnly = true; 
+    }
+    else if (type === 'TAB_CHANGE') {
+        msg = "Deja de cambiar de pestaña, si no el examen se te va a cancelar.";
+        notificationType = "danger"; // Rojo
+    }
+    else if (type === 'WINDOW_BLUR') {
+        msg = "No salgas de la ventana del examen.";
+        notificationType = "danger"; // Rojo
+    }
+    else if (type === 'AI_MULTIPLE_FACES') {
+        msg = "Se detectaron múltiples personas. Solo tú puedes estar." + sign;
+        notificationType = "danger"; // Rojo
+    }
 
-            showFloatingNotification(msg, "warning"); 
-            
-            if (!isWarningOnly) {
-                html2canvas(document.body, { logging: false }).then(c => {
-                    socket.emit('exam_violation', { 
-                        user_id: currentUserId, 
-                        username: username, 
-                        exam_id: EXAM_ID, 
-                        type: type, 
-                        screenshot: c.toDataURL('image/jpeg', 0.4) 
-                    });
-                });
-            } else {
-                console.log("Violación detectada (Local - No Reportada):", type);
-            }
-            
-            setTimeout(() => violationReported = false, 8000);
-        };
-
+    // 🔥 LANZAMOS LA NOTIFICACIÓN MODERNA 🔥
+    showFloatingNotification(msg, notificationType); 
+    
+    // --- REPORTE AL ADMIN (Solo si no es Warning leve) ---
+    if (!isWarningOnly) {
+        html2canvas(document.body, { logging: false }).then(c => {
+            socket.emit('exam_violation', { 
+                user_id: currentUserId, 
+                username: username, 
+                exam_id: EXAM_ID, 
+                type: type, 
+                screenshot: c.toDataURL('image/jpeg', 0.4) 
+            });
+        });
+    } else {
+        console.log("Violación leve (No enviada al server):", type);
+    }
+    
+    setTimeout(() => violationReported = false, 8000);
+};
         window.startProctoringMonitoring = function() {
             const video = document.getElementById('ai-video-feed');
             if (isAudioProcessing || isInitializingMedia || (video && video.srcObject)) return;
@@ -917,49 +1027,57 @@
         };
 
         window.startExam = function() {
-            console.log("🚀 User clicked Start Exam");
-            
-            const btn = document.getElementById('start-exam-button');
-            const manualBtn = document.getElementById('manual-start-btn');
-            
-            const setLoading = (b) => { if(b) { b.disabled = true; b.textContent = "⌛ Iniciando..."; } };
-            const resetLoading = (b) => { if(b) { b.disabled = false; b.textContent = "Comenzar Examen Ahora 🚀"; } };
-            
-            setLoading(btn);
-            setLoading(manualBtn);
+    const btn = document.getElementById('start-exam-button');
+    const manualBtn = document.getElementById('manual-start-btn');
+    
+    // Función rápida para bloquear ambos botones
+    const lockButtons = () => {
+        if(btn) { btn.disabled = true; btn.textContent = "⌛ Validando cámara..."; }
+        if(manualBtn) { manualBtn.disabled = true; manualBtn.textContent = "⌛ Validando..."; }
+    };
 
-            if (!csrfToken) {
-                Swal.fire({ title: 'Error', text: 'Falta token de seguridad. Recarga la página.', icon: 'error' });
-                resetLoading(btn); resetLoading(manualBtn);
-                return;
+    const unlockButtons = () => {
+        if(btn) { btn.disabled = false; btn.textContent = "Comenzar Examen Ahora 🚀"; }
+        if(manualBtn) { manualBtn.disabled = false; manualBtn.textContent = "▶️ ACTIVAR CÁMARA E INICIAR"; }
+    };
+
+    lockButtons();
+
+    // 1. PEDIMOS PERMISOS ANTES QUE NADA
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(stream => {
+        console.log("✅ Cámara aceptada. Iniciando examen...");
+        
+        // 2. SOLO SI ACEPTA, LE AVISAMOS AL SERVIDOR
+        fetch(START_TIMER_URL, {
+            method: 'POST',
+            body: new URLSearchParams({ action: 'start_timer_now' }),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload(); 
+            } else {
+                Swal.fire('Error', 'No se pudo iniciar el examen en el servidor.', 'error');
+                unlockButtons();
             }
-
-            setTimeout(() => {
-                try { window.startProctoringMonitoring(); } catch(e) { console.warn("Error cámara al inicio (no fatal):", e); }
-            }, 50);
-
-            fetch(START_TIMER_URL, {
-                method: 'POST',
-                body: new URLSearchParams({ action: 'start_timer_now' }),
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken }
-            })
-            .then(async response => {
-                if (response.ok) {
-                    console.log("✅ Timer started. Reloading...");
-                    window.location.reload();
-                } else {
-                    const text = await response.text();
-                    console.error("❌ Server Error:", response.status, text);
-                    Swal.fire({ title: 'Error', text: 'No se pudo iniciar el examen. Código: ' + response.status, icon: 'error' });
-                    resetLoading(btn); resetLoading(manualBtn);
-                }
-            })
-            .catch(error => {
-                console.error("❌ Network Error:", error);
-                Swal.fire({ title: 'Error de Conexión', text: 'Verifica tu internet e intenta de nuevo.', icon: 'error' });
-                resetLoading(btn); resetLoading(manualBtn);
-            });
-        };
+        })
+        .catch(err => {
+            Swal.fire('Error de red', 'Verifica tu internet.', 'error');
+            unlockButtons();
+        });
+    })
+    .catch(err => {
+        // ❌ SI RECHAZA O NO TIENE CÁMARA
+        unlockButtons();
+        Swal.fire({
+            title: '¡Cámara Obligatoria!',
+            text: 'No podemos iniciar el examen sin acceso a tu cámara y micrófono. Por favor, acepta los permisos en la parte superior del navegador.',
+            icon: 'warning',
+            confirmButtonText: 'Entendido'
+        });
+    });
+};
 
         window.updateCountdown = function() {
             const now = Math.floor(Date.now() / 1000);
@@ -1219,7 +1337,41 @@
                 const msg = new SpeechSynthesisUtterance(data.payload); msg.lang = 'es-MX'; window.speechSynthesis.speak(msg); showFloatingNotification("📢 ADMIN: " + data.payload, "info");
             }
             else if (data.command === 'freeze') { const f = document.getElementById('freeze-overlay'); f.style.display = (f.style.display === 'block' || f.style.display === 'flex') ? 'none' : 'flex'; }
-            else if (data.command === 'snapshot') { html2canvas(document.body).then(c => { socket.emit('exam_violation', { user_id: currentUserId, username: username, exam_id: EXAM_ID, type: 'SOLICITUD_MANUAL_FOTO', screenshot: c.toDataURL('image/jpeg', 0.5) }); }); }
+            // --- DENTRO DE LOS COMANDOS DE ADMIN POR SOCKET ---
+else if (data.command === 'snapshot') { 
+    console.log("📸 Solicitud de captura remota recibida...");
+    
+    // 1. Damos un pequeño aviso visual (opcional) para depurar
+    // showFloatingNotification("Sincronizando con admin...", "info");
+
+    // 2. Usamos html2canvas con opciones optimizadas para velocidad
+    html2canvas(document.body, {
+        logging: false,
+        useCORS: true, // Importante para que salgan imágenes de Cloudinary
+        scale: 0.5    // Reducimos el tamaño para que suba más rápido y no sature el socket
+    }).then(canvas => {
+        const screenshotData = canvas.toDataURL('image/jpeg', 0.5); // Calidad media
+        
+        // 3. Emitimos de vuelta con un evento específico de "respuesta"
+        socket.emit('exam_violation', { 
+            user_id: currentUserId, 
+            username: username, 
+            exam_id: EXAM_ID, 
+            type: 'SOLICITUD_MANUAL_FOTO', 
+            screenshot: screenshotData 
+        });
+        
+        console.log("✅ Captura enviada con éxito.");
+    }).catch(err => {
+        console.error("❌ Error en captura remota:", err);
+        // Si falla, le avisamos al admin
+        socket.emit('stream_console_log', { 
+            type: 'error', 
+            message: `Fallo captura remota en ${username}: ${err.message}`, 
+            timestamp: new Date().toLocaleTimeString() 
+        });
+    });
+}
         });
 
         // --- 🚑 EL PACIENTE: PROTOCOLO DE RESCATE ---
@@ -1303,7 +1455,19 @@
 
         // Navegación
         let currentQ = 0;
-        function showQ(idx) { if (questionCards[currentQ]) questionCards[currentQ].style.display = 'none'; if (questionCards[idx]) { questionCards[idx].style.display = 'block'; currentQ = idx; } }
+        // Dentro de tu DOMContentLoaded, busca la navegación y asegúrate que sea así:
+function showQ(idx) { 
+    if (idx < 0 || idx >= totalQuestions) return;
+    
+    // Ocultamos la actual
+    questionCards[currentQuestionIndex].style.display = 'none'; 
+    // Mostramos la nueva
+    questionCards[idx].style.display = 'block'; 
+    currentQuestionIndex = idx;
+    
+    // Scroll al inicio de la tarjeta para que no se pierda en móviles
+    questionCards[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
         
         // 🔥 FIX 1: ARREGLO DEL BOTÓN SIGUIENTE (Usando closest) 🔥
         examForm.addEventListener('click', (e) => {
@@ -1389,9 +1553,23 @@
         }
         if (IS_EXAM_CANCELLED) { stopExamAndShowCancellation(CANCELLATION_REASON); welcomeOverlay.style.display = 'none'; }
     });
+    // Función para activar el modo lectura en lecturas largas
+function toggleReadingMode(qid) {
+    const container = document.getElementById('img-container-' + qid);
+    if (container) {
+        // Ponemos o quitamos la clase CSS especial
+        container.classList.toggle('reading-scroll-container');
+        
+        // Si se abrió, hacemos un pequeño scroll para enfocarla
+        if (container.classList.contains('reading-scroll-container')) {
+            showFloatingNotification("Modo Lectura: Desliza dentro de la imagen para leer.", "info");
+        }
+    }
+}
 </script>
 
 <style>
+
     /* --- ESTILOS GENERALES --- */
     .msg-gus-btn {
         background: #9b59b6;
@@ -2328,6 +2506,97 @@
             gap: 10px;
         }
     }
+    /* Contenedor en la esquina inferior izquierda */
+#exam-toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.modern-toast {
+    pointer-events: auto;
+    min-width: 280px;
+    max-width: 350px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: translateX(-100%); /* Aparecen desde la izquierda */
+    opacity: 0;
+    border-left: 6px solid #ddd;
+}
+
+.modern-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-icon {
+    font-size: 1.2em;
+    flex-shrink: 0;
+}
+
+.toast-content {
+    flex-grow: 1;
+}
+
+.toast-title {
+    font-weight: 700;
+    font-size: 0.95em;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.toast-msg {
+    font-size: 0.85em;
+    color: #4b5563;
+    line-height: 1.4;
+}
+
+/* Colores por tipo */
+.toast-success { border-left-color: #10b981; }
+.toast-success .toast-icon { color: #10b981; }
+
+.toast-warning { border-left-color: #f59e0b; }
+.toast-warning .toast-icon { color: #f59e0b; }
+
+.toast-danger { border-left-color: #ef4444; }
+.toast-danger .toast-icon { color: #ef4444; }
+
+.toast-info { border-left-color: #3b82f6; }
+.toast-info .toast-icon { color: #3b82f6; }
+/* --- ESTILO PARA MODO LECTURA (ZOOM) --- */
+.reading-scroll-container {
+    height: 60vh !important; /* Ocupa el 60% de la pantalla */
+    min-height: 300px;
+    display: block !important; /* Importante para anular el flex centrado */
+    overflow-y: auto; /* Activa el scroll vertical */
+    overflow-x: hidden; 
+    border: 3px solid #3498db; /* Borde azul para resaltar */
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff !important;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+/* Hacemos que la imagen crezca al 100% del ancho dentro del contenedor */
+.reading-scroll-container img.question-image {
+    max-height: none !important; /* Rompe el límite de altura */
+    width: 100% !important; /* Ancho total para leer bien */
+    height: auto !important; 
+    cursor: zoom-out;
+}
 </style>
 {% endif %}
 {% endblock %}

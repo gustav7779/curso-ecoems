@@ -3,170 +3,282 @@
 {% block title %}Exámenes Disponibles{% endblock %}
 
 {% block content %}
-    <div class="header-page-title exam-header">
-        <h1>📚 Exámenes Disponibles</h1>
-        <p>Selecciona un examen para comenzar tu simulación de prueba.</p>
-    </div>
-    
-    <div class="container exam-list-container">
-        
-        <div class="exams-grid">
-            {% for item in exams %}
-                {# Asumimos que 'item' viene con la estructura del código 2 #}
-                {% set exam = item.exam_obj %}
-                {% set locked = item.is_locked %}
-                {% set seconds = item.seconds_to_start %}
-                
-                {# Calculamos si está expirado usando fecha actual (lógica del código 1) #}
-                {% set now_iso = now.isoformat() if now else None %} <div class="exam-card {% if locked %}locked-card{% endif %}" 
-                     id="exam-card-{{ exam.id }}"
-                     data-seconds="{{ seconds }}">
-                    
-                    {% if locked %}
-                    <div class="locked-overlay" id="overlay-{{ exam.id }}">
-                        <div class="overlay-content">
-                            <div class="lock-icon">🔒</div>
-                            <h3>Programado</h3>
-                            <p>Disponible en:</p>
-                            <div class="countdown-timer" id="timer-{{ exam.id }}">
-                                <span class="cd-d">00</span>d :
-                                <span class="cd-h">00</span>h :
-                                <span class="cd-m">00</span>m :
-                                <span class="cd-s">00</span>s
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
+<div class="header-page-title exam-header">
+    <h1>📚 Exámenes Disponibles</h1>
+    <p>Selecciona un examen para comenzar tu simulación de prueba.</p>
+</div>
 
-                    <div class="card-body">
-                        <h5 class="card-title">{{ exam.title }}</h5>
-                        <div class="exam-meta">
-                            <span class="badge-questions">📝 {{ exam.questions | length | default(0) }} Preguntas</span>
-                        </div>
-                        <p class="card-text">{{ exam.description | truncate(90) }}</p>
-                    </div>
-                    
-                    <div class="card-footer">
-                        {% if locked %}
-                            <button class="btn btn-secondary btn-block disabled-btn" disabled>
-                                ⏳ Esperando inicio...
-                            </button>
-                        {% else %}
-                            <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn present-btn btn-block">
-                                🚀 Presentar Examen
-                            </a>
-                        {% endif %}
+<div class="container exam-list-container">
+
+    <div class="exams-grid">
+        {% for item in exams %}
+        {# Asumimos que 'item' viene con la estructura del código 2 #}
+        {% set exam = item.exam_obj %}
+        {% set locked = item.is_locked %}
+        {% set seconds = item.seconds_to_start %}
+
+        {# Calculamos si está expirado usando fecha actual (lógica del código 1) #}
+        {% set now_iso = now.isoformat() if now else None %} <div
+            class="exam-card {% if locked %}locked-card{% endif %}" id="exam-card-{{ exam.id }}"
+            data-seconds="{{ seconds }}">
+
+            {% if locked %}
+            <div class="locked-overlay" id="overlay-{{ exam.id }}">
+                <div class="overlay-content">
+                    <div class="lock-icon">🔒</div>
+                    <h3>Programado</h3>
+                    <p>Disponible en:</p>
+                    <div class="countdown-timer" id="timer-{{ exam.id }}">
+                        <span class="cd-d">00</span>d :
+                        <span class="cd-h">00</span>h :
+                        <span class="cd-m">00</span>m :
+                        <span class="cd-s">00</span>s
                     </div>
                 </div>
-            {% else %}
-                <div class="no-exams-message" style="grid-column: 1 / -1;">
-                    <p>No hay exámenes asignados por el momento.</p>
+            </div>
+            {% endif %}
+
+            <div class="card-body">
+                <h5 class="card-title">{{ exam.title }}</h5>
+                <div class="exam-meta">
+                    <span class="badge-questions">📝 {{ exam.questions | length | default(0) }} Preguntas</span>
                 </div>
-            {% endfor %}
+                <p class="card-text">{{ exam.description | truncate(90) }}</p>
+            </div>
+
+            <div class="card-footer">
+                {% if locked %}
+                <button class="btn btn-secondary btn-block disabled-btn" disabled>
+                    ⏳ Esperando inicio...
+                </button>
+                {% else %}
+                <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn present-btn btn-block">
+                    🚀 Presentar Examen
+                </a>
+                {% endif %}
+            </div>
         </div>
-        
-        <div style="margin-top: 30px; text-align: center;">
-            <a href="{{ url_for('dashboard') }}" class="btn back-btn">⬅ Volver al Dashboard</a>
+
+        {% for exam in exams %}
+        <div class="exam-card">
+            <h3>{{ exam.title }}</h3>
+            <a href="{{ url_for('take_exam', exam_id=exam.id) }}" class="btn">🚀 Presentar Examen</a>
         </div>
+
+        {% else %}
+        <div class="alert alert-info text-center" style="grid-column: 1 / -1; padding: 40px;">
+            <h2 style="font-size: 3rem;">🎉</h2>
+            <h3>¡Felicidades!</h3>
+            <p>Has completado todos los exámenes disponibles por ahora o no tienes exámenes asignados.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Volver al Inicio</a>
+        </div>
+        {% endfor %}
     </div>
 
-    <style>
-        /* --- HEADER DEL CÓDIGO 1 --- */
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{{ url_for('dashboard') }}" class="btn back-btn">⬅ Volver al Dashboard</a>
+    </div>
+</div>
+
+<style>
+    /* --- HEADER DEL CÓDIGO 1 --- */
+    .exam-header {
+        background: linear-gradient(90deg, #3498db, #2980b9);
+        color: white;
+        padding: 25px;
+        text-align: center;
+        border-radius: 0 0 10px 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .exam-header h1 {
+        margin: 0;
+        font-size: 2em;
+    }
+
+    .exam-header p {
+        margin: 5px 0 0;
+        opacity: 0.9;
+    }
+
+    /* --- GRID SYSTEM (CÓDIGO 2) --- */
+    .exam-list-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding-bottom: 50px;
+    }
+
+    .exams-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 25px;
+    }
+
+    /* --- TARJETAS (CÓDIGO 2 MEJORADO) --- */
+    .exam-card {
+        border: 1px solid #eee;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s;
+        position: relative;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .exam-card:hover:not(.locked-card) {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-body {
+        padding: 20px;
+        flex-grow: 1;
+    }
+
+    .card-title {
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 1.25rem;
+    }
+
+    .card-text {
+        color: #7f8c8d;
+        font-size: 0.95em;
+        line-height: 1.5;
+    }
+
+    .badge-questions {
+        background: #eaf2f8;
+        color: #3498db;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: inline-block;
+    }
+
+    .card-footer {
+        background: #f8f9fa;
+        padding: 15px;
+        border-top: 1px solid #eee;
+    }
+
+    /* --- BOTONES --- */
+    .present-btn {
+        background: #2ecc71;
+        color: white;
+        font-weight: bold;
+        border: none;
+        padding: 10px;
+        width: 100%;
+        display: block;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+    }
+
+    .present-btn:hover {
+        background: #27ae60;
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-btn {
+        background: #7f8c8d;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .back-btn:hover {
+        background: #616f70;
+        color: white;
+    }
+
+    /* --- OVERLAY BLOQUEADO (CÓDIGO 2) --- */
+    .locked-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(44, 62, 80, 0.9);
+        backdrop-filter: blur(4px);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        transition: opacity 0.5s ease-out;
+    }
+
+    .locked-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .overlay-content {
+        text-align: center;
+    }
+
+    .lock-icon {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        animation: bounce 2s infinite;
+    }
+
+    .countdown-timer {
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 8px 15px;
+        border-radius: 50px;
+        margin-top: 10px;
+    }
+
+    .no-exams-message {
+        background: #fff3cd;
+        color: #856404;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px;
+        font-weight: bold;
+    }
+
+    @keyframes bounce {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
         .exam-header {
-            background: linear-gradient(90deg, #3498db, #2980b9);
-            color: white; 
-            padding: 25px;
-            text-align: center; 
-            border-radius: 0 0 10px 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        .exam-header h1 { margin: 0; font-size: 2em; }
-        .exam-header p { margin: 5px 0 0; opacity: 0.9; }
-
-        /* --- GRID SYSTEM (CÓDIGO 2) --- */
-        .exam-list-container { max-width: 1000px; margin: 0 auto; padding-bottom: 50px; }
-        .exams-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
-            gap: 25px; 
+            padding: 15px;
         }
 
-        /* --- TARJETAS (CÓDIGO 2 MEJORADO) --- */
-        .exam-card { 
-            border: 1px solid #eee; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            transition: all 0.3s; 
-            position: relative; 
-            background: white; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
-            display: flex;
-            flex-direction: column;
+        .exam-header h1 {
+            font-size: 1.5em;
         }
-        .exam-card:hover:not(.locked-card) { 
-            transform: translateY(-5px); 
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1); 
-        }
-        
-        .card-body { padding: 20px; flex-grow: 1; }
-        .card-title { font-weight: 700; color: #2c3e50; margin-bottom: 10px; font-size: 1.25rem; }
-        .card-text { color: #7f8c8d; font-size: 0.95em; line-height: 1.5; }
-        
-        .badge-questions {
-            background: #eaf2f8;
-            color: #3498db;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-bottom: 10px;
-            display: inline-block;
-        }
+    }
+</style>
 
-        .card-footer { background: #f8f9fa; padding: 15px; border-top: 1px solid #eee; }
-
-        /* --- BOTONES --- */
-        .present-btn {
-            background: #2ecc71; color: white; font-weight: bold; border: none; padding: 10px; width: 100%; display: block; text-align: center; text-decoration: none; border-radius: 5px;
-        }
-        .present-btn:hover { background: #27ae60; color: white; text-decoration: none; }
-        
-        .back-btn { background: #7f8c8d; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block; }
-        .back-btn:hover { background: #616f70; color: white; }
-
-        /* --- OVERLAY BLOQUEADO (CÓDIGO 2) --- */
-        .locked-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(44, 62, 80, 0.9);
-            backdrop-filter: blur(4px);
-            color: white; display: flex; justify-content: center; align-items: center;
-            z-index: 10; transition: opacity 0.5s ease-out;
-        }
-        .locked-overlay.hidden { opacity: 0; pointer-events: none; }
-        
-        .overlay-content { text-align: center; }
-        .lock-icon { font-size: 2.5rem; margin-bottom: 10px; animation: bounce 2s infinite; }
-        .countdown-timer {
-            font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold;
-            background: rgba(0,0,0,0.3); padding: 8px 15px; border-radius: 50px; margin-top: 10px;
-        }
-
-        .no-exams-message {
-            background: #fff3cd; color: #856404; padding: 20px; text-align: center; border-radius: 8px; font-weight: bold;
-        }
-
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        
-        /* Responsive */
-        @media (max-width: 600px) {
-            .exam-header { padding: 15px; }
-            .exam-header h1 { font-size: 1.5em; }
-        }
-    </style>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
         const lockedCards = document.querySelectorAll('.locked-card');
 
         lockedCards.forEach(card => {
@@ -179,7 +291,7 @@
                 if (timeLeft <= 0) {
                     clearInterval(interval);
                     overlay.classList.add('hidden');
-                    
+
                     setTimeout(() => {
                         const footer = card.querySelector('.card-footer');
                         // Usamos JS para inyectar el botón correcto
@@ -211,5 +323,5 @@
             const interval = setInterval(updateCardTimer, 1000);
         });
     });
-    </script>
+</script>
 {% endblock %}

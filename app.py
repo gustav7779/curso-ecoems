@@ -2444,8 +2444,14 @@ def delete_announcement(announcement_id):
 @app.route("/admin/exams/edit/<int:exam_id>", methods=["GET", "POST"])
 @login_required
 def edit_exam(exam_id):
-    # ... (código inicial de verificación de rol y obtención de exam/students) ...
+    # 1. Verificación de permisos (Seguridad)
+    if current_user.role not in ["admin", "ayudante"]:
+        flash("Acceso denegado", "danger")
+        return redirect(url_for("dashboard"))
+
     exam = Exam.query.get_or_404(exam_id)
+    
+    # Obtener lista de todos los estudiantes para los checkboxes
     students = (
         User.query.filter(User.role.notin_(["admin", "ayudante"]))
         .order_by(User.username)
@@ -2458,66 +2464,62 @@ def edit_exam(exam_id):
         start_date_str = request.form.get("start_datetime")
         end_date_str = request.form.get("end_datetime")
 
-        # Inicializa las variables para evitar el error si no hay fechas
+        # Conversión de strings a objetos datetime
         start_dt = None
         end_dt = None
-
-        # 🔥 CÓDIGO FALTANTE: CONVERTIR STRING A DATETIME 🔥
         try:
             if start_date_str:
-                # El formato '%Y-%m-%dT%H:%M' es el que usan los inputs HTML type="datetime-local"
                 start_dt = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M")
             if end_date_str:
                 end_dt = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M")
         except ValueError:
-            flash(
-                "Formato de fecha y hora inválido. Usa el formato AAAA-MM-DD HH:MM.",
-                "danger",
-            )
-            # Redirige para no seguir con un error
+            flash("Formato de fecha inválido. Intenta de nuevo.", "danger")
             return redirect(url_for("edit_exam", exam_id=exam_id))
 
-        # --- AHORA PUEDES USAR start_dt y end_dt ---
-
+        # Actualizar datos básicos del examen
         exam.title = title
         exam.description = description
-        exam.start_datetime = start_dt  # ¡Aquí ya está definida!
-        exam.end_datetime = end_dt  # ¡Aquí ya está definida!
+        exam.start_datetime = start_dt
+        exam.end_datetime = end_dt
 
-        # ... (Resto del código para actualizar assigned_students) ...
-
-        # 🔥 ACTUALIZAR LISTA DE ALUMNOS 🔥
+        # 🔥 ACTUALIZAR LISTA DE ALUMNOS (Lógica Restrictiva) 🔥
+        # Capturamos los IDs de los checkboxes marcados
         selected_student_ids = request.form.getlist("assigned_students")
 
-        # Limpiar lista anterior y agregar los nuevos
-        exam.assigned_students = []
-        for student_id in selected_student_ids:
-            student = User.query.get(int(student_id))
-            if student:
-                exam.assigned_students.append(student)
+        if selected_student_ids:
+            # Traemos todos los alumnos seleccionados de golpe (Optimizado)
+            # Esto sincroniza la relación: quita a los no marcados y añade los nuevos
+            students_to_assign = User.query.filter(User.id.in_(selected_student_ids)).all()
+            exam.assigned_students = students_to_assign
+        else:
+            # Si no hay ninguno seleccionado, el examen queda vacío (nadie lo ve)
+            exam.assigned_students = []
 
-        db.session.commit()
+        try:
+            db.session.commit()
+            app.logger.info(f"AUDIT: {current_user.username} editó el examen ID: {exam.id}")
+            flash("Examen y asignaciones actualizados correctamente.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash("Error al guardar los cambios.", "danger")
+            print(f"Error en edit_exam: {e}")
 
-        app.logger.info(
-            f"User {current_user.username} edited exam '{title}' (ID: {exam.id})."
-        )
-
-        flash("Examen actualizado correctamente.", "success")
         return redirect(url_for("admin_panel"))
 
+    # Función auxiliar para formatear fechas en el input datetime-local
     def format_datetime_local(dt_obj):
         if dt_obj:
             return dt_obj.strftime("%Y-%m-%dT%H:%M")
         return ""
 
+    # GET: Renderizar formulario con datos actuales
     return render_template(
         "edit_exam.html",
         exam=exam,
-        students=students,  # <-- Pasar lista completa
+        students=students,
         start_date_str=format_datetime_local(exam.start_datetime),
         end_date_str=format_datetime_local(exam.end_datetime),
     )
-
 
 @app.route("/admin/exams/new", methods=["GET", "POST"])
 @login_required
@@ -2575,13 +2577,15 @@ def new_exam():
         # 🔥 RECOGER ALUMNOS SELECCIONADOS 🔥
         selected_student_ids = request.form.getlist("assigned_students")
 
-        # Asignar los alumnos al objeto examen
-        for student_id in selected_student_ids:
-            student = User.query.get(int(student_id))
-            if student:
-                exam.assigned_students.append(student)
+        if selected_student_ids:
+            # Buscamos todos los alumnos de golpe para no hacer un query por cada uno
+            students_to_assign = User.query.filter(User.id.in_(selected_student_ids)).all()
+            exam.assigned_students = students_to_assign
+        else:
+            # Si no hay nadie seleccionado, la lista queda vacía 
+            # y por lo tanto NADIE lo verá con el nuevo filtro.
+            exam.assigned_students = []
 
-        # Guardar en base de datos
         db.session.add(exam)
         db.session.commit()
 
@@ -3134,22 +3138,32 @@ def export_results():
         .all()
     )
 
-    csv_content = "Alumno,Examen,Puntuacion Final,Fecha de Presentacion\n"
+    # Usamos StringIO para manejar correctamente la memoria y caracteres especiales
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+
+    # Cabeceras
+    writer.writerow(['Alumno', 'Examen', 'Puntuacion Final', 'Fecha de Presentacion'])
 
     for username, title, score, date_taken in all_results:
-        date_str = date_taken.strftime("%Y-%m-%d %H:%M:%S")
-        csv_content += f'"{username}","{title}",{score:.2f},"{date_str}"\n'
+        # Validamos el score: si es None, ponemos 0
+        final_score = score if score is not None else 0
+        
+        # Validamos la fecha
+        date_str = date_taken.strftime("%Y-%m-%d %H:%M:%S") if date_taken else "N/A"
+        
+        # Escribimos la fila
+        writer.writerow([username, title, final_score, date_str])
 
+    # Preparamos la respuesta con codificación utf-8 para los acentos
     response = Response(
-        csv_content,
+        output.getvalue().encode('utf-8-sig'), # El sig añade el BOM para que Excel abra bien los acentos
         mimetype="text/csv",
         headers={
             "Content-Disposition": "attachment;filename=Reporte_Calificaciones_ECOMS.csv",
-            "Content-type": "text/csv; charset=utf-8",
         },
     )
     return response
-
 
 @app.route("/admin/exams/<int:exam_id>/answers")
 @login_required
@@ -3806,36 +3820,27 @@ def mark_announcement_read(announcement_id):
 
     return "", 204  # Retorna un status 204 No Contenido
 
-
 @app.route("/exams")
 @login_required
 def exams_list():
-    session.pop("just_logged_in", None)
-    current_time = datetime.utcnow()
+    # 1. Seguridad: Solo alumnos entran aquí
+    if current_user.role != "student":
+        return redirect(url_for("admin_panel"))
 
-    exams = (
-        Exam.query.filter(
-            (Exam.start_datetime == None) | (Exam.start_datetime <= current_time)
-        )
-        .filter((Exam.end_datetime == None) | (Exam.end_datetime >= current_time))
-        .all()
-    )
-    visible_exams = [
-        e
-        for e in exams
-        if current_user in e.assigned_students or not e.assigned_students
-    ]
-    return render_template("exams.html", exams=exams, current_time=current_time)
+    # 2. Buscamos los IDs de los exámenes que el alumno YA terminó (score >= 0)
+    completed_exam_ids = [r.exam_id for r in ExamResult.query.filter(
+        ExamResult.user_id == current_user.id,
+        ExamResult.score >= 0.0
+    ).all()]
 
-def save_option_image(file_storage):
-    if file_storage and file_storage.filename:
-        filename = secure_filename(file_storage.filename)
-        # Usamos UUID para que los nombres no se repitan nunca
-        unique_name = f"opt_{uuid.uuid4().hex}_{filename}"
-        path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
-        file_storage.save(path)
-        return unique_name
-    return None
+    # 3. FILTRADO RESTRICTIVO (El gran cambio)
+    # Traemos solo exámenes donde el alumno está asignado Y no los ha terminado
+    available_exams = Exam.query.filter(
+        Exam.assigned_students.any(id=current_user.id), 
+        ~Exam.id.in_(completed_exam_ids)
+    ).all()
+
+    return render_template("exams.html", exams=available_exams)
 @app.route("/exam/save_answer", methods=["POST"])
 @login_required
 @limiter.limit("100 per 10 minutes")
@@ -4003,19 +4008,21 @@ def take_exam(exam_id):
         flash("El tiempo para tomar este examen ha expirado.", "danger")
         return redirect(url_for("exams_list"))
 
-    # --- 3. VERIFICAR RESULTADO PREVIO ---
+    # --- 3. VERIFICAR RESULTADO PREVIO (BLOQUEO DE REINTENTOS) ---
     existing_result = ExamResult.query.filter_by(
         user_id=current_user.id, exam_id=exam_id
     ).first()
 
     if existing_result:
-        # Si ya tiene calificación (>= 0), ya acabó.
+        # 🔥 MODIFICACIÓN: Bloqueo agresivo si el examen ya tiene calificación final (>= 0)
         if existing_result.score is not None and existing_result.score >= 0.0:
-            flash("Ya has completado este examen.", "warning")
+            flash("Ya has completado este examen. No es posible realizarlo nuevamente.", "info")
+            # Redirigimos al detalle del resultado para que vea su calificación anterior
             return redirect(url_for("student_exam_detail", exam_id=exam.id))
+        
         # Si fue cancelado (-1)
         elif existing_result.score == -1.0:
-            flash("Tu examen fue cancelado y está bloqueado.", "danger")
+            flash("Tu examen fue cancelado y el acceso ha sido bloqueado.", "danger")
             return redirect(url_for("dashboard"))
 
     # ==============================================================================
@@ -4045,18 +4052,18 @@ def take_exam(exam_id):
 
                 # 3. Generar orden de preguntas si es nuevo
                 if not existing_result:
-                        result = ExamResult(
-                            user_id=current_user.id, 
-                            exam_id=exam_id,
-                            score=-2.0  # 🔥 AGREGAMOS ESTO: -2 significa "Iniciando" para engañar a la BD
-                        )
-                        # Asegúrate de que esta función exista o importala
-                        result.question_order = generar_orden_comipems(exam_id) 
-                        db.session.add(result)
+                    result = ExamResult(
+                        user_id=current_user.id, 
+                        exam_id=exam_id,
+                        score=-2.0  # -2 significa "En Curso/Iniciando"
+                    )
+                    # Asegúrate de importar la función generar_orden_comipems
+                    result.question_order = generar_orden_comipems(exam_id) 
+                    db.session.add(result)
 
                 db.session.commit()
                 
-                # 4. Notificar
+                # 4. Notificar al Admin
                 socketio.emit("new_activity", {
                     "msg": f"🚀 {current_user.username} empezó {exam.title}!",
                     "type": "success",
@@ -4064,59 +4071,36 @@ def take_exam(exam_id):
 
             except Exception as e:
                 db.session.rollback()
-                print(f"❌ ERROR AL INICIAR: {e}") # Ver en consola negra
+                print(f"❌ ERROR AL INICIAR: {e}")
             
-            return "", 204 # <--- RETORNO OBLIGATORIO PARA AJAX
+            return "", 204
 
         # OPCIÓN B: ENTREGAR EXAMEN (SUBMIT)
-        # Si no es 'start_timer_now', asumimos que es entrega normal
         submission_type = request.form.get("submission_type", "manual")
         
-        # Verificar sesión activa
         active_session = ActiveExamSession.query.filter_by(
             user_id=current_user.id, exam_id=exam_id
         ).first()
 
+        # Si no hay sesión activa, no puede entregar (evita envíos duplicados)
         if not active_session:
-            # Si no hay sesión, redirigir a detalles (ya se envió o error)
             return redirect(url_for("student_exam_detail", exam_id=exam_id))
 
-        # --- LÓGICA DE CALIFICACIÓN ---
+        # --- LÓGICA DE CALIFICACIÓN OPTIMIZADA ---
         recording_json = request.form.get("recording_data")
-        try:
-            final_proctoring_data = session.pop(f"proctoring_data_{exam_id}", None)
-        except:
-            final_proctoring_data = None
+        if recording_json and len(recording_json) > 500000:
+            recording_json = '{"info": "Data too large, omitted to prevent error 400"}'
+            
+        final_proctoring_data = session.pop(f"proctoring_data_{exam_id}", None)
 
-        total_score_sum = 0.0
-        all_questions = Question.query.filter_by(exam_id=exam_id).all()
-        
-        # Obtener respuestas enviadas
-        final_answers = Answer.query.join(Question).filter(
-            Answer.user_id == current_user.id, Question.exam_id == exam_id
-        ).all()
-        answers_dict = {a.question_id: a for a in final_answers}
+        # CALCULAR ACIERTOS (Directo en DB para mayor velocidad)
+        total_score_sum = db.session.query(Answer).join(Question).filter(
+            Answer.user_id == current_user.id,
+            Question.exam_id == exam_id,
+            Answer.response == Question.correct_option
+        ).count()
 
-        # Calificar
-        for question in all_questions:
-            answer = answers_dict.get(question.id)
-            grade = 0.0
-            feedback_text = None
-            if answer and answer.response:
-                if question.correct_option:
-                    if answer.response == question.correct_option:
-                        grade = 1.0
-                        total_score_sum += 1.0
-                        feedback_text = "¡Correcto!"
-                    else:
-                        feedback_text = f"Incorrecto. Correcta: {question.correct_option}."
-                else:
-                    grade = None # Pregunta abierta
-                answer.grade = grade
-                answer.feedback = feedback_text
-                db.session.add(answer)
-
-        # Actualizar o Crear Resultado
+        # ACTUALIZAR RESULTADO EXISTENTE (-2 a Score Real)
         result_to_update = ExamResult.query.filter_by(
             user_id=current_user.id, exam_id=exam_id
         ).first()
@@ -4125,13 +4109,13 @@ def take_exam(exam_id):
             result_to_update = ExamResult(user_id=current_user.id, exam_id=exam_id)
             db.session.add(result_to_update)
 
-        result_to_update.score = total_score_sum
+        result_to_update.score = float(total_score_sum)
         result_to_update.date_taken = datetime.now(pytz.utc)
         result_to_update.submission_type = submission_type
         result_to_update.proctoring_data = final_proctoring_data
         result_to_update.session_recording = recording_json
 
-        # Limpiar sesión activa
+        # 4. LIMPIAR SESIÓN Y GUARDAR
         db.session.delete(active_session)
         
         try:
@@ -4142,7 +4126,8 @@ def take_exam(exam_id):
             }, room="admin_pulse_room")
         except Exception as e:
             db.session.rollback()
-            print(f"Error guardando resultado: {e}")
+            print(f"❌ Error crítico al finalizar: {e}")
+            flash("Hubo un problema al guardar, pero tus respuestas están seguras.", "warning")
 
         flash("Examen finalizado correctamente.", "success")
         return redirect(url_for("student_exam_detail", exam_id=exam.id))
@@ -4150,9 +4135,8 @@ def take_exam(exam_id):
     # ==============================================================================
     #                                LÓGICA GET (RENDERIZAR)
     # ==============================================================================
-    # Si el código llega aquí, ES UN GET (porque los POST retornaron arriba)
     
-    # 1. Recuperar Sesión
+    # 1. Recuperar Sesión Activa
     active_session = ActiveExamSession.query.filter_by(
         user_id=current_user.id, exam_id=exam_id
     ).first()
@@ -4162,7 +4146,6 @@ def take_exam(exam_id):
 
     if active_session:
         if active_session.start_time:
-            # Conversión segura de fecha a timestamp
             if active_session.start_time.tzinfo is None:
                 start_time = int(active_session.start_time.timestamp())
             else:
@@ -4170,38 +4153,33 @@ def take_exam(exam_id):
         
         time_added_sec = active_session.time_added_sec if active_session.time_added_sec else 0
 
-    # 2. Recuperar Preguntas (Ordenadas)
+    # 2. Recuperar Preguntas en el orden guardado
     questions = []
     if existing_result and existing_result.question_order:
         ids_ordenados = existing_result.question_order
-        # Truco para ordenar según la lista guardada
-        # Primero traemos todas
         todas = Question.query.filter(Question.id.in_(ids_ordenados)).all()
         q_map = {q.id: q for q in todas}
-        # Reconstruimos la lista en orden
         for q_id in ids_ordenados:
             if q_id in q_map: questions.append(q_map[q_id])
         
-        # Añadir preguntas nuevas si se crearon después de iniciar
+        # Sincronizar si se añadieron preguntas extra después
         ids_set = set(ids_ordenados)
         nuevas = Question.query.filter_by(exam_id=exam_id).filter(~Question.id.in_(ids_set)).all()
         questions.extend(nuevas)
     else:
-        # Orden por defecto si no hay sesión iniciada
         questions = Question.query.filter_by(exam_id=exam_id).all()
 
-    # 3. Cargar respuestas guardadas
+    # 3. Cargar respuestas guardadas para reasumir
     saved_answers = Answer.query.filter_by(user_id=current_user.id).join(Question).filter(Question.exam_id == exam_id).all()
     saved_answers_dict = {a.question_id: a.response for a in saved_answers}
 
-    # 4. Datos cancelación
+    # 4. Verificar si el usuario está cancelado localmente
     is_user_cancelled = False
     user_cancellation_reason = ""
     if existing_result and existing_result.score == -1.0:
         is_user_cancelled = True
         user_cancellation_reason = exam.cancellation_reason
 
-    # 5. RETORNO FINAL (Aquí es donde fallaba antes si no llegaba)
     return render_template(
         "take_exam.html",
         exam=exam,
