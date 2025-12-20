@@ -31,6 +31,11 @@
                     <div class="card-actions">
                         <a href="{{ url_for('student_exam_detail', exam_id=last_result.exam_id) }}" class="button primary-btn shadow-lift">Revisar Detalle</a>
                     </div>
+                    {# 🔥 AGREGA ESTE BOTÓN NUEVO AQUÍ ABAJO 🔥 #}
+                        <a href="{{ url_for('student_exam_history') }}" class="button button-secondary shadow-lift" style="margin-top: 10px;">
+                            📜 Ver Historial Completo
+                        </a>
+                    </div>
                 {% else %}
                     <div class="card-content-wrapper performance-content">
                         <p class="big-score score-gray">0%</p>
