@@ -4259,6 +4259,7 @@ def take_exam(exam_id):
     except Exception as e:
         db.session.rollback()
         return f"❌ Error al reparar: {str(e)}"
+    # Corrección de puntajes forzad
 
 @app.errorhandler(404)
 def page_not_found(e):
