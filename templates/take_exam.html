@@ -431,27 +431,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             {# 🔥 FIX IMÁGENES: Corregido error de sintaxis y añadido contenedor responsivo #}
            {# Ejemplo para la imagen de la pregunta #}
-{# --- IMAGEN PRINCIPAL DE LA PREGUNTA --- #}
+{# --- IMAGEN PRINCIPAL --- #}
                     {% if question.image_filename %}
-                        <div class="question-image-container" 
-                             id="img-container-{{ question.id }}"
-                             style="min-height: 150px; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s ease;">
-                             
+                        <div class="question-image-container" id="img-container-{{ question.id }}" style="text-align:center;">
                             <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
                                  class="question-image" 
-                                 loading="lazy" 
-                                 onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();"
-                                 draggable="false" 
-                                 alt="Imagen de la pregunta">
+                                 loading="lazy"
+                                 style="max-width:100%; border-radius:8px;"
+                                 onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();">
                         </div>
-
                         {# Botón Zoom #}
-                        <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-                            <button type="button" 
-                                    class="btn btn-sm btn-secondary" 
-                                    style="border-radius: 20px;"
-                                    onclick="toggleReadingMode('{{ question.id }}')">
-                                🔍 📄 Ampliar / Reducir Lectura
+                        <div style="text-align: center; margin: 10px 0;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleReadingMode('{{ question.id }}')">
+                                🔍 Ampliar Lectura
                             </button>
                         </div>
                     {% endif %}
