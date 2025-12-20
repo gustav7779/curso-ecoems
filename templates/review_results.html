@@ -89,7 +89,7 @@
                                 </a>
                             {% endif %}
                             
-                            <form method="POST" action="{{ url_for('reset_exam_attempt', exam_id=exam.id, user_id=result.user_id) }}" class="inline-form"
+                            <form method="POST" action="{{ url_for('reset_attempt_by_user', exam_id=exam.id, user_id=result.user_id) }}" ...
                                     onsubmit="return confirm('¿SEGURO que quieres REINICIAR el intento de {{ result.username }}? Se borrarán todas sus respuestas y su calificación.');">
                                 
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
