@@ -4185,36 +4185,80 @@ def take_exam(exam_id):
         cancellation_reason=user_cancellation_reason,
         active_result=existing_result,
     )
-@app.route("/student/exam/<int:exam_id>/detail")
-@login_required
-def student_exam_detail(exam_id):
-    if current_user.role != "student":
-        flash("Acceso denegado", "danger")
-        return redirect(url_for("admin_panel"))
+    @app.route("/student/exam/<int:exam_id>/detail")
+    @login_required
+    def student_exam_detail(exam_id):
+        if current_user.role != "student":
+            flash("Acceso denegado", "danger")
+            return redirect(url_for("admin_panel"))
 
-    session.pop("just_logged_in", None)
+        session.pop("just_logged_in", None)
 
-    exam = Exam.query.get_or_404(exam_id)
+        exam = Exam.query.get_or_404(exam_id)
 
-    result = ExamResult.query.filter_by(
-        user_id=current_user.id, exam_id=exam_id
-    ).first()
+        result = ExamResult.query.filter_by(
+            user_id=current_user.id, exam_id=exam_id
+        ).first()
 
-    answers = (
-        Answer.query.join(Question)
-        .filter(Answer.user_id == current_user.id, Question.exam_id == exam_id)
-        .all()
-    )
+        answers = (
+            Answer.query.join(Question)
+            .filter(Answer.user_id == current_user.id, Question.exam_id == exam_id)
+            .all()
+        )
 
-    answers_dict = {a.question_id: a for a in answers}
+        answers_dict = {a.question_id: a for a in answers}
 
-    if not result:
-        flash("Aún no has completado este examen.", "danger")
-        return redirect(url_for("student_exams"))
+        if not result:
+            flash("Aún no has completado este examen.", "danger")
+            return redirect(url_for("student_exams"))
 
-    return render_template(
-        "student_exam_detail.html", exam=exam, answers_dict=answers_dict, result=result
-    )
+        return render_template(
+            "student_exam_detail.html", exam=exam, answers_dict=answers_dict, result=result
+        )
+        
+    @app.route("/admin/repair_scores/<int:exam_id>")
+    @login_required
+    def repair_scores(exam_id):
+    # Solo el admin puede hacer esto
+        if current_user.role != "admin":
+            return "Acceso denegado", 403
+
+    # 1. Buscar todos los resultados que se quedaron "pegados" en -2.0
+    stuck_results = ExamResult.query.filter_by(exam_id=exam_id, score=-2.0).all()
+    
+    count_fixed = 0
+    log_details = []
+
+    for result in stuck_results:
+        # 2. Contar manualmente sus respuestas correctas en la tabla Answer
+        # (Esto es lo que el Auto-Save fue guardando poco a poco)
+        real_score = db.session.query(Answer).join(Question).filter(
+            Answer.user_id == result.user_id,
+            Question.exam_id == exam_id,
+            Answer.response == Question.correct_option
+        ).count()
+
+        # 3. Actualizar la calificación
+        result.score = float(real_score)
+        result.submission_type = "RESCATE_ADMIN" # Marca para saber que fue recuperado
+        result.date_taken = datetime.now() # Actualizamos fecha de entrega
+        
+        log_details.append(f"Usuario {result.user_id}: De -2 a {real_score}")
+        count_fixed += 1
+
+    # 4. Guardar cambios masivos
+    try:
+        db.session.commit()
+        return f"""
+        <h1>✅ Reparación Exitosa</h1>
+        <p>Se recalcularon las calificaciones de <b>{count_fixed}</b> alumnos.</p>
+        <pre>{'<br>'.join(log_details)}</pre>
+        <br>
+        <a href='/admin/dashboard'>Volver al Panel</a>
+        """
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ Error al reparar: {str(e)}"
 
 @app.errorhandler(404)
 def page_not_found(e):
