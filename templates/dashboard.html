@@ -1,276 +1,233 @@
 {% extends "base.html" %}
 
-{% block title %}Panel del Alumno | {{ username }}{% endblock %}
+{% block title %}Panel del Alumno | {{ current_user.username }}{% endblock %}
 
 {% block content %}
-    <div class="page-content-wrapper"> 
-        <div class="header-welcome-banner"> 
-            <h1>👋 ¡Hola, {{ username | capitalize }}!</h1>
-            <p>Tu Panel de Acceso Rápido y Resumen de Progreso.</p>
+
+<div class="min-h-screen pb-12 font-sans text-left">
+    
+    <div class="relative pb-24 pt-12 px-4 shadow-xl rounded-b-[3rem] overflow-hidden mb-[-4rem] z-0"
+         style="background: var(--bg-header); border-bottom: 1px solid var(--borde-tarjeta);">
+        
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-30 pointer-events-none">
+             <i class="fas fa-shapes absolute top-10 left-10 text-9xl animate-pulse" style="color: var(--color-primario); opacity: 0.1;"></i>
+             <i class="fas fa-atom absolute bottom-10 right-10 text-9xl" style="color: var(--color-primario); opacity: 0.1;"></i>
         </div>
 
-        <div class="container student-dashboard-grid">
-            
-            <div class="card card-performance hidden-content" data-card-id="results">
-                <h2>⭐ Rendimiento Reciente</h2>
-                
-                {% if last_result %}
-                    {% set score_percent = (last_result.score / last_exam_questions_count) * 100 if last_exam_questions_count > 0 else 0 %}
-                    {% set score_class = 'score-green' if score_percent >= 60 else 'score-red' %}
+        <div class="relative z-10 container mx-auto max-w-6xl">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="text-center md:text-left">
                     
-                    <div class="card-content-wrapper performance-content">
-                        <p class="exam-title-display">Último Examen: <strong>{{ Exam.query.get(last_result.exam_id).title }}</strong></p>
-                        
-                        <div class="big-score {{ score_class }}">
-                            {{ "%.0f"|format(score_percent) }}%
-                        </div>
-                        
-                        <p class="score-date">Examen presentado el: {{ last_result.date_taken | datetimeformat('dd MMM yyyy') }}</p>
-                    </div>
+                    <span class="font-bold text-xs uppercase tracking-wider mb-2 inline-block px-3 py-1 rounded-full shadow-sm"
+                          style="background: var(--color-primario); color: white;">
+                        Panel de Estudiante
+                    </span>
                     
-                    <div class="card-actions">
-                        <a href="{{ url_for('student_exam_detail', exam_id=last_result.exam_id) }}" class="button primary-btn shadow-lift">Revisar Detalle</a>
-                    </div>
-                    {# 🔥 AGREGA ESTE BOTÓN NUEVO AQUÍ ABAJO 🔥 #}
-                        <a href="{{ url_for('student_exam_history') }}" class="button button-secondary shadow-lift" style="margin-top: 10px;">
-                            📜 Ver Historial Completo
-                        </a>
-                    </div>
-                {% else %}
-                    <div class="card-content-wrapper performance-content">
-                        <p class="big-score score-gray">0%</p>
-                        <p class="empty-text">Aún no has completado ninguna simulación. ¡Es hora de empezar!</p>
-                    </div>
-                    <div class="card-actions">
-                        <a href="{{ url_for('exams_list') }}" class="button success-btn shadow-lift">Comenzar Ahora</a>
-                    </div>
-                {% endif %}
-            </div>
+                    <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow-sm mb-2 mt-2"
+                        style="color: var(--color-texto);">
+                        👋 ¡Hola, <span style="color: #f59e0b;">{{ current_user.username | capitalize }}</span>!
+                    </h1>
+                    
+                    <p class="text-lg font-medium opacity-90"
+                       style="color: var(--color-texto-secundario);">
+                        Aquí tienes tu resumen de progreso y acceso rápido.
+                    </p>
+                </div>
 
-            <div class="card card-weak-subjects hidden-content" data-card-id="weak-subjects">
-                <h2>📉 Áreas de Mejora</h2>
-                
-                {% if weak_subjects %}
-                    <div class="card-content-wrapper">
-                        <p>Tus promedios más bajos están en:</p>
-                        <ul class="detail-list">
-                            {% for item in weak_subjects %}
-                            <li class="subject-item">
-                                <strong>{{ item.subject }}</strong>
-                                <span class="score-red">{{ "%.1f"|format(item.avg_score | float) }}%</span> 
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class="card-actions">
-                        <p class="warning-text">*Concéntrate en estas áreas para mejorar tu puntaje.</p>
-                        <a href="{{ url_for('exams_list') }}" class="button button-secondary shadow-lift">Practicar Más</a>
-                    </div>
-                {% else %}
-                      <div class="card-content-wrapper">
-                          <p class="empty-text">Aún no hay suficientes datos para determinar tus áreas débiles. ¡Sigue tomando exámenes!</p>
-                      </div>
-                      <div class="card-actions">
-                          <a href="{{ url_for('exams_list') }}" class="button button-secondary shadow-lift">Practicar Más</a>
-                      </div>
-                {% endif %}
-            </div>
-            
-            <div class="card card-announcements hidden-content" data-card-id="announcements">
-                <div class="card-content-wrapper">
-                    <h2>&#128227; Anuncios
-                        {% if unread_count > 0 %}
-                            <span class="announcement-badge">{{ unread_count }} Nuevo{% if unread_count > 1 %}s{% endif %}</span>
-                        {% endif %}
-                    </h2>
-                    <p class="card-description">Revisa la información sobre fechas, comunicados y horarios.</p>
-                </div>
-                <div class="card-actions">
-                    <a href="{{ url_for('view_announcements') }}" class="button success-btn shadow-lift">Ver Anuncios</a>
+                <div class="p-4 rounded-full shadow-2xl transform transition hover:scale-110 duration-300 hidden md:block"
+                     style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta);">
+                    <i class="fas fa-user-astronaut text-5xl" style="color: var(--color-primario);"></i>
                 </div>
             </div>
-
-            <div class="card card-support hidden-content" data-card-id="support">
-                <div class="card-content-wrapper">
-                    <h2>&#128736; Soporte</h2>
-                    <p class="card-description">Envía un reporte si encuentras problemas con la plataforma o preguntas.</p>
-
-                    <h3 class="subsection-title">Historial Reciente</h3>
-                    <ul class="detail-list latest-reports-list">
-                        {% if latest_reports %}
-                            {% for report in latest_reports %}
-                            <li class="report-status-item status-{{ report.status | lower | replace(' ', '-') }}">
-                                <span>#{{ report.id }} ({{ report.title | truncate(20) }})</span>
-                                <span class="report-status-badge">{{ report.status }}</span>
-                            </li>
-                            {% endfor %}
-                        {% else %}
-                            <li class="no-report-item">No has enviado reportes aún.</li>
-                        {% endif %}
-                    </ul>
-                </div>
-                
-                <div class="card-actions action-split">
-                    <a href="{{ url_for('student_reports') }}" class="button support-btn shadow-lift">Ver Mis Reportes</a>
-                    <a href="{{ url_for('new_report') }}" class="new-report-btn">Enviar Nuevo Reporte</a>
-                </div>
-            </div>
-            
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animación Fade-in
-            const allCards = document.querySelectorAll('.hidden-content');
-            function staggerFadeIn() {
-                allCards.forEach((card, index) => {
-                    setTimeout(() => {
-                        card.classList.remove('hidden-content');
-                    }, 150 + index * 100); 
-                });
-            }
-            staggerFadeIn();
-
-            // Hover efecto
-            const reportItems = document.querySelectorAll('.latest-reports-list li');
-            reportItems.forEach(item => {
-                item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f8f8f8');
-                item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
-            });
-        });
-    </script>
-
-    <style>
-        /* --- ESTILOS BASE (MODO CLARO) --- */
-        .hidden-content { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
+    <div class="container mx-auto max-w-6xl px-4 relative z-10">
         
-        .header-welcome-banner { 
-            opacity: 1; transform: translateY(0); transition: opacity 0.5s ease-out;
-            max-width: 1100px; margin: 20px auto 0 auto; padding: 30px 20px; text-align: center;
-            background: linear-gradient(135deg, #e6f0f8 0%, #ffffff 100%);
-            border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border: 1px solid #dcdcdc;
-        }
-        .header-welcome-banner h1 { font-size: 2.8em; font-weight: 800; color: #2c3e50; margin-bottom: 5px; }
-        .header-welcome-banner p { font-size: 1.2em; color: #7f8c8d; }
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-8">
+                
+                <div class="card !p-0 overflow-hidden transform transition hover:-translate-y-1 duration-300 border-0">
+                    <div class="p-6 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                        <h2 class="flex items-center text-xl font-extrabold" style="color: var(--color-primario);">
+                            <span class="w-1.5 h-6 rounded-full mr-3" style="background-color: var(--color-primario);"></span>
+                            Rendimiento Reciente
+                        </h2>
+                        {% if last_result %}
+                        <span class="text-xs font-bold uppercase tracking-wide px-2 py-1 rounded" style="background: rgba(0,0,0,0.05); color: var(--color-texto-secundario);">
+                            Última actividad
+                        </span>
+                        {% endif %}
+                    </div>
 
-        .student-dashboard-grid {
-            width: 90%; max-width: 1100px; margin: 40px auto; display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px;
-        }
-        @media (min-width: 769px) { .card-performance { grid-column: span 2; } }
+                    <div class="p-8 text-center">
+                        {% if last_result %}
+                            {% set score_percent = (last_result.score / last_exam_questions_count) * 100 if last_exam_questions_count > 0 else 0 %}
+                            
+                            <p class="mb-2 text-lg" style="color: var(--color-texto-secundario);">
+                                Examen: <strong style="color: var(--color-texto);">{{ Exam.query.get(last_result.exam_id).title }}</strong>
+                            </p>
 
-        .card {
-            background: white; padding: 30px; border-radius: 15px; text-align: left;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex; flex-direction: column; justify-content: space-between; border-top: 6px solid;
-        }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15); }
+                            <div class="relative inline-block my-6">
+                                <span class="text-7xl font-black tracking-tighter drop-shadow-sm" 
+                                      style="color: {% if score_percent >= 60 %}#10b981{% else %}#ef4444{% endif %};">
+                                    {{ "%.0f"|format(score_percent) }}%
+                                </span>
+                            </div>
 
-        .card[data-card-id="results"] { border-top-color: #3498db; }
-        .card[data-card-id="weak-subjects"] { border-top-color: #f39c12; }
-        .card[data-card-id="announcements"] { border-top-color: #2ecc71; }
-        .card[data-card-id="support"] { border-top-color: #e74c3c; }
+                            <p class="text-sm mb-8 flex justify-center items-center gap-2" style="color: var(--color-texto-secundario);">
+                                <i class="far fa-calendar-alt"></i> 
+                                {{ last_result.date_taken | datetimeformat('dd MMM yyyy') }}
+                            </p>
 
-        .card h2 { margin-top: 0; font-size: 1.8em; color: #2c3e50; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px; font-weight: 700; }
-        .card-description { color: #7f8c8d; font-size: 1em; }
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                <a href="{{ url_for('student_exam_detail', exam_id=last_result.exam_id) }}" 
+                                   class="btn shadow-lg">
+                                    Revisar Detalle
+                                </a>
+                                <a href="{{ url_for('student_exam_history') }}" 
+                                   class="btn" style="background: transparent; border: 2px solid var(--borde-input); color: var(--color-texto);">
+                                    📜 Historial
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="py-6">
+                                <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background: rgba(0,0,0,0.05); color: var(--color-texto-secundario);">
+                                    <i class="fas fa-clipboard-check text-4xl"></i>
+                                </div>
+                                <p class="text-xl font-medium mb-6" style="color: var(--color-texto-secundario);">Aún no has completado ninguna simulación.</p>
+                                <a href="{{ url_for('exams_list') }}" 
+                                   class="btn shadow-lg">
+                                    ¡Comenzar Examen!
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
 
-        .performance-content { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 0; }
-        .exam-title-display { font-size: 1.1em; color: #555; }
-        .big-score { font-size: 4.5em; font-weight: 900; margin: 10px 0 15px 0; line-height: 1; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); }
-        .score-red { color: #e74c3c; } .score-green { color: #2ecc71; } .score-gray { color: #95a5a6; }
-        .warning-text { font-size: 0.9em; margin: 0; color: #a93226; font-weight: 500;}
+                <div class="card !p-0 overflow-hidden border-0">
+                    <div class="p-6 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                        <h2 class="flex items-center text-xl font-extrabold" style="color: #f97316;">
+                            <span class="w-1.5 h-6 bg-orange-500 rounded-full mr-3"></span>
+                            Áreas de Oportunidad
+                        </h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        {% if weak_subjects %}
+                            <p class="mb-4 text-sm font-medium" style="color: var(--color-texto-secundario);">Basado en tus promedios más bajos:</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {% for item in weak_subjects %}
+                                <div class="flex justify-between items-center p-4 rounded-xl" style="border: 1px solid var(--borde-tarjeta); background: var(--bg-tabla-hover);">
+                                    <span class="font-bold" style="color: var(--color-texto);">{{ item.subject }}</span>
+                                    <span class="font-bold px-2 py-1 rounded text-sm" style="background: #fff1f2; color: #e11d48; border: 1px solid #fda4af;">
+                                        {{ "%.1f"|format(item.avg_score | float) }}%
+                                    </span> 
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-6 text-center">
+                                <a href="{{ url_for('exams_list') }}" class="font-bold text-sm hover:underline" style="color: var(--color-primario);">
+                                    Ir a practicar temas &rarr;
+                                </a>
+                            </div>
+                        {% else %}
+                             <p class="text-center py-4 font-medium italic" style="color: var(--color-texto-secundario);">
+                                Necesitamos más datos para detectar tus áreas débiles.
+                             </p>
+                        {% endif %}
+                    </div>
+                </div>
 
-        .detail-list { list-style: none; padding: 0; margin-top: 15px; }
-        .subject-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dotted #eee; font-size: 1em; }
-        .subject-item strong { color: #34495e; font-weight: 600; }
-        
-        .subsection-title { font-size: 1.2em; margin-top: 25px; border-bottom: 1px dashed #ecf0f1; padding-bottom: 5px; color: #7f8c8d; font-weight: 600; }
-        .report-status-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95em; color: #34495e; }
-        .no-report-item { color: #95a5a6; font-size: 0.9em; padding: 8px 0; }
-        
-        .report-status-badge { padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75em; color: white; }
-        .status-abierto .report-status-badge { background: #e67e22; }
-        .status-en-proceso .report-status-badge { background: #3498db; }
-        .status-cerrado .report-status-badge { background: #2ecc71; }
-        .announcement-badge { background: #e74c3c; color: white; padding: 4px 8px; border-radius: 50px; font-size: 0.7em; font-weight: bold; margin-left: 10px; }
+            </div>
 
-        .card-actions { margin-top: auto; padding-top: 20px; border-top: 1px dashed #f0f4f8; }
-        .button { display: block; width: 100%; padding: 14px 0; margin-top: 10px; text-decoration: none; border-radius: 10px; font-weight: 700; transition: all 0.3s ease; text-align: center; border: none; cursor: pointer; }
-        .shadow-lift { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
-        .button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); }
+            <div class="space-y-6">
+                
+                <div class="card !p-0 overflow-hidden transform transition hover:-translate-y-1 border-0">
+                    <div class="p-5 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                        <h3 class="flex items-center text-lg font-extrabold" style="color: #eab308;">
+                            <span class="w-1.5 h-6 bg-yellow-500 rounded-full mr-3"></span>
+                            Anuncios
+                        </h3>
+                        {% if unread_count > 0 %}
+                            <span class="text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse shadow-md" style="background: #e11d48;">
+                                {{ unread_count }} Nuevo{% if unread_count > 1 %}s{% endif %}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm mb-4 font-medium" style="color: var(--color-texto-secundario);">
+                            Revisa las fechas importantes y comunicados.
+                        </p>
+                        <a href="{{ url_for('view_announcements') }}" 
+                           class="block w-full py-2 font-bold text-center rounded-lg transition-colors no-underline"
+                           style="background: #fef9c3; color: #854d0e; border: 1px solid #fde047;">
+                            Ver Tablón
+                        </a>
+                    </div>
+                </div>
 
-        .primary-btn { background: #3498db; color: white; }
-        .success-btn { background: #2ecc71; color: white; }
-        .button-secondary { background: #ecf0f1; color: #7f8c8d; border: 2px solid #bdc3c7; padding: 12px 0; }
-        .support-btn { background: #c0392b; color: white; margin-bottom: 5px; }
+                <div class="card !p-0 overflow-hidden border-0">
+                    <div class="p-5" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                        <h3 class="flex items-center text-lg font-extrabold" style="color: #9333ea;">
+                            <span class="w-1.5 h-6 bg-purple-600 rounded-full mr-3"></span>
+                            Soporte
+                        </h3>
+                    </div>
+                    <div class="p-5">
+                        <ul class="space-y-3 mb-5">
+                            {% if latest_reports %}
+                                {% for report in latest_reports %}
+                                <li class="flex justify-between items-center text-sm p-2 rounded transition-colors last:border-0"
+                                    style="border-bottom: 1px solid var(--borde-tarjeta);">
+                                    <span class="truncate w-2/3 font-medium" title="{{ report.title }}" style="color: var(--color-texto);">
+                                        #{{ report.id }} {{ report.title }}
+                                    </span>
+                                    
+                                    {% if 'Abierto' in report.status or 'Pendiente' in report.status %}
+                                        <span class="px-2 py-0.5 rounded text-xs font-bold" style="background: #ffedd5; color: #c2410c;">Pendiente</span>
+                                    {% elif 'Cerrado' in report.status or 'Resuelto' in report.status %}
+                                        <span class="px-2 py-0.5 rounded text-xs font-bold" style="background: #dcfce7; color: #15803d;">Resuelto</span>
+                                    {% else %}
+                                        <span class="px-2 py-0.5 rounded text-xs font-bold" style="background: #dbeafe; color: #1d4ed8;">{{ report.status }}</span>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="text-sm italic text-center py-2" style="color: var(--color-texto-secundario);">No hay reportes recientes.</li>
+                            {% endif %}
+                        </ul>
 
-        .new-report-btn { display: block; width: 100%; margin-top: 10px; padding: 10px 0; font-size: 1em; background: transparent; color: #e74c3c; border: 2px solid #e74c3c; text-decoration: none; border-radius: 10px; font-weight: 700; text-align: center; transition: all 0.2s ease; }
-        .new-report-btn:hover { background: #e74c3c; color: white; transform: none; }
-        
-        @media (max-width: 600px) { .student-dashboard-grid { width: 95%; margin: 20px auto; gap: 15px; } .card { padding: 20px; } .header-welcome-banner { margin: 10px auto; } .header-welcome-banner h1 { font-size: 2.2em; } }
+                        <div class="grid grid-cols-2 gap-3">
+                            <a href="{{ url_for('student_reports') }}" class="text-center py-2 text-sm rounded-lg font-bold transition no-underline"
+                               style="background: #f3e8ff; color: #6b21a8;">
+                                Ver Todos
+                            </a>
+                            <a href="{{ url_for('new_report') }}" class="text-center py-2 text-sm text-white rounded-lg font-bold transition shadow-md no-underline"
+                               style="background: #9333ea;">
+                                + Nuevo
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
-        /* ========================================= */
-        /* 🌙 MODO OSCURO (PANEL ALUMNO) 🌙 */
-        /* ========================================= */
-        
-        /* 1. Fondo del Header de Bienvenida */
-        body.dark-mode .header-welcome-banner {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%) !important;
-            border-color: #333 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
-        }
-        body.dark-mode .header-welcome-banner h1 { color: #ffffff !important; }
-        body.dark-mode .header-welcome-banner p { color: #bbbbbb !important; }
+                <div class="rounded-2xl shadow-xl p-6 text-center transform transition hover:scale-[1.02] border-t-4 border-yellow-400"
+                     style="background: linear-gradient(135deg, #1e293b, #0f172a); color: white;">
+                    
+                    <i class="fas fa-rocket text-4xl text-yellow-400 mb-3 drop-shadow-md"></i>
+                    <h3 class="font-bold text-lg mb-1">¿Listo para practicar?</h3>
+                    <p class="text-gray-300 text-sm mb-4">Hay nuevos exámenes disponibles.</p>
+                    <a href="{{ url_for('exams_list') }}" 
+                       class="block w-full py-3 font-bold rounded-xl transition shadow-lg no-underline"
+                       style="background: white; color: #111827;">
+                        Ver Exámenes
+                    </a>
+                </div>
 
-        /* 2. Tarjetas (Fondo y Bordes) */
-        body.dark-mode .card {
-            background-color: #1e1e1e !important; /* Gris oscuro */
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6) !important;
-            border-left: 1px solid #333 !important;
-            border-right: 1px solid #333 !important;
-            border-bottom: 1px solid #333 !important;
-            /* El border-top se mantiene del color original (azul/rojo/verde) */
-        }
+            </div>
+        </div>
+    </div>
+</div>
 
-        /* 3. Textos Generales en Tarjetas */
-        body.dark-mode .card h2,
-        body.dark-mode .card p,
-        body.dark-mode .exam-title-display,
-        body.dark-mode .score-details,
-        body.dark-mode .score-date,
-        body.dark-mode .empty-text,
-        body.dark-mode .warning-text,
-        body.dark-mode .subject-item strong,
-        body.dark-mode .report-status-item {
-            color: #e0e0e0 !important;
-        }
-
-        /* 4. Títulos Secundarios */
-        body.dark-mode .subsection-title {
-            color: #bbbbbb !important;
-            border-bottom-color: #444 !important;
-        }
-        
-        /* 5. Bordes internos */
-        body.dark-mode .card h2 { border-bottom-color: #444 !important; }
-        body.dark-mode .subject-item,
-        body.dark-mode .report-status-item { border-bottom-color: #333 !important; }
-        body.dark-mode .card-actions { border-top-color: #333 !important; }
-
-        /* 6. Botones Secundarios en Oscuro */
-        body.dark-mode .button-secondary {
-            background-color: #2d2d2d !important;
-            border-color: #555 !important;
-            color: #e0e0e0 !important;
-        }
-        body.dark-mode .button-secondary:hover {
-            background-color: #444 !important;
-        }
-
-        /* 7. Hover en listas */
-        body.dark-mode .latest-reports-list li:hover {
-            background-color: #252525 !important;
-        }
-    </style>
 {% endblock %}

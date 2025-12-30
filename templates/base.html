@@ -10,69 +10,102 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/output.css') }}">
+    
     <style>
     /* ========================================= */
-    /* 1. DEFINICIÓN DE VARIABLES (EL CEREBRO) */
+    /* 1. SISTEMA DE VARIABLES (LA LÓGICA REAL) */
     /* ========================================= */
+    
+    /* 🔥 MODO DÍA (ESTADO BASE / DEFAULT) 🔥 */
     :root {
-        /* --- MODO CLARO (DEFAULT) --- */
-        --bg-pagina: #eef2f5;          
-        --color-texto: #333333;        
-        --color-texto-secundario: #555; 
+        /* Fondo Principal: Gris azulado muy claro y limpio */
+        --bg-pagina: #f4f6fb;
         
-        --bg-header: linear-gradient(145deg, #34495e, #2c3e50);
-        --bg-footer: #2c3e50;
-        --texto-footer: #ecf0f1;
+        /* Textos: Oscuros para alto contraste */
+        --color-texto: #111827;        /* Gray-900 */
+        --color-texto-secundario: #6b7280; /* Gray-500 */
+        
+        /* HEADER (HERO): Gradiente suave y luminoso */
+        --bg-header: linear-gradient(135deg, #e0e7ff, #d1fae5); /* Indigo suave a Esmeralda suave */
+        --texto-header: #1e293b; /* Texto oscuro sobre fondo claro */
+        --borde-header: rgba(0,0,0,0.05);
 
-        --bg-tarjeta: #ffffff;         
-        --sombra-tarjeta: 0 4px 8px rgba(0,0,0,0.1);
-        --borde-tarjeta: #ddd;
+        /* NAV: Botones limpios */
+        --color-nav-link: #374151;
+        --bg-nav-link: rgba(255, 255, 255, 0.6);
+        --bg-nav-link-hover: #ffffff;
 
+        /* TARJETAS: Blancas puras con sombra suave */
+        --bg-tarjeta: #ffffff;
+        --sombra-tarjeta: 0 10px 25px rgba(0,0,0,0.08); /* Sombra elegante */
+        --borde-tarjeta: #e5e7eb; /* Borde muy sutil */
+
+        /* Inputs */
         --bg-input: #ffffff;
-        --borde-input: #ccc;
+        --borde-input: #d1d5db;
         
-        --bg-tabla-head: #2c3e50;      
-        --texto-tabla-head: #ffffff;
-        --bg-tabla-hover: #f1f1f1;
+        /* Tablas */
+        --bg-tabla-head: #f9fafb;      
+        --texto-tabla-head: #374151;
+        --bg-tabla-hover: #f3f4f6;
 
-        --color-primario: #3498db;     
-        --color-primario-hover: #2980b9;
+        /* Colores Acción */
+        --color-primario: #2563eb;     
+        --color-primario-hover: #1d4ed8;
         
-        /* Tipografía */
-        --fuente-principal: 'Inter', Arial, sans-serif;
+        /* Footer */
+        --bg-footer: #1f2937;
+        --texto-footer: #9ca3af;
+
+        --fuente-principal: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* --- MODO OSCURO (OVERRIDE) --- */
+    /* 🌑 MODO NOCTURNO (SOLO SOBRESCRIBE) 🌑 */
     body.dark-mode {
-        --bg-pagina: #121212;          
-        --color-texto: #e0e0e0;        
-        --color-texto-secundario: #b0b0b0;
+        /* Fondo: Azul muy profundo (casi negro pero con tono) */
+        --bg-pagina: #020617;          
+        
+        /* Textos: Claros */
+        --color-texto: #e5e7eb;        
+        --color-texto-secundario: #9ca3af;
 
-        --bg-header: linear-gradient(145deg, #000000, #1a1a1a);
-        --bg-footer: #0f0f0f;
-        --texto-footer: #888;
+        /* Header: Gradiente profundo y serio */
+        --bg-header: linear-gradient(135deg, #020617, #064e3b); /* Oscuro a Verde Bosque */
+        --texto-header: #f3f4f6;
+        --borde-header: #1e293b;
 
-        --bg-tarjeta: #1e1e1e;         
-        --sombra-tarjeta: 0 4px 15px rgba(0,0,0,0.6); 
-        --borde-tarjeta: #333;
+        /* Nav */
+        --color-nav-link: #e5e7eb;
+        --bg-nav-link: rgba(255, 255, 255, 0.05);
+        --bg-nav-link-hover: rgba(255, 255, 255, 0.15);
 
-        --bg-input: #2d2d2d;
-        --borde-input: #555;
+        /* Tarjetas: Slate oscuro sin sombra (flat design) */
+        --bg-tarjeta: #0f172a;         
+        --sombra-tarjeta: none; 
+        --borde-tarjeta: #1e293b;
 
-        --bg-tabla-head: #1a1a1a;
-        --texto-tabla-head: #e0e0e0;
-        --bg-tabla-hover: #252525;
+        /* Inputs */
+        --bg-input: #1e293b;
+        --borde-input: #374151;
+
+        /* Tablas */
+        --bg-tabla-head: #0f172a;
+        --texto-tabla-head: #d1d5db;
+        --bg-tabla-hover: #1e293b;
+        
+        /* Footer */
+        --bg-footer: #020617;
     }
 
     /* ========================================= */
-    /* 2. ESTILOS GENERALES */
+    /* 2. APLICACIÓN DE ESTILOS */
     /* ========================================= */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
     
     body {
         font-family: var(--fuente-principal);
-        background-color: var(--bg-pagina);
-        color: var(--color-texto);
+        background-color: var(--bg-pagina); /* Aplica el #f4f6fb */
+        color: var(--color-texto);          /* Aplica el #111827 */
         margin: 0;
         padding: 0;
         min-height: 100vh;
@@ -82,19 +115,20 @@
         transition: background-color 0.3s ease, color 0.3s ease;
     }
     
-    /* --- HEADER --- */
+    /* --- HEADER (HERO) --- */
     header {
-        background: var(--bg-header);
-        color: white; 
+        background: var(--bg-header); /* El gradiente bonito */
+        color: var(--texto-header);
         padding: 18px 0; 
         display: flex;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+        border-bottom: 1px solid var(--borde-header);
         position: sticky;
         top: 0;
         z-index: 100;
-        transition: background 0.3s;
+        transition: background 0.3s, color 0.3s;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Sombra suave en el header */
     }
     
     .header-content-wrapper {
@@ -110,40 +144,46 @@
     header h1 {
         margin: 0;
         font-size: 1.8em;
-        font-weight: 700;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        font-weight: 800;
+        letter-spacing: -0.025em;
     }
 
     /* --- NAVEGACIÓN --- */
     .main-nav a {
-        color: white;
+        color: var(--color-nav-link);
         text-decoration: none;
         padding: 10px 18px;
         border-radius: 8px;
         margin-left: 10px;
-        transition: all 0.3s;
-        font-size: 1em;
+        transition: all 0.2s ease-in-out;
+        font-size: 0.95em;
         font-weight: 600;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--bg-nav-link);
+        border: 1px solid transparent;
     }
 
     .main-nav a:hover {
-        background: var(--color-primario);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(52, 152, 219, 0.5);
+        background: var(--bg-nav-link-hover);
+        color: var(--color-primario);
+        transform: translateY(-1px);
+        border-color: var(--borde-tarjeta);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
     
-    .main-nav a[href*="admin_panel"] { background: #2980b9 !important; border: 1px solid #3498db; }
-    .main-nav a[href*="logout"] { background: #c0392b !important; border: 1px solid #e74c3c; }
+    /* Botones especiales */
+    .main-nav a[href*="admin_panel"] { background: #0ea5e9 !important; color: white !important; }
+    .main-nav a[href*="logout"] { background: #ef4444 !important; color: white !important; }
 
     .nav-role {
-        font-weight: bold;
-        color: #f1c40f;
+        font-weight: 700;
+        color: var(--color-texto-secundario);
         margin-right: 20px;
-        padding: 5px 10px;
-        border-radius: 5px;
-        background: rgba(0, 0, 0, 0.2);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        background: rgba(0,0,0,0.05);
     }
+    body.dark-mode .nav-role { background: rgba(255,255,255,0.1); color: #fbbf24; }
     
     /* --- CONTENIDO & TARJETAS --- */
     main { padding: 20px 20px 40px 20px; flex: 1; }
@@ -154,26 +194,30 @@
     .white-box,
     .glass-card,
     .details-card {
-        background-color: var(--bg-tarjeta);
+        background-color: var(--bg-tarjeta); /* Blanco en día */
         color: var(--color-texto);
         padding: 30px;
         border-radius: 12px;
-        box-shadow: var(--sombra-tarjeta);
+        box-shadow: var(--sombra-tarjeta); /* Sombra solo en día */
         border: 1px solid var(--borde-tarjeta); 
         margin: 20px auto; 
         max-width: 1200px;
         transition: background-color 0.3s, box-shadow 0.3s, border-color 0.3s;
     }
 
+    /* Textos secundarios */
+    .text-muted, small, .help-text {
+        color: var(--color-texto-secundario) !important;
+    }
+
     /* --- FOOTER --- */
     footer {
         text-align: center;
-        padding: 15px;
+        padding: 20px;
         background: var(--bg-footer); 
         color: var(--texto-footer);
         width: 100%;
         font-size: 0.9em;
-        border-top: 3px solid var(--color-primario);
         transition: background-color 0.3s;
     }
     
@@ -183,19 +227,22 @@
         z-index: 10000; width: 350px; display: flex; flex-direction: column-reverse; gap: 10px;
     }
     .flash-message {
-        padding: 15px 20px; border-radius: 8px; text-align: left; font-weight: 600;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); color: #333; /* Texto oscuro por defecto en alertas */
+        padding: 15px 20px; border-radius: 10px; text-align: left; font-weight: 600;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+        color: #1e293b; 
+        background: white;
+        border: 1px solid rgba(0,0,0,0.05);
     }
-    .flash-success { background: #d4edda; color: #155724; border-left: 5px solid #2ecc71; }
-    .flash-danger { background: #f8d7da; color: #721c24; border-left: 5px solid #e74c3c; }
-    .flash-warning { background: #fff3cd; color: #856404; border-left: 5px solid #f1c40f; }
-    .flash-info { background: #e6f3ff; color: #1f6391; border-left: 5px solid #3498db; }
+    .flash-success { border-left: 5px solid #22c55e; }
+    .flash-danger { border-left: 5px solid #ef4444; }
+    .flash-warning { border-left: 5px solid #eab308; }
     
     /* --- FORMS & LISTS --- */
     .btn {
-        display: inline-block; padding: 12px 20px; 
+        display: inline-block; padding: 12px 24px; 
         background: var(--color-primario); color: white; border-radius: 8px;
         text-decoration: none; transition: 0.3s, transform 0.2s; cursor: pointer; border: none; font-weight: 600;
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
     }
     .btn:hover { background: var(--color-primario-hover); transform: translateY(-1px); }
     
@@ -210,13 +257,8 @@
     }
     form input:focus, form textarea:focus { 
         border-color: var(--color-primario); 
-        box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); outline: none; 
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); outline: none; 
     }
-    form input::placeholder { color: var(--color-texto-secundario); opacity: 0.7; }
-
-    .submit-btn { margin: 10px 0; padding: 12px; width: 80%; box-sizing: border-box; border-radius: 8px; }
-    form button { background: #2ecc71; color: white; border: none; cursor: pointer; }
-    form button:hover { background: #27ae60; }
     
     ul { list-style: none; padding: 0; }
     ul li {
@@ -231,32 +273,35 @@
 
     /* --- TABLAS --- */
     table {
-        width: 100%; border-collapse: collapse;
+        width: 100%; border-collapse: separate; border-spacing: 0;
         background-color: var(--bg-tarjeta); color: var(--color-texto);
+        border-radius: 8px; overflow: hidden; border: 1px solid var(--borde-tarjeta);
     }
     th {
         background-color: var(--bg-tabla-head); color: var(--texto-tabla-head);
-        padding: 12px; text-align: left; border-bottom: 1px solid var(--borde-tarjeta);
+        padding: 15px; text-align: left; font-weight: 700;
+        border-bottom: 1px solid var(--borde-tarjeta);
     }
     td {
-        padding: 12px; border-bottom: 1px solid var(--borde-tarjeta);
+        padding: 15px; border-bottom: 1px solid var(--borde-tarjeta);
         background-color: var(--bg-tarjeta); color: var(--color-texto);
     }
+    tr:last-child td { border-bottom: none; }
     tr:hover td { background-color: var(--bg-tabla-hover); }
 
     /* --- TOGGLE BUTTON --- */
     .theme-toggle-btn {
         position: fixed; bottom: 20px; left: 20px; z-index: 9999;
-        background: #2c3e50; color: white; border: none;
+        background: #1e293b; color: #fcd34d; border: none;
         width: 50px; height: 50px; border-radius: 50%;
         cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
         transition: transform 0.3s, background 0.3s;
     }
-    .theme-toggle-btn:hover { transform: scale(1.1); }
+    .theme-toggle-btn:hover { transform: scale(1.1) rotate(15deg); }
     
     .icon-sun { display: none; }
-    body.dark-mode .theme-toggle-btn { background: #f1c40f; color: #333; }
+    body.dark-mode .theme-toggle-btn { background: #fcd34d; color: #1e293b; }
     body.dark-mode .icon-sun { display: block; }
     body.dark-mode .icon-moon { display: none; }
 
@@ -264,13 +309,13 @@
     @media (max-width: 768px) {
         header { flex-direction: column; align-items: flex-start; padding: 15px 15px; }
         .header-content-wrapper { padding: 0 15px; }
-        .main-nav { margin-top: 10px; display: flex; flex-direction: column; width: 100%; }
-        .main-nav a { margin-left: 0; margin-bottom: 5px; width: 100%; }
+        .main-nav { margin-top: 15px; display: flex; flex-direction: column; width: 100%; gap: 5px; }
+        .main-nav a { margin-left: 0; width: 100%; text-align: center; }
         form input:not([type="submit"]), form textarea, form button.submit-btn { width: 100%; }
         ul li { flex-direction: column; align-items: flex-start; gap: 10px; }
         #flash-container { width: 90%; right: 5%; left: 5%; bottom: 10px; }
         main { padding: 10px; }
-        .container { padding: 20px 10px; }
+        .container { padding: 20px 15px; }
     }
     </style>
     
@@ -285,18 +330,18 @@
                 <span class="nav-role">Rol: {{ current_user.role | capitalize }}</span>
                 
                 {% if current_user.role == 'student' %}
-                <a href="{{ url_for('dashboard') }}">Inicio</a>
-                <a href="{{ url_for('exams_list') }}">Exámenes</a>
-                <a href="{{ url_for('view_announcements') }}">Anuncios</a>
-                <a href="{{ url_for('student_reports') }}">Mis Reportes</a>
+                <a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Inicio</a>
+                <a href="{{ url_for('exams_list') }}"><i class="fas fa-file-alt"></i> Exámenes</a>
+                <a href="{{ url_for('view_announcements') }}"><i class="fas fa-bullhorn"></i> Anuncios</a>
+                <a href="{{ url_for('student_reports') }}"><i class="fas fa-clipboard-list"></i> Reportes</a>
                 
                 {% elif current_user.role in ['admin', 'ayudante'] %}
-                <a href="{{ url_for('admin_panel') }}">Panel</a>
-                <a href="{{ url_for('admin_reports') }}">Reportes</a>
+                <a href="{{ url_for('admin_panel') }}"><i class="fas fa-cogs"></i> Panel</a>
+                <a href="{{ url_for('admin_reports') }}"><i class="fas fa-exclamation-circle"></i> Reportes</a>
                 
                 {% endif %}
                 
-                <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
+                <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Salir</a>
             </nav>
             {% endif %}
         </div>
@@ -363,52 +408,22 @@
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 
     {% if current_user.is_authenticated and current_user.role in ['admin', 'ayudante'] %}
-    
     <div id="global-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 10px;"></div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Conexión admin
             const globalSocket = io.connect(window.location.origin);
-
-            globalSocket.on('connect', function() {
-                globalSocket.emit('admin_join_pulse');
-            });
-
-            globalSocket.on('admin_notification_alert', function(data) {
-                showGlobalToast(data);
-            });
-
+            globalSocket.on('connect', function() { globalSocket.emit('admin_join_pulse'); });
+            globalSocket.on('admin_notification_alert', function(data) { showGlobalToast(data); });
             function showGlobalToast(data) {
                 const container = document.getElementById('global-toast-container');
                 const toast = document.createElement('div');
-                // Estilos inline fijos para admin
                 toast.style.cssText = "background-color:white; border-left:5px solid #f39c12; padding:15px 20px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); display:flex; flex-direction:column; min-width:300px; animation:slideIn 0.5s ease-out;";
-                
-                toast.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <strong style="font-size:1.1em; color:#333;">${data.title}</strong>
-                        <small style="color:#999;">Ahora</small>
-                    </div>
-                    <p style="margin:0 0 10px 0; color:#555;">${data.message}</p>
-                    <a href="/admin/chat/${data.user_id}" target="_blank" style="text-align:center; background:#3498db; color:white; text-decoration:none; padding:8px; border-radius:5px; font-weight:bold;">💬 Abrir Chat</a>
-                `;
-
+                toast.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><strong style="font-size:1.1em; color:#333;">${data.title}</strong><small style="color:#999;">Ahora</small></div><p style="margin:0 0 10px 0; color:#555;">${data.message}</p><a href="/admin/chat/${data.user_id}" target="_blank" style="text-align:center; background:#3498db; color:white; text-decoration:none; padding:8px; border-radius:5px; font-weight:bold;">💬 Abrir Chat</a>`;
                 container.appendChild(toast);
-
-                try {
-                    const audio = new Audio('https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_100KB_MP3.mp3'); 
-                    audio.volume = 0.5;
-                    audio.play().catch(e => console.log("Audio autoplay bloqueado"));
-                } catch(e){}
-
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 500);
-                }, 15000);
+                try { const audio = new Audio('https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_100KB_MP3.mp3'); audio.volume = 0.5; audio.play().catch(e => console.log("Audio autoplay bloqueado")); } catch(e){}
+                setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 15000);
             }
         });
-        
         const style = document.createElement('style');
         style.innerHTML = `@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`;
         document.head.appendChild(style);
@@ -416,142 +431,36 @@
     {% endif %}
 
     {% if current_user.is_authenticated and current_user.role == 'student' %}
-    
     <div id="student-toast-container" style="position: fixed; bottom: 30px; right: 30px; z-index: 99999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;"></div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- 1. Conexión Socket (Usando el global o creando uno si falla) ---
             var socket;
-            if (typeof io !== 'undefined') {
-                socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-            } else {
-                console.error("Socket.IO no cargado correctamente.");
-                return;
-            }
-
-            socket.on('connect', function() {
-                console.log("🟢 Alumno conectado a notificaciones.");
-            });
-
-            // --- 2. Escuchar evento ---
-            socket.on('student_notification', function(data) {
-                mostrarNotificacionBonita(data);
-            });
-
-            // --- 3. Nueva Función de Notificación "Bonita" ---
+            if (typeof io !== 'undefined') { socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port); }
+            else { console.error("Socket.IO no cargado correctamente."); return; }
+            socket.on('student_notification', function(data) { mostrarNotificacionBonita(data); });
             function mostrarNotificacionBonita(data) {
                 const container = document.getElementById('student-toast-container');
                 const toast = document.createElement('div');
-
-                // Detectar modo oscuro para colores
                 const isDark = document.body.classList.contains('dark-mode');
-                // Colores dinámicos
                 const bg = isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.98)';
                 const text = isDark ? '#ffffff' : '#2c3e50';
-                const titleColor = isDark ? '#2ecc71' : '#27ae60'; // Verde vibrante para el título
+                const titleColor = isDark ? '#2ecc71' : '#27ae60';
                 const shadow = isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.15)';
                 const linkColor = isDark ? '#3498db' : '#2980b9';
-
-                // Estilos CSS en línea para la tarjeta
-                toast.style.cssText = `
-                    background: ${bg};
-                    color: ${text};
-                    backdrop-filter: blur(10px); /* Efecto vidrio moderno */
-                    -webkit-backdrop-filter: blur(10px);
-                    border-left: 5px solid #2ecc71; /* Borde verde de éxito */
-                    border-radius: 12px;
-                    padding: 18px 22px;
-                    box-shadow: 0 10px 30px -5px ${shadow}, 0 4px 10px -5px rgba(0,0,0,0.1);
-                    min-width: 320px;
-                    max-width: 400px;
-                    cursor: pointer;
-                    opacity: 0;
-                    transform: translateY(60px) scale(0.95); /* Empieza abajo y un poco más pequeña */
-                    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Animación con rebote */
-                    display: flex;
-                    flex-direction: column;
-                    position: relative;
-                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                `;
-
-                // Botón de cerrar (X)
+                toast.style.cssText = `background: ${bg}; color: ${text}; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-left: 5px solid #2ecc71; border-radius: 12px; padding: 18px 22px; box-shadow: 0 10px 30px -5px ${shadow}, 0 4px 10px -5px rgba(0,0,0,0.1); min-width: 320px; max-width: 400px; cursor: pointer; opacity: 0; transform: translateY(60px) scale(0.95); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; position: relative; font-family: 'Inter', sans-serif;`;
                 const closeBtn = document.createElement('span');
                 closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-                closeBtn.style.cssText = `
-                    position: absolute; top: 12px; right: 15px; font-size: 1em; cursor: pointer; opacity: 0.5; transition: opacity 0.2s, transform 0.2s; color: ${text};
-                `;
-                closeBtn.onmouseover = () => { closeBtn.style.opacity = '1'; closeBtn.style.transform = 'scale(1.1)'; };
-                closeBtn.onmouseleave = () => { closeBtn.style.opacity = '0.5'; closeBtn.style.transform = 'scale(1)'; };
-                closeBtn.onclick = (e) => { 
-                    e.stopPropagation(); // Evitar que el clic cierre active el enlace
-                    dismissToast(toast); 
-                };
-
-                // 🔥 CONTENIDO ACTUALIZADO: NUEVA PESTAÑA 🔥
-                toast.innerHTML = `
-                    <div style="font-weight: 700; font-size: 1.1em; margin-bottom: 8px; display:flex; align-items:center; gap:10px; color: ${titleColor};">
-                        <i class="fas fa-bell" style="animation: swing 2s ease infinite;"></i> ${data.title}
-                    </div>
-                    <div style="font-size: 0.95em; line-height: 1.5; opacity: 0.95; margin-bottom: 12px;">
-                        ${data.message}
-                    </div>
-                    <div style="font-size: 0.85em; color: ${linkColor}; font-weight: 700; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 6px; transition: gap 0.2s;">
-                        Abrir en nueva pestaña <i class="fas fa-external-link-alt"></i>
-                    </div>
-                `;
-
+                closeBtn.style.cssText = `position: absolute; top: 12px; right: 15px; font-size: 1em; cursor: pointer; opacity: 0.5; transition: opacity 0.2s, transform 0.2s; color: ${text};`;
+                closeBtn.onclick = (e) => { e.stopPropagation(); dismissToast(toast); };
+                toast.innerHTML = `<div style="font-weight: 700; font-size: 1.1em; margin-bottom: 8px; display:flex; align-items:center; gap:10px; color: ${titleColor};"><i class="fas fa-bell" style="animation: swing 2s ease infinite;"></i> ${data.title}</div><div style="font-size: 0.95em; line-height: 1.5; opacity: 0.95; margin-bottom: 12px;">${data.message}</div><div style="font-size: 0.85em; color: ${linkColor}; font-weight: 700; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 6px; transition: gap 0.2s;">Abrir en nueva pestaña <i class="fas fa-external-link-alt"></i></div>`;
                 toast.appendChild(closeBtn);
-
-                // 🔥 ACCIÓN ACTUALIZADA: INMUNIDAD + NUEVA PESTAÑA 🔥
-                toast.onclick = function() {
-                    if (data.link) {
-                        
-                        // 🔥 1. VERIFICAR SI ESTAMOS EN EXAMEN (Inmunidad) 🔥
-                        // Solo ejecutamos esto si existe la función definida en take_exam.html
-                        if (typeof window.activarInmunidadReporte === 'function') {
-                            console.log("🛡️ Activando inmunidad por clic en notificación.");
-                            window.activarInmunidadReporte(); 
-                        }
-
-                        // 🔥 2. ABRIR EN NUEVA PESTAÑA 🔥
-                        window.open(data.link, '_blank');
-                    }
-                };
-
-                // Efecto hover en el enlace
-                const linkDiv = toast.lastElementChild;
-                toast.onmouseover = () => linkDiv.style.gap = '10px';
-                toast.onmouseleave = () => linkDiv.style.gap = '6px';
-
-                // Agregar al contenedor
+                toast.onclick = function() { if (data.link) { if (typeof window.activarInmunidadReporte === 'function') { window.activarInmunidadReporte(); } window.open(data.link, '_blank'); } };
                 container.appendChild(toast);
-
-                // Sonido (opcional)
                 try { new Audio('https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_100KB_MP3.mp3').play().catch(()=>{}); } catch(e){}
-
-                // Animación de entrada
-                requestAnimationFrame(() => {
-                     setTimeout(() => {
-                        toast.style.opacity = '1';
-                        toast.style.transform = 'translateY(0) scale(1)';
-                    }, 50);
-                });
-
-                // Auto-cerrar a los 8 segundos
+                requestAnimationFrame(() => { setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0) scale(1)'; }, 50); });
                 const autoCloseTimer = setTimeout(() => dismissToast(toast), 8000);
-
-                // Función para cerrar suavemente
-                function dismissToast(element) {
-                    clearTimeout(autoCloseTimer);
-                    element.style.opacity = '0';
-                    element.style.transform = 'translateY(30px) scale(0.9)'; 
-                    setTimeout(() => {
-                        if (element.parentNode) element.remove();
-                    }, 500);
-                }
+                function dismissToast(element) { clearTimeout(autoCloseTimer); element.style.opacity = '0'; element.style.transform = 'translateY(30px) scale(0.9)'; setTimeout(() => { if (element.parentNode) element.remove(); }, 500); }
             }
-            
             const style = document.createElement('style');
             style.innerHTML = `@keyframes swing { 20% { transform: rotate(15deg); } 40% { transform: rotate(-10deg); } 60% { transform: rotate(5deg); } 80% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }`;
             document.head.appendChild(style);
