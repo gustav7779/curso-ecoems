@@ -1,347 +1,66 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Token CSRF para seguridad en Flask -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-
+    
     <title>Curso ECOEMS - Inicio de Sesión</title>
-    <style>
-        /* --- ESTILOS BASE Y FUENTE --- */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #3498db, #2ecc71); 
-            color: white;
-            min-height: 100vh; 
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* --- ENCABEZADO CON IMAGEN DE FONDO --- */
-        header {
-            position: relative;
-            text-align: center;
-            padding: 70px 20px; 
-            background: linear-gradient(135deg, #3498db, #2ecc71); 
-            overflow: hidden; 
-        }
 
-        /* --- 🔥 IMAGEN CORREGIDA Y VISIBLE 🔥 --- */
-        header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: url('{{ url_for('static', filename='casa.png') }}');
+    <!-- FontAwesome para los íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS (Usando CDN para que funcione directo. En producción usa tu archivo compilado) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Si tienes tu archivo local compilado, descomenta la siguiente línea y quita el script de arriba -->
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/output.css') }}"> -->
+
+    <style>
+        /* Estilo específico para pasar la URL de Flask a CSS */
+        .header-bg-image {
+            background-image: url("{{ url_for('static', filename='casa.png') }}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            
-            /* Ajustado para que la imagen sea visible */
-            filter: brightness(1.1); /* Ligero brillo */
-            opacity: 0.3; /* Más visible */
-            
-            z-index: 1; 
-        }
-        /* --- 🔥 FIN DE CORRECCIÓN DE IMAGEN 🔥 --- */
-
-
-        /* --- CONTENIDO DE LA CABECERA (H1, P) --- */
-        header h1, header p {
-            position: relative; 
-            z-index: 2; 
-            text-shadow: 0 0 10px rgba(0, 0, 0, 0.9); 
-            font-weight: 900;
         }
         
-        header h1 {
-            margin: 0;
-            font-size: 2.8em;
-        }
-        header p {
-            font-size: 1.4em;
-        }
-        
-        /* --- MENSAJES FLASH (FLOTANTES) --- */
-        #flash-container {
-            position: fixed; 
-            bottom: 20px; 
-            right: 20px; 
-            z-index: 10000; 
-            width: 350px; 
-        }
-
-        .flash-message {
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            border-radius: 8px; 
-            text-align: center;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            transition: opacity 0.5s ease-out;
-        }
-        
-        .flash-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .flash-danger {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .flash-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-        }
-        
-        /* --- CONTENIDO PRINCIPAL --- */
-        .main-content {
-            flex-grow: 1; 
-        }
-        
-        .container {
-            display: flex;
-            justify-content: center; 
-            align-items: flex-start;
-            max-width: 1000px; 
-            width: 90%;
-            margin: 40px auto;
-            padding: 0;
-            gap: 40px; 
-        }
-        
-        /* --- BLOQUE DE INFORMACIÓN --- */
-        .info {
-            flex: 2; 
-            padding: 30px;
-            background: rgba(255, 255, 255, 0.15); 
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-        }
-        .info h2 {
-            margin-top: 0;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
-            padding-bottom: 10px;
-            font-size: 1.8em;
-        }
-        .info ul {
-            list-style: disc;
-            padding-left: 25px;
-        }
-        .info ul li {
-            margin-bottom: 8px;
-        }
-        
-        /* --- CAJA DE LOGIN --- */
-        .login-box {
-            flex: 1; 
-            background: white;
-            color: #333;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-        }
-        .login-box h2 {
-            margin-top: 0;
-            color: #3498db;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-        
-        /* --- FORMULARIO Y BOTONES --- */
-        .login-box form input {
-            width: 100%; 
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            box-sizing: border-box;
-        }
-        .login-box button {
-            width: 100%;
-            padding: 12px;
-            background: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: bold;
-            transition: background 0.3s;
-            margin-top: 15px;
-        }
-        .login-box button:hover {
-            background: #1f6391;
-        }
-
-        /* --- FOOTER (CORRECCIONES ESTÉTICAS Y DE POSICIONAMIENTO) --- */
-        footer {
-            background: rgba(0, 0, 0, 0.4); 
-            color: #eee;
-            padding: 30px 20px 0 20px; 
-            width: 100%;
-            box-sizing: border-box;
-            margin-top: auto; 
-            font-size: 0.9em;
-        }
-        .footer-content {
-            display: flex;
-            flex-direction: row; 
-            justify-content: space-between; 
-            align-items: flex-start;
-            max-width: 1200px;
-            margin: 0 auto;
-            text-align: left; 
-            gap: 20px;
-        }
-        .footer-left {
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: row; 
-            align-items: center;
-            text-align: left;
-            flex-grow: 1; 
-            flex-basis: auto; 
-        }
-        .footer-left img {
-            height: 180px; 
-            filter: grayscale(100%) brightness(200%); 
-            margin-right: 60px; 
-            margin-bottom: 0; 
-            flex-shrink: 0; 
-        }
-        .footer-address {
-            font-size: 1.2em; 
-            line-height: 1.4;
-            flex-grow: 1;
-        }
-        .footer-bottom {
-            text-align: center; 
-            padding: 15px 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            margin-top: 15px;
-            font-size: 0.8em;
-            width: 100%;
-        }
-        
-        /* --- ESTILOS BANNER COOKIES --- */
-        .cookie-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 15px 20px;
-            background: #2c3e50; 
-            color: white;
-            z-index: 9999; 
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
-        }
-        .cookie-banner p {
-            margin: 0;
-            font-size: 0.9em;
-            flex-grow: 1;
-            margin-right: 20px;
-        }
-        .cookie-banner a {
-            color: #3498db;
-            text-decoration: underline;
-            margin-left: 5px;
-        }
-        .cookie-btn {
-            background: #3498db;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .cookie-btn:hover {
-            background: #2980b9;
-        }
-
-
-        /* --- MEDIA QUERIES (ADAPTABILIDAD) --- */
-        @media (max-width: 900px) {
-            .footer-content {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-            .footer-left {
-                flex-direction: column; 
-                align-items: center;
-                flex-basis: 100%;
-                text-align: center; 
-            }
-            .footer-left img {
-                height: 120px; 
-                margin-right: 0;
-                margin-bottom: 15px;
-            }
-            .footer-address {
-                text-align: center; 
-                font-size: 1.1em;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            
-            .container {
-                flex-direction: column; 
-                width: 95%;
-                margin: 20px auto;
-                gap: 20px;
-            }
-
-            .info, .login-box {
-                width: 100%; 
-                flex: none;
-                padding: 20px;
-            }
-            
-            header h1 {
-                font-size: 2em;
-            }
-            
-            .cookie-banner {
-                flex-direction: column;
-                text-align: center;
-            }
-            .cookie-banner p {
-                margin-bottom: 10px;
-                margin-right: 0;
-            }
-            .cookie-btn {
-                width: 100%;
-            }
+        /* Fuente base similar a la original pero modernizada */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
     </style>
 </head>
-<body>
-    
-    <header>
-        <h1>Curso de Preparación ECOEMS</h1>
-        <p>Plataforma oficial para exámenes, calificaciones y anuncios 📘</p>
+
+<body class="bg-gradient-to-br from-[#3498db] to-[#2ecc71] min-h-screen flex flex-col text-white">
+
+    <!-- --- ENCABEZADO --- -->
+    <header class="relative py-20 text-center overflow-hidden shadow-lg group">
+        <!-- Capa de fondo con la imagen 'casa.png' -->
+        <div class="absolute inset-0 z-0 header-bg-image opacity-30 brightness-110 transition-transform duration-700 group-hover:scale-105"></div>
+        
+        <!-- Contenido del header -->
+        <div class="relative z-10 drop-shadow-md px-4">
+            <h1 class="text-4xl md:text-6xl font-black tracking-tight mb-2 text-shadow-lg">
+                Curso de Preparación ECOEMS
+            </h1>
+            <p class="text-lg md:text-2xl font-light opacity-95 text-shadow-md">
+                Plataforma oficial para exámenes, calificaciones y anuncios 📘
+            </p>
+        </div>
     </header>
 
-    <div id="flash-container">
+    <!-- --- MENSAJES FLASH (FLOTANTES) --- -->
+    <div id="flash-container" class="fixed bottom-5 right-5 z-50 w-80 space-y-3 pointer-events-none">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="flash-message flash-{{ category }}">
+                    <div class="flash-message pointer-events-auto p-4 rounded-lg shadow-xl text-center font-bold transition-all duration-500 transform translate-y-0 opacity-100
+                        {% if category == 'success' %} bg-green-100 text-green-800 border-l-4 border-green-500
+                        {% elif category == 'danger' %} bg-red-100 text-red-800 border-l-4 border-red-500
+                        {% elif category == 'warning' %} bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500
+                        {% else %} bg-blue-100 text-blue-800 border-l-4 border-blue-500 {% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -349,104 +68,160 @@
         {% endwith %}
     </div>
 
-    <div class="main-content">
-        <div class="container">
-            <div class="info">
-                <h2>Bienvenido al curso de preparacion para el examen 
-                    ECOEMS
-                </h2>
-                <p>
-                    Esta plataforma está diseñada para apoyarte en tu preparación al examen de ECOEMS. 
-                    Aquí podrás acceder a:
+    <!-- --- CONTENIDO PRINCIPAL --- -->
+    <div class="flex-grow container mx-auto px-4 py-10 flex flex-col lg:flex-row gap-10 items-start justify-center">
+        
+        <!-- COLUMNA IZQUIERDA: INFORMACIÓN -->
+        <div class="lg:flex-[2] w-full bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-white/20">
+            <h2 class="text-3xl font-bold border-b-2 border-white/30 pb-4 mb-6">
+                Bienvenido al curso ECOEMS
+            </h2>
+            <p class="text-lg leading-relaxed mb-4 text-white/90">
+                Esta plataforma está diseñada para apoyarte en tu preparación al examen de ECOEMS. 
+                Aquí podrás acceder a:
+            </p>
+            <ul class="space-y-4 ml-2 mb-6 text-lg">
+                <li class="flex items-center">
+                    <i class="fas fa-laptop-code text-yellow-300 mr-3 text-xl"></i> Exámenes en línea (simulación estilo IPN/UNAM)
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-star text-yellow-300 mr-3 text-xl"></i> Consulta de Calificaciones
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-bullhorn text-yellow-300 mr-3 text-xl"></i> Anuncios y avisos importantes
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-headset text-yellow-300 mr-3 text-xl"></i> Soporte en caso de problemas
+                </li>
+            </ul>
+            <div class="mt-8 bg-white/20 py-3 rounded-lg text-center backdrop-blur-sm">
+                <p class="text-xl font-bold text-white">
+                    ¡Prepárate y da tu mejor esfuerzo! 🚀
                 </p>
-                <ul>
-                    <li>Exámenes en línea (simulación estilo IPN/UNAM)</li>
-                    <li>Calificaciones</li>
-                    <li>Anuncios y avisos importantes</li>
-                    <li>Soporte en caso de problemas</li>
-                </ul>
-                <p>¡Prepárate y da tu mejor esfuerzo! 🚀</p>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: LOGIN -->
+        <div class="w-full lg:flex-1 max-w-md bg-white text-gray-800 p-8 rounded-2xl shadow-2xl transform transition hover:scale-[1.01]">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 text-2xl mb-4 shadow-inner">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 border-b border-gray-200 pb-2">
+                    Iniciar sesión
+                </h2>
             </div>
 
-            <div class="login-box">
-                <h2>Iniciar sesión</h2>
-                
-                <form method="POST" action="{{ url_for('login') }}">
-                    
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form method="POST" action="{{ url_for('login') }}" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                   <input type="text" name="username" placeholder="Nombre completo o Usuario" required autocomplete="username" spellcheck="false">
-                    <input type="password" name="password" placeholder="Contraseña" required>
-                    <button type="submit">Entrar</button>
-                </form>
+                <!-- Input Usuario -->
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors group-focus-within:text-blue-500">
+                        <i class="fas fa-user text-gray-400"></i>
+                    </div>
+                    <input type="text" name="username" placeholder="Usuario o Nombre Completo" required autocomplete="username" spellcheck="false"
+                        class="w-full pl-10 px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm">
                 </div>
+
+                <!-- Input Contraseña -->
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors group-focus-within:text-blue-500">
+                        <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" name="password" placeholder="Contraseña" required 
+                        class="w-full pl-10 px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm">
+                </div>
+
+                <!-- Botón -->
+                <button type="submit" 
+                    class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow-md transform transition active:scale-95 hover:-translate-y-0.5 focus:ring-4 focus:ring-blue-300">
+                    Entrar
+                </button>
+            </form>
         </div>
+
     </div>
     
-    <footer>
-        <div class="footer-content">
-            <div class="footer-left">
-               <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo Institucional"> 
+    <!-- --- FOOTER --- -->
+    <footer class="bg-gray-900/90 text-gray-300 pt-10 pb-6 mt-auto border-t border-gray-700">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+            
+            <div class="flex flex-col md:flex-row items-center text-center md:text-left gap-8">
+                <!-- Logo -->
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo Institucional" 
+                    class="h-28 md:h-36 brightness-200 grayscale opacity-80 hover:opacity-100 transition-opacity">
                 
-                <div class="footer-address">
-                    <strong>CURSO DE LA CASA DE CULTURA DE SAN MATEO XALPA</strong>
-                    <br>
-                    <br>
-                    16800, Av. Miguel Hidalgo 58, San Mateo Xalpa, Xochimilco, 16300 Ciudad de México, CDMX
-                    <br>
-                    <br>
-                    Teléfono del Profe: +55  35 04 76 10
+                <!-- Dirección -->
+                <div class="text-sm md:text-base space-y-2">
+                    <strong class="text-white block text-lg tracking-wide border-b border-gray-600 pb-1 mb-2">CURSO DE LA CASA DE CULTURA DE SAN MATEO XALPA</strong>
+                    <p class="leading-relaxed">
+                        16800, Av. Miguel Hidalgo 58, San Mateo Xalpa,<br> 
+                        Xochimilco, 16300 Ciudad de México, CDMX
+                    </p>
+                    <p class="text-blue-400 font-bold flex items-center justify-center md:justify-start gap-2 pt-1">
+                        <i class="fas fa-phone-alt"></i> Teléfono del Profe: +55 35 04 76 10
+                    </p>
                 </div>
             </div>
-            
-            <div class="footer-right">
-                <a href="{{ url_for('privacy_notice') }}" target="_blank" style="color: #3498db; font-weight: bold; text-decoration: none;">Aviso de Privacidad</a>
+
+            <!-- Enlaces -->
+            <div>
+                <a href="{{ url_for('privacy_notice') }}" target="_blank" class="text-blue-400 hover:text-blue-300 font-bold underline decoration-dotted hover:decoration-solid transition">
+                    Aviso de Privacidad
+                </a>
             </div>
-            
         </div>
 
-        <div class="footer-bottom">
+        <div class="text-center mt-8 pt-4 border-t border-gray-700 text-xs text-gray-500">
             © 2025 Curso ECOEMS de la CCSMX. Todos los derechos reservados.
         </div>
     </footer>
     
-    <div id="cookie-notice" class="cookie-banner" style="display: none;">
-        <p>
-            Usamos cookies propias y de sesión para el correcto funcionamiento de la autenticación. Al hacer clic en "Aceptar", confirmas que has leído y aceptas nuestro 
-            <a href="{{ url_for('privacy_notice') }}" target="_blank">Aviso de Privacidad</a>.
-        </p>
-        <button id="accept-cookies" class="cookie-btn">Aceptar y Continuar</button>
+    <!-- --- BANNER DE COOKIES --- -->
+    <div id="cookie-notice" class="hidden fixed bottom-0 left-0 right-0 bg-gray-800/95 backdrop-blur text-white p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.3)] z-[9999] flex-col md:flex-row justify-between items-center gap-4 border-t border-blue-500">
+        <div class="flex items-start gap-3">
+            <i class="fas fa-cookie-bite text-2xl text-yellow-500 mt-1"></i>
+            <p class="text-sm text-center md:text-left leading-relaxed">
+                Usamos cookies propias y de sesión para el correcto funcionamiento de la autenticación. Al hacer clic en "Aceptar", confirmas que has leído y aceptas nuestro 
+                <a href="{{ url_for('privacy_notice') }}" target="_blank" class="text-blue-400 hover:text-blue-300 underline font-semibold">Aviso de Privacidad</a>.
+            </p>
+        </div>
+        <button id="accept-cookies" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded transition transform active:scale-95 shadow-lg whitespace-nowrap w-full md:w-auto">
+            Aceptar y Continuar
+        </button>
     </div>
 
+    <!-- --- JAVASCRIPT --- -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // LÓGICA PARA OCULTAR MENSAJES FLASH
-            let flashMessages = document.querySelectorAll('#flash-container .flash-message');
-            
+            // 1. LÓGICA PARA OCULTAR MENSAJES FLASH
+            const flashMessages = document.querySelectorAll('#flash-container .flash-message');
             flashMessages.forEach(function(message) {
-                // Oculta el mensaje después de 4 segundos
                 setTimeout(function() {
-                    message.style.opacity = '0'; // Inicia la transición
-                    setTimeout(function() {
-                        message.remove(); // Quita el elemento del DOM
-                    }, 500); // Espera 500ms para que la transición CSS se vea suave
-                }, 4000); // 4000 milisegundos = 4 segundos
+                    // Efecto de desvanecimiento
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateY(10px)';
+                    // Eliminar del DOM después de la transición
+                    setTimeout(function() { message.remove(); }, 500);
+                }, 4000); // 4 segundos visible
             });
             
-            // LÓGICA DEL BANNER DE COOKIES
+            // 2. LÓGICA DEL BANNER DE COOKIES
             const cookieBanner = document.getElementById('cookie-notice');
             const acceptButton = document.getElementById('accept-cookies');
 
-            // 1. Verificar si la cookie de aceptación ya existe
+            // Verificar si NO se ha aceptado antes
             if (localStorage.getItem('cookies_accepted') !== 'true') {
-                cookieBanner.style.display = 'flex';
+                cookieBanner.classList.remove('hidden'); // Mostrar (quitando hidden)
+                cookieBanner.classList.add('flex');      // Usar flexbox
             }
 
-            // 2. Manejar el clic en el botón
+            // Al hacer clic en Aceptar
             acceptButton.addEventListener('click', function() {
-                // Guardar la preferencia del usuario en el navegador
                 localStorage.setItem('cookies_accepted', 'true');
-                cookieBanner.style.display = 'none';
+                cookieBanner.classList.add('hidden');    // Ocultar
+                cookieBanner.classList.remove('flex');
             });
         });
     </script>
