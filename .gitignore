@@ -8,3 +8,5 @@ __pycache__/
 # Archivos de logs
 *.log
 .env
+# --- BASURA DE NODE.JS (TAILWIND) ---
+node_modules/
