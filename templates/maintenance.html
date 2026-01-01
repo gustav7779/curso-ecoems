@@ -4,248 +4,277 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mantenimiento | Curso ECOEMS</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/MotionPathPlugin.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap');
-
         :root {
-            --bg-color: #050505;
-            --accent-color: #7000ff;
+            --bg-color: #080a14;
             --text-color: #ffffff;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(25, 25, 40, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --neon-purple: #c65dfd;
+            --neon-pink: #ff5ea1;
+            --neon-blue: #5ce1e6;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
+            margin: 0; padding: 0; height: 100vh; width: 100vw;
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 50% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 100% 0%, rgba(124, 58, 237, 0.1) 0%, transparent 40%);
-            font-family: 'Poppins', sans-serif;
-            color: var(--text-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
+            background-image: radial-gradient(circle at 50% 50%, rgba(25, 25, 40, 1) 0%, rgba(8, 10, 20, 1) 100%);
+            font-family: 'Poppins', sans-serif; color: var(--text-color);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; position: relative;
         }
 
-        /* --- FONDO DE ESTRELLAS ANIMADAS --- */
-        .stars {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .star {
-            position: absolute;
-            background: white;
+        .stars { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+        .star { position: absolute; background: white; border-radius: 50%; animation: twinkle var(--duration) infinite ease-in-out alternate; }
+        @keyframes twinkle { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+
+        /* --- LUNA --- */
+        .moon {
+            position: absolute; top: 10%; right: 10%; width: 120px; height: 120px;
+            background: radial-gradient(circle at 30% 30%, #e2e8f0, #94a3b8);
             border-radius: 50%;
-            opacity: 0.5;
-            animation: twinkle var(--duration) infinite ease-in-out;
+            box-shadow: inset -20px -20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(255,255,255,0.2);
+            z-index: 5;
         }
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.2; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
+        .crater { position: absolute; background: rgba(0,0,0,0.1); border-radius: 50%; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3); }
 
-        /* --- TARJETA PRINCIPAL (GLASSMORPHISM) --- */
+        /* --- TARJETA --- */
         .maintenance-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border);
-            padding: 3rem;
-            border-radius: 30px;
-            text-align: center;
-            max-width: 480px;
-            width: 85%;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
-            position: relative;
-            z-index: 10;
-            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            background: var(--glass-bg); backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1px solid var(--glass-border); padding: 4rem 2.5rem;
+            border-radius: 35px; text-align: center; max-width: 550px; width: 85%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(198, 93, 253, 0.2);
+            position: relative; z-index: 10;
         }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* --- COHETE INTERACTIVO --- */
+        /* --- COHETE --- */
         .rocket-container {
-            font-size: 5rem;
-            margin-bottom: 1rem;
-            display: inline-block;
-            cursor: pointer;
-            transition: transform 0.3s;
-            animation: float 3s ease-in-out infinite;
-            filter: drop-shadow(0 0 25px rgba(112, 0, 255, 0.4));
+            position: absolute; z-index: 20; top: 0; left: 0;
+            transform: translate(-100px, 110vh) rotate(45deg);
+            filter: drop-shadow(0 0 15px var(--neon-pink));
         }
-        .rocket-container:hover {
-            transform: scale(1.1);
+        .rocket-body { font-size: 5rem; position: relative; z-index: 2; }
+        
+        .thrust-particles {
+            position: absolute; bottom: 15px; left: 50%;
+            transform: translateX(-50%) rotate(45deg); z-index: 1;
         }
-        .rocket-container.launching {
-            animation: launch 1.5s ease-in-out forwards;
+        .particle {
+            position: absolute; width: 10px; height: 10px;
+            background: linear-gradient(to top, #ff9800, #ff5722);
+            border-radius: 50%; opacity: 0;
+            animation: thrust 0.8s infinite ease-out;
+        }
+        @keyframes thrust {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(3deg); }
+        .flag {
+            position: absolute; bottom: 80px; left: 50%;
+            font-size: 2rem; opacity: 0; transform: translateX(-50%) scale(0);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        @keyframes launch {
-            0% { transform: translateY(0) scale(1); }
-            40% { transform: translateY(20px) scale(0.8); }
-            100% { transform: translateY(-1000px) scale(1.5); opacity: 0; }
-        }
+        .flag.planted { opacity: 1; transform: translateX(-50%) scale(1); }
 
         /* --- TEXTOS --- */
-        h1 {
-            font-size: 2rem;
-            margin: 0 0 10px 0;
-            background: linear-gradient(90deg, #fff, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-            letter-spacing: -1px;
+        h1 { font-size: 2.5rem; margin: 0 0 20px 0; background: linear-gradient(135deg, #fff 20%, var(--neon-pink) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; line-height: 1.1; letter-spacing: -1px; }
+        p { color: #e2e8f0; font-size: 1.1rem; line-height: 1.7; margin-bottom: 3rem; font-weight: 300; }
+        
+        /* --- BARRA DE PROGRESO REAL --- */
+        .progress-box { 
+            position: relative; width: 100%; height: 10px; 
+            background: rgba(255, 255, 255, 0.08); border-radius: 20px; 
+            overflow: hidden; margin-bottom: 12px; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); 
         }
-
-        p {
-            color: #94a3b8;
-            font-size: 1rem;
-            line-height: 1.6;
-            margin-bottom: 2rem;
+        .progress-fill { 
+            height: 100%; width: 0%; /* Empieza en 0, JS lo actualiza */
+            border-radius: 20px; 
+            background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink), var(--neon-blue), var(--neon-purple)); 
+            background-size: 300% 100%; 
+            animation: gradientFlow 3s linear infinite; 
+            box-shadow: 0 0 20px var(--neon-purple); 
+            position: relative; 
+            transition: width 1s ease-out; /* Transición suave al cargar */
         }
-
-        /* --- BARRA DE PROGRESO "FAKE" --- */
-        .loader-container {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            position: relative;
+        .progress-fill::after { 
+            content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 40%; 
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); 
+            transform: translateX(-150%) skewX(-20deg); 
+            animation: shimmerFlow 2s infinite cubic-bezier(0.4, 0, 0.2, 1); 
         }
-        .loader-bar {
-            height: 100%;
-            width: 40%;
-            background: linear-gradient(90deg, #7c3aed, #2563eb);
-            border-radius: 10px;
-            position: absolute;
-            animation: loading 2s infinite ease-in-out;
-            box-shadow: 0 0 15px #7c3aed;
+        @keyframes gradientFlow { 0% { background-position: 100% 0; } 100% { background-position: -200% 0; } }
+        @keyframes shimmerFlow { 100% { transform: translateX(250%) skewX(-20deg); } }
+        
+        .progress-label { 
+            font-size: 0.9rem; color: var(--neon-pink); font-weight: 600; letter-spacing: 1px; 
+            display: flex; justify-content: space-between; 
+            text-shadow: 0 0 10px rgba(255, 94, 161, 0.5); 
         }
-        @keyframes loading {
-            0% { left: -40%; }
-            100% { left: 100%; }
-        }
-
-        .status-text {
-            font-size: 0.85rem;
-            color: #8b5cf6;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
-            display: block;
-        }
-
-        /* --- FOOTER / ADMIN --- */
-        .footer {
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            font-size: 0.85rem;
-            color: #475569;
-        }
-
-        .admin-trigger {
-            color: #334155;
-            text-decoration: none;
-            transition: color 0.3s;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 10px;
-        }
-        .admin-trigger:hover { color: #64748b; }
-
+        
+        .footer { margin-top: 4rem; font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 500; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
     <div class="stars" id="stars"></div>
 
+    <div class="moon" id="moon">
+        <div class="crater" style="width: 30px; height: 30px; top: 20%; left: 20%;"></div>
+        <div class="crater" style="width: 15px; height: 15px; top: 60%; left: 50%;"></div>
+        <div class="crater" style="width: 20px; height: 20px; top: 30%; right: 20%;"></div>
+    </div>
+
+    <div class="rocket-container" id="rocket">
+        <div class="flag" id="flag">🚩</div>
+        <div class="rocket-body">🚀</div>
+        <div class="thrust-particles" id="thrust"></div>
+    </div>
+
     <div class="maintenance-card">
+        <h1>Estamos agregando mejoras importantes</h1>
+        <p>El <strong>Curso ECOEMS</strong> se está actualizando para ser más rápido y seguro. Pronto volveremos.</p>
         
-        <div class="rocket-container" onclick="lanzarCohete(this)" title="¡Hazme clic!">
-            🚀
+        <div class="progress-box">
+            <div class="progress-fill" id="realProgressBar"></div>
         </div>
-
-        <span class="status-text">Actualización de Sistema</span>
+        <div class="progress-label">
+            <span>Progreso General</span>
+            <span id="percentageText">0%</span>
+        </div>
         
-        <h1>Estamos cocinando algo increíble</h1>
-        
-        <p>
-            La plataforma <strong>Curso ECOEMS</strong> está recibiendo mejoras importantes. 
-            Estamos ajustando los motores para brindarte una experiencia más rápida y segura.
-        </p>
-
-        <div class="loader-container">
-            <div class="loader-bar"></div>
-        </div>
-        <small style="color: #64748b;">Progreso de la actualización...</small>
-
-        <div class="footer">
-            &copy; 2026 Curso ECOEMS<br>
-            <a href="{{ url_for('login') }}" class="admin-trigger">
-                <i class="fas fa-lock"></i> Acceso Administrativo
-            </a>
-        </div>
+        <div class="footer">© <span id="year"></span> Curso ECOEMS CCSMX</div>
     </div>
 
     <script>
-        // 1. Generar Estrellas Aleatorias
-        const starsContainer = document.getElementById('stars');
-        const starCount = 50;
+        gsap.registerPlugin(MotionPathPlugin);
 
-        for (let i = 0; i < starCount; i++) {
-            const star = document.createElement('div');
-            star.classList.add('star');
+        // --- CONFIGURACIÓN DE FECHA Y TIEMPO (13 DÍAS) ---
+        // ⚠️ FECHA DE INICIO: 1 DE ENERO DE 2026 (Ajusta si quieres reiniciar la cuenta)
+        const START_DATE = new Date('2026-01-01T00:00:00'); 
+        const TOTAL_DAYS = 13;
+
+        function updateRealProgress() {
+            const now = new Date();
+            const endDate = new Date(START_DATE.getTime() + (TOTAL_DAYS * 24 * 60 * 60 * 1000));
             
-            // Posición aleatoria
-            const x = Math.random() * 100;
-            const y = Math.random() * 100;
-            // Tamaño aleatorio
-            const size = Math.random() * 3;
-            // Duración aleatoria
-            const duration = Math.random() * 3 + 2;
+            let percentage = 0;
 
-            star.style.left = x + '%';
-            star.style.top = y + '%';
-            star.style.width = size + 'px';
-            star.style.height = size + 'px';
-            star.style.setProperty('--duration', duration + 's');
+            if (now >= endDate) {
+                percentage = 100;
+            } else if (now > START_DATE) {
+                const totalDuration = endDate - START_DATE;
+                const timePassed = now - START_DATE;
+                percentage = (timePassed / totalDuration) * 100;
+            }
 
+            // Actualizar la barra y el texto con 2 decimales para que se vea "vivo"
+            const finalPercent = percentage.toFixed(4); 
+            document.getElementById('realProgressBar').style.width = finalPercent + '%';
+            document.getElementById('percentageText').innerText = parseFloat(finalPercent).toFixed(1) + '%';
+        }
+
+        // Actualizar la barra cada segundo
+        setInterval(updateRealProgress, 1000);
+        updateRealProgress(); // Ejecutar inmediatamente al cargar
+
+        // --- ESTRELLAS Y AÑO ---
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div'); star.className = 'star';
+            const size = Math.random() * 2.5 + 0.5; star.style.width = size + 'px'; star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + '%'; star.style.top = Math.random() * 100 + '%';
+            star.style.setProperty('--duration', (Math.random() * 3 + 1.5) + 's');
+            star.style.animationDelay = (Math.random() * 4) + 's';
             starsContainer.appendChild(star);
         }
+        document.getElementById('year').textContent = new Date().getFullYear();
 
-        // 2. Función para lanzar el cohete
-        function lanzarCohete(element) {
-            element.classList.add('launching');
-            setTimeout(() => {
-                element.classList.remove('launching');
-                // Efecto sorpresa: Cambiar el emoji
-                element.innerHTML = '✨'; 
-                setTimeout(() => element.innerHTML = '🚀', 1000);
-            }, 1500);
+        // --- FUEGO DEL COHETE ---
+        const thrustContainer = document.getElementById('thrust');
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div'); p.className = 'particle';
+            p.style.setProperty('--tx', (Math.random() * 40 - 20) + 'px');
+            p.style.setProperty('--ty', (Math.random() * 100 + 50) + 'px');
+            p.style.animationDelay = (Math.random() * 0.8) + 's';
+            thrustContainer.appendChild(p);
         }
-    </script>
 
+        // --- MISIÓN ESPACIAL CON ATERRIZAJE ---
+        const rocket = document.getElementById('rocket');
+        const flag = document.getElementById('flag');
+        const moon = document.getElementById('moon');
+
+        function getMoonPosition() {
+            const rect = moon.getBoundingClientRect();
+            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        }
+
+        function randomPath(landing = false) {
+            const width = window.innerWidth; const height = window.innerHeight;
+            const startX = Math.random() < 0.5 ? -100 : width + 100;
+            const startY = height + 100;
+            const endX = Math.random() < 0.5 ? -100 : width + 100;
+            const endY = -100;
+
+            const path = [{ x: startX, y: startY }];
+            for (let i = 0; i < 3; i++) {
+                path.push({
+                    x: Math.random() * width * 1.5 - width * 0.25,
+                    y: Math.random() * height * 0.8 + height * 0.1
+                });
+            }
+            if (landing) {
+                const moonPos = getMoonPosition();
+                path.push({ x: moonPos.x - 40, y: moonPos.y - 60 });
+            } else {
+                path.push({ x: endX, y: endY });
+            }
+            return path;
+        }
+
+        function launchMission() {
+            const isLandingMission = Math.random() > 0.5; 
+            const path = randomPath(isLandingMission);
+            const duration = isLandingMission ? 8 : 12;
+
+            gsap.set(flag, { opacity: 0, scale: 0 });
+            gsap.set(thrustContainer, { opacity: 1 });
+
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    if (!isLandingMission) launchMission();
+                }
+            });
+
+            tl.to(rocket, {
+                duration: duration,
+                motionPath: { path: path, curviness: 1.5, autoRotate: true },
+                ease: isLandingMission ? "power2.out" : "none"
+            });
+
+            if (isLandingMission) {
+                tl.to(rocket, { rotation: 0, duration: 1 }, "-=1");
+                tl.to(thrustContainer, { opacity: 0, duration: 0.5 }, "-=0.5");
+                tl.to(flag, { opacity: 1, scale: 1, duration: 0.5 });
+                tl.to({}, { duration: 3 });
+                tl.to(flag, { opacity: 0, scale: 0, duration: 0.3 });
+                tl.to(thrustContainer, { opacity: 1, duration: 0.3 });
+                tl.to(rocket, { 
+                    y: -200, x: "+=100", rotation: 45, duration: 2, ease: "power3.in",
+                    onComplete: launchMission 
+                });
+            }
+        }
+
+        setTimeout(launchMission, 1000);
+        window.addEventListener('resize', () => gsap.killTweensOf(rocket) && launchMission());
+
+    </script>
 </body>
 </html>
