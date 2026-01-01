@@ -1025,7 +1025,7 @@ def before_request_hook():
         session["last_activity"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
 
 # --- CONFIGURACIÓN DE MANTENIMIENTO ---
-MAINTENANCE_MODE = True  # <--- ¡Pon esto en False cuando quieras abrir la página!
+MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE', 'False') == 'True'
 
 @app.before_request
 def check_maintenance():
