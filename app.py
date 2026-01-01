@@ -1181,6 +1181,8 @@ def chart_data():
 
     return jsonify(labels=chart_labels, data=chart_data)
 
+
+
 @app.route("/admin/api/exam_performance/<int:exam_id>")
 @login_required
 def api_exam_performance(exam_id):
