@@ -3,7 +3,7 @@ body {
     margin: 0;
     padding: 0;
     background: #f7f9fc;
-    color: #333;
+    color: var(--color-texto);
 }
 
 header {

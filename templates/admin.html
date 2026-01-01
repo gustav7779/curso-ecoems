@@ -3,436 +3,211 @@
 {% block title %}Panel de Administración{% endblock %}
 
 {% block content %}
-<div class="page-content-wrapper"> 
-    <div class="header-card">
-        <h1>⚙️ Panel de Administración - Bienvenido, {{ current_user.username | capitalize }}</h1>
-        <p>Gestiona usuarios, exámenes y anuncios del sistema.</p>
-    </div>
 
-    <div class="control-tower-container hidden-card">
-        <a href="{{ url_for('admin_dashboard') }}" class="control-tower-button-link management-effect">
-            <div class="button-icon">
-                <i class="fas fa-broadcast-tower"></i>
-            </div>
-            <div class=     "button-text">
-                <strong>Torre de Control</strong>
-                <span>Acceder al dashboard de métricas y monitoreo en vivo.</span>
-            </div>
-        </a>
-    </div>
-
-    <div class="container admin-container">
+<div class="min-h-screen pb-12 font-sans text-left">
+    
+    <div class="relative pb-24 pt-12 px-4 shadow-xl rounded-b-[3rem] overflow-hidden mb-[-4rem] z-0"
+         style="background: var(--bg-header); border-bottom: 1px solid var(--borde-tarjeta);">
         
-        <div class="flex-container">
-            
-            {# Secciones solo para el rol 'admin' #}
-            {% if current_user.role == 'admin' %}
-            <div class="card management-card management-effect hidden-card">
-                <h2>⬇️ Exportar Datos</h2>
-                <p>Descarga un archivo CSV con el historial completo de resultados.</p>
-                <a href="{{ url_for('export_results') }}" class="button export-btn" style="background: #1abc9c;">
-                    <i class="fas fa-file-csv"></i> Descargar Reporte CSV
+        <div class="absolute inset-0 opacity-10 pointer-events-none" 
+             style="background-image: radial-gradient(var(--color-texto) 1px, transparent 1px); background-size: 30px 30px;">
+        </div>
+
+        <div class="relative z-10 container mx-auto max-w-6xl">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="text-center md:text-left">
+                    
+                    <span class="font-bold text-xs uppercase tracking-wider mb-2 inline-block px-3 py-1 rounded-full shadow-sm"
+                          style="background: var(--bg-nav-link); color: var(--color-texto-secundario); border: 1px solid var(--borde-tarjeta);">
+                        Sistema de Gestión V2.0
+                    </span>
+                    
+                    <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow-sm mb-2 mt-2" 
+                        style="color: var(--texto-header);">
+                        ⚙️ Panel de Administración
+                    </h1>
+                    
+                    <p class="text-lg font-medium opacity-90" style="color: var(--color-texto-secundario);">
+                        Bienvenido, <span style="color: #f59e0b;">{{ current_user.username | capitalize }}</span>.
+                    </p>
+                </div>
+
+                <a href="{{ url_for('admin_dashboard') }}" 
+                   class="group p-5 rounded-2xl shadow-xl transform transition hover:scale-105 duration-300 flex flex-col items-center justify-center text-decoration-none"
+                   style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta); min-width: 200px;">
+                    
+                    <i class="fas fa-broadcast-tower text-4xl mb-2 group-hover:animate-pulse" style="color: #0ea5e9;"></i>
+                    <span class="font-bold" style="color: var(--color-texto);">Torre de Control</span>
+                    <span class="text-xs" style="color: var(--color-texto-secundario);">Monitoreo en Vivo</span>
                 </a>
             </div>
-            
-            <div class="card management-card management-effect hidden-card">
-                <h2>🧑‍🎓 Gestión de Usuarios</h2>
-                <p>Crea o elimina cuentas de estudiantes y administradores.</p>
-                <a href="{{ url_for('manage_users') }}" class="button primary-btn">👥 Administrar Alumnos</a>
-            </div>
-            {% endif %}
+        </div>
+    </div>
 
-            <div class="card management-card management-effect hidden-card">
-                <h2>🛠️ Gestión de Reportes</h2>
-                <p>Revisa las fallas o problemas reportados por los alumnos.</p>
-                <a href="{{ url_for('admin_reports') }}" class="button danger-btn">📋 Ver Reportes</a>
-            </div>
+    <div class="container mx-auto max-w-6xl px-4 relative z-10">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             
-            {# Seguridad 2FA solo para el rol 'admin' #}
             {% if current_user.role == 'admin' %}
-            <div class="card management-card security-card management-effect hidden-card">
-                <h2>🔒 Seguridad (2FA)</h2>
-                {% if current_user.two_factor_secret %}
-                    <p>La autenticación de dos factores está **activa**.</p>
-                    <form method="POST" action="{{ url_for('disable_2fa') }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de desactivar 2FA?');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="button" style="background: #e74c3c;">Desactivar 2FA</button>
-                    </form>
-                    <a href="{{ url_for('setup_2fa') }}" class="button" style="background: #f39c12; margin-top: 10px;">Reconfigurar</a>
-                {% else %}
-                    <p>Asegura tu cuenta de administrador con un código TOTP (Google Authenticator).</p>
-                    <a href="{{ url_for('setup_2fa') }}" class="button success-btn">Activar 2FA ahora</a>
+            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
+                 style="border-left-color: #3b82f6;">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">👥 Usuarios</h3>
+                        <i class="fas fa-users-cog text-2xl" style="color: #3b82f6; opacity: 0.5;"></i>
+                    </div>
+                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Administrar cuentas de estudiantes.</p>
+                </div>
+                <a href="{{ url_for('manage_users') }}" class="btn text-center w-full" style="background: #3b82f6;">Administrar</a>
+            </div>
+
+            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
+                 style="border-left-color: #10b981;">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">📊 Reportes</h3>
+                        <i class="fas fa-file-csv text-2xl" style="color: #10b981; opacity: 0.5;"></i>
+                    </div>
+                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Descargar historial en CSV.</p>
+                </div>
+                <a href="{{ url_for('export_results') }}" class="btn text-center w-full" style="background: #10b981;">Descargar CSV</a>
+            </div>
+            {% endif %}
+
+            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
+                 style="border-left-color: #f59e0b;">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">🛠️ Soporte</h3>
+                        <i class="fas fa-tools text-2xl" style="color: #f59e0b; opacity: 0.5;"></i>
+                    </div>
+                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Revisar fallas reportadas.</p>
+                </div>
+                <a href="{{ url_for('admin_reports') }}" class="btn text-center w-full" style="background: #f59e0b;">Ver Reportes</a>
+            </div>
+
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-8">
+                
+                <div class="card !p-0 overflow-hidden">
+                    <div class="p-6 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                        <h2 class="text-xl font-bold flex items-center" style="color: var(--color-texto);">
+                            <i class="fas fa-clipboard-list mr-3" style="color: var(--color-primario);"></i> Exámenes
+                        </h2>
+                        <a href="{{ url_for('new_exam') }}" class="btn text-sm py-2" style="background: var(--color-primario);">
+                            + Crear
+                        </a>
+                    </div>
+
+                    <div class="p-0">
+                        {% if exams %}
+                            <ul class="m-0 p-0" style="list-style: none;">
+                                {% for exam in exams %}
+                                    {% set active_count = 0 %}
+                                    {% for ex_id, ex_title, count in active_exams_summary %}
+                                        {% if ex_id == exam.id %}{% set active_count = count %}{% endif %}
+                                    {% endfor %}
+
+                                    <li class="flex flex-col sm:flex-row justify-between items-center p-5 border-b last:border-0 hover:bg-opacity-50 transition"
+                                        style="border-color: var(--borde-tarjeta); background: var(--bg-tarjeta);">
+                                        
+                                        <div class="mb-3 sm:mb-0 w-full sm:w-auto">
+                                            <div class="font-bold text-lg" style="color: var(--color-texto);">{{ exam.title }}</div>
+                                            <div class="text-sm mt-1" style="color: var(--color-texto-secundario);">
+                                                <i class="fas fa-list-ol"></i> {{ exam.questions | list | length }} Preguntas
+                                                {% if active_count > 0 %}
+                                                    <span class="ml-2 px-2 py-0.5 rounded text-xs font-bold" style="background: #dcfce7; color: #166534;">
+                                                        🟢 {{ active_count }} En vivo
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
+                                            <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: #f97316;" title="Monitor"><i class="fas fa-eye"></i></a>
+                                            <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: var(--color-primario);" title="Editar"><i class="fas fa-cog"></i></a>
+                                            <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: #8b5cf6;" title="Preguntas"><i class="fas fa-pencil-alt"></i></a>
+                                            <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: #0ea5e9;" title="Resultados"><i class="fas fa-table"></i></a>
+                                            
+                                            <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline m-0" onsubmit="return confirm('¿ELIMINAR EXAMEN?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn py-1 px-3 text-xs" style="background: #ef4444;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="p-10 text-center">
+                                <p style="color: var(--color-texto-secundario);">No hay exámenes creados.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                
+                {% if current_user.role == 'admin' %}
+                <div class="card !p-0 overflow-hidden">
+                    <div class="p-5 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                        <h3 class="font-bold" style="color: var(--color-texto);">📢 Anuncios</h3>
+                        <a href="{{ url_for('new_announcement') }}" class="btn text-xs py-1 px-2" style="background: var(--color-primario);">+ Nuevo</a>
+                    </div>
+                    <div class="p-4">
+                        {% if announcements_list %}
+                            <ul class="space-y-3 m-0 p-0" style="list-style: none;">
+                                {% for ann in announcements_list %}
+                                <li class="flex justify-between items-center p-3 rounded" 
+                                    style="background: var(--bg-tabla-hover); border: 1px solid var(--borde-tarjeta);">
+                                    <div>
+                                        <div class="font-bold text-sm" style="color: var(--color-texto);">{{ ann.title }}</div>
+                                        <div class="text-xs" style="color: {% if ann.is_active %}#10b981{% else %}#94a3b8{% endif %};">
+                                            {{ 'Activo' if ann.is_active else 'Inactivo' }}
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <a href="{{ url_for('edit_announcement', announcement_id=ann.id) }}" class="text-xs p-1" style="color: var(--color-primario);">✏️</a>
+                                        <form method="POST" action="{{ url_for('delete_announcement', announcement_id=ann.id) }}" class="inline m-0" onsubmit="return confirm('¿Borrar?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="text-xs p-1 border-0 bg-transparent cursor-pointer" style="color: #ef4444;">🗑️</button>
+                                        </form>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            <div class="mt-4 text-center">
+                                <a href="{{ url_for('admin_announcement_read_status') }}" class="text-sm font-bold hover:underline" style="color: var(--color-primario);">
+                                    👁️ Ver Lecturas
+                                </a>
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-center" style="color: var(--color-texto-secundario);">Sin anuncios.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card !p-5 border-l-4" style="border-left-color: #f97316;">
+                    <h3 class="font-bold mb-3" style="color: var(--color-texto);">🔒 Seguridad (2FA)</h3>
+                    {% if current_user.two_factor_secret %}
+                        <p class="text-sm mb-3 font-bold" style="color: #10b981;">✅ Activado</p>
+                        <form method="POST" action="{{ url_for('disable_2fa') }}" onsubmit="return confirm('¿Desactivar?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn w-full text-sm" style="background: #ef4444;">Desactivar</button>
+                        </form>
+                    {% else %}
+                        <p class="text-sm mb-3" style="color: var(--color-texto-secundario);">Protege tu cuenta.</p>
+                        <a href="{{ url_for('setup_2fa') }}" class="btn w-full text-sm" style="background: #10b981;">Activar Ahora</a>
+                    {% endif %}
+                </div>
                 {% endif %}
+
             </div>
-            {% endif %}
-
         </div>
-
-        <div class="card exam-card hidden-card">
-            <h2>📝 Gestión de Exámenes</h2>
-            <p>Lista de exámenes disponibles. Haz clic para añadir preguntas o ver resultados.</p>
-            <a href="{{ url_for('new_exam') }}" class="button success-btn add-exam-btn">➕ Crear Nuevo Examen</a>
-            
-            {% if exams %}
-                <ul class="exam-list">
-                    {% for exam in exams %}
-                        {% set active_count = 0 %}
-                        {% for ex_id, ex_title, count in active_exams_summary %}
-                            {% if ex_id == exam.id %}
-                                {% set active_count = count %}
-                            {% endif %}
-                        {% endfor %}
-
-                        <li class="exam-item">
-                            <span class="exam-title">
-                                {{ exam.title }} ({{ exam.questions | list | length }} Preguntas)
-                                {% if active_count > 0 %}
-                                    <span class="badge badge-warning">🟢 {{ active_count }} en Vivo</span>
-                                {% endif %}
-                            </span>
-                            
-                            <div class="exam-actions">
-                                <a href="{{ url_for('exam_simulator_view', exam_id=exam.id) }}" class="button action-btn simulator-btn" style="background: #9b59b6; margin: 0 4px 0 0;" title="Ver Rendimiento Simulado">
-                                    📊 Rendimiento
-                                </a>
-                                
-                                {% if current_user.role == 'admin' %}
-                                <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="button action-btn monitor-btn" style="background: #e67e22; font-size: 0.8em; padding: 6px 8px; margin: 0 4px 0 0;" title="Monitor en Vivo">
-                                    👀 Monitor
-                                </a>
-                                {% endif %}
-                                
-                                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="button action-btn edit-btn-blue" style="margin: 0 4px 0 0;" title="Editar Configuración">
-                                    ⚙️ Editar
-                                </a>
-                                
-                                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;" title="Gestionar Preguntas">
-                                    ✏️ Preguntas
-                                </a>
-
-                                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="button action-btn view-btn" style="margin: 0 4px 0 0;" title="Ver Tabla de Resultados">
-                                    📖 Resultados
-                                </a>
-
-                                <a href="{{ url_for('download_failure_stats', exam_id=exam.id) }}" class="button action-btn" style="background: #c0392b; margin: 0 4px 0 0;" title="Descargar análisis de reprobación por materia">
-                                    <i class="fas fa-file-csv"></i> Reprobación
-                                </a>
-                                
-                                <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de DUPLICAR el examen \'{{ exam.title }}\'?');" style="margin: 0;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="button action-btn duplicate-btn" style="margin: 0 4px 0 0;" title="Duplicar Examen">📋 Duplicar</button>
-                                </form>
-                                
-                                <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline-form" onsubmit="return confirm('¿Estás seguro de eliminar el examen: {{ exam.title }}? Esto eliminará TODAS las preguntas y respuestas asociadas.');" style="margin: 0;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="button action-btn delete-btn" style="margin: 0;" title="Eliminar Examen">🗑️</button>
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="no-items-message">Aún no hay exámenes creados.</p>
-            {% endif %}
-        </div>
-
-        {# Gestión de Anuncios solo para el rol 'admin' #}
-        {% if current_user.role == 'admin' %}
-        <div class="card announcement-card hidden-card">
-            <h2>📢 Gestión de Anuncios</h2>
-            <div class="announcement-controls">
-                <a href="{{ url_for('new_announcement') }}" class="button primary-btn announcement-action-btn">Crear Nuevo Anuncio</a>
-                <a href="{{ url_for('admin_announcement_read_status') }}" class="button primary-btn announcement-action-btn" style="background: #16a085;">👀Que alumno vieron el examen👀</a>
-            </div>
-            
-            <h3 class="subsection-title">Anuncios Publicados</h3>
-            
-            {% if announcements_list %}
-                <ul class="announcement-list">
-                    {% for announcement in announcements_list %}
-                        <li class="exam-item">
-                            <div>
-                                <strong>{{ announcement.title }}</strong><br>
-                                <span class="announcement-status status-{{ announcement.is_active | lower }}">
-                                    (Estado: {% if announcement.is_active %}Activo{% else %}Inactivo{% endif %})
-                                </span>
-                            </div>
-
-                            <div class="exam-actions">
-                                <a href="{{ url_for('edit_announcement', announcement_id=announcement.id) }}" class="button action-btn edit-btn" style="margin: 0 4px 0 0;">✏️ Editar</a>
-
-                                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=announcement.id) }}" class="inline-form" onsubmit="return confirm('¿Seguro que quieres eliminar este anuncio?');" style="margin: 0;">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="button delete-btn action-btn" style="margin: 0;">🗑️ Eliminar</button>
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="no-items-message">No hay anuncios publicados.</p>
-            {% endif %}
-        </div>
-        {% endif %}
-        
-        <div class="logout-end-container hidden-card">
-            <a href="{{ url_for('logout') }}" class="btn final-logout-btn">
-                Cerrar Sesión
-            </a>
-        </div>
-        
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // --- LÓGICA DE ANIMACIÓN ---
-        const contentWrapper = document.querySelector('.page-content-wrapper');
-        const managementCards = document.querySelectorAll('.management-effect');
-        const examListItems = document.querySelectorAll('.exam-list li');
-        const allCards = document.querySelectorAll('.hidden-card');
-        
-        function staggerFadeIn() {
-            allCards.forEach((card, index) => {
-                setTimeout(() => {
-                    card.classList.remove('hidden-card');
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }, 100 + index * 100); 
-            });
-            if (contentWrapper) {
-                contentWrapper.style.opacity = '1';
-                contentWrapper.style.transform = 'translateY(0)';
-            }
-        }
-        staggerFadeIn();
-
-        managementCards.forEach(card => {
-            if (card.querySelector('a')) {
-                card.style.cursor = 'pointer';
-            }
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.boxShadow = `
-                    0 15px 40px rgba(0, 0, 0, 0.3), 
-                    radial-gradient(circle at ${x}px ${y}px, rgba(255, 255, 255, 0.45) 10%, transparent 60%)
-                `;
-                card.style.transform = 'translateY(-10px)'; 
-            });
-            card.addEventListener('mouseleave', () => {
-                card.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
-                card.style.transform = 'translateY(0)'; 
-            });
-        });
-
-        examListItems.forEach(item => {
-            item.addEventListener('mouseenter', () => {
-                item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                item.style.transform = 'translateY(-1px)';
-            });
-            item.addEventListener('mouseleave', () => {
-                item.style.boxShadow = 'none';
-                item.style.transform = 'translateY(0)';
-            });
-        });
-    });
-</script>
-
-<style>
-    /* --- ESTILOS BASE (MODO CLARO) --- */
-    .hidden-card {
-        opacity: 0 !important;
-        transform: translateY(20px) !important;
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-    }
-    .page-content-wrapper {
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-    }
-
-    .admin-container {
-        padding: 0 20px;
-        max-width: 1100px;
-        margin: 0 auto 30px auto;
-    }
-    
-    .header-card {
-        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); 
-        color: white;
-        padding: 35px;
-        text-align: center;
-        border-radius: 0 0 18px 18px; 
-        margin-bottom: 40px;
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-    }
-    .header-card h1 {
-        font-size: 2.2em; 
-        font-weight: 800;
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-        margin-bottom: 5px;
-    }
-    .header-card p { color: #ecf0f1; }
-
-    /* Botón Torre de Control */
-    .control-tower-container {
-        display: flex; justify-content: center; padding: 10px 20px;
-        margin: -25px auto 30px auto; position: relative; z-index: 50; max-width: 1100px;
-    }
-    
-    a.control-tower-button-link {
-        display: flex; align-items: center; width: 100%; max-width: 800px;
-        padding: 25px 35px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        color: #2c3e50; text-decoration: none; border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); transition: all 0.3s ease; border: 1px solid #e9ecef;
-    }
-
-    a.control-tower-button-link:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        color: #3498db;
-    }
-
-    .control-tower-button-link .button-icon {
-        font-size: 3.5em; margin-right: 25px; color: #3498db; transition: color 0.3s ease;
-    }
-    .control-tower-button-link:hover .button-icon { color: #2980b9; }
-    .control-tower-button-link .button-text strong { display: block; font-size: 1.8em; font-weight: 700; }
-    .control-tower-button-link .button-text span { font-size: 1.1em; color: #555; }
-
-    /* Flex Container */
-    .flex-container {
-        display: flex; gap: 25px; margin-bottom: 40px; flex-wrap: wrap;
-    }
-
-    /* Cards */
-    .card {
-        flex: 1 1 280px; padding: 30px; border-radius: 15px; 
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); transition: all 0.3s ease; 
-        background: #ffffff; border: 1px solid #f0f0f0; position: relative; overflow: hidden;
-    }
-    .security-card { border-top: 5px solid #ff7f50 !important; }
-
-    .card h2 {
-        border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 15px;
-        color: #2c3e50; font-size: 1.8em; font-weight: 700; transition: color 0.3s;
-    }
-    .card h2:hover { color: #3498db; }
-    
-    /* Botones */
-    .button {
-        display: inline-block; padding: 10px 15px; border-radius: 5px; color: white;
-        text-decoration: none; font-weight: bold; text-align: center;
-        transition: background 0.3s ease, transform 0.1s; margin: 0; 
-        border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .add-exam-btn { margin-top: 20px; padding: 14px 30px; font-size: 1.15em; border-radius: 50px; box-shadow: 0 6px 18px rgba(46, 204, 113, 0.6); }
-    .monitor-btn { background-color: #e67e22 !important; font-size: 0.8em; padding: 6px 8px !important; }
-    .monitor-btn:hover { background-color: #d35400 !important; }
-    .primary-btn { background: #3498db; }
-    .success-btn { background: #2ecc71; }
-    .danger-btn { background: #e74c3c; }
-    .export-btn { background: #1abc9c !important; }
-    .export-btn:hover { background: #16a085 !important; }
-    .edit-btn-blue { background: #3498db !important; } 
-    .action-btn.edit-btn { background: #f39c12; }
-    .action-btn.view-btn { background: #3498db; }
-    .action-btn.delete-btn { background: #e74c3c; }
-    .action-btn.duplicate-btn { background: #9b59b6; }
-    .action-btn.duplicate-btn:hover { background: #8e44ad; } 
-    
-    /* Listas */
-    .exam-list, .announcement-list { list-style: none; padding: 0; margin-top: 15px; }
-    .exam-list li, .announcement-list li {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 15px 10px; margin: 5px 0; border-bottom: 1px solid #f0f0f0;
-        border-radius: 8px; transition: all 0.2s ease-out; background: white; 
-    }
-    .exam-list li:hover, .announcement-list li:hover {
-        background: #fcfcfc; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transform: translateY(-1px);
-    }
-    .exam-actions { display: flex; gap: 4px; flex-wrap: nowrap; min-width: fit-content; align-items: center; }
-    .exam-actions .inline-form { display: flex; align-items: center; }
-    .exam-title, .announcement-list strong {
-        font-weight: 700; color: #2c3e50; flex-grow: 1; margin-right: 15px; font-size: 1.1em; transition: color 0.3s;
-    }
-    .exam-list li:hover .exam-title { color: #3498db; }
-    
-    .logout-end-container { text-align: center; margin-top: 40px; padding: 20px; border-top: 1px solid #eee; }
-    .final-logout-btn { background: #e74c3c; padding: 12px 30px; font-size: 1.1em; font-weight: 700; border-radius: 50px; box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4); }
-    .final-logout-btn:hover { background: #c0392b; transform: scale(1.02); }
-
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
-    @media (max-width: 600px) {
-        .control-tower-container { margin-top: -15px; padding: 10px 15px; }
-        a.control-tower-button-link { flex-direction: column; text-align: center; padding: 20px; }
-        .control-tower-button-link .button-icon { font-size: 2.8em; margin-right: 0; margin-bottom: 10px; }
-        .control-tower-button-link .button-text strong { font-size: 1.4em; }
-        .control-tower-button-link .button-text span { font-size: 0.9em; }
-        .header-card { padding: 25px 20px; margin-bottom: 30px; }
-        .header-card h1 { font-size: 1.8em; }
-        .exam-actions { flex-direction: column; gap: 5px; }
-        .exam-actions .button, .exam-actions .inline-form, .exam-actions .inline-form input { width: 100%; padding: 10px 15px; margin: 0; }
-        .announcement-controls { flex-direction: column; gap: 10px; }
-        .announcement-action-btn { width: 100%; margin: 0; }
-        .final-logout-btn { width: 100%; }
-    }
-
-    /* ================================================= */
-    /* 🌙 MODO OSCURO (ADMIN MENU) - DEFINITIVO 🌙 */
-    /* ================================================= */
-    
-    /* 1. Fondo Header */
-    body.dark-mode .header-card {
-        background: linear-gradient(135deg, #111, #2c3e50) !important;
-        box-shadow: 0 8px 15px rgba(0,0,0,0.8) !important;
-    }
-
-    /* 2. Tarjetas y Contenedores (Fondo Gris y Borde) */
-    body.dark-mode .card,
-    body.dark-mode .control-tower-button-link,
-    body.dark-mode .exam-list li,
-    body.dark-mode .announcement-list li {
-        background: #1e1e1e !important;
-        color: #e0e0e0 !important;
-        border: 1px solid #333 !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
-    }
-
-    /* 3. Textos Generales (Blanco) */
-    body.dark-mode h1, 
-    body.dark-mode h2, 
-    body.dark-mode strong, 
-    body.dark-mode span, 
-    body.dark-mode p,
-    body.dark-mode .exam-title,
-    body.dark-mode .control-tower-button-link .button-text span {
-        color: #e0e0e0 !important;
-        border-bottom-color: #444 !important;
-    }
-
-    /* 4. Hover en elementos de lista (Para que no se pongan blancos) */
-    body.dark-mode .exam-list li:hover, 
-    body.dark-mode .announcement-list li:hover,
-    body.dark-mode .control-tower-button-link:hover {
-        background: #252525 !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.8) !important;
-    }
-
-    /* 5. Títulos al pasar el mouse (Cian) */
-    body.dark-mode .card h2:hover,
-    body.dark-mode .exam-list li:hover .exam-title {
-        color: #00cec9 !important;
-    }
-
-    /* 6. Icono del botón grande */
-    body.dark-mode .control-tower-button-link .button-icon {
-        color: #00cec9 !important;
-    }
-</style>
 {% endblock %}

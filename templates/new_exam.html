@@ -3,189 +3,302 @@
 {% block title %}Nuevo Examen - Curso ECOMS{% endblock %}
 
 {% block content %}
-    <div class="container new-exam-container">
-        <div class="card form-card">
-            <h2 class="card-title">📝 Crear Nuevo Examen</h2>
-            <p class="exam-meta">Define un título, descripción y asigna a los alumnos. Podrás añadir las preguntas después de crearlo.</p>
+
+{# ========================================================= #}
+{# 🎨 ESTILOS MODERNOS (MODO OSCURO + DISEÑO PREMIUM) 🎨 #}
+{# ========================================================= #}
+<style>
+    :root {
+        --bg-body: #f3f4f6;
+        --bg-card: #ffffff;
+        --text-main: #1f2937;
+        --text-sec: #6b7280;
+        --border-color: #e5e7eb;
+        --input-bg: #f9fafb;
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        --radius: 16px;
+    }
+
+    /* MODO OSCURO */
+    body.dark-mode {
+        --bg-body: #0f172a;
+        --bg-card: #1e293b;
+        --text-main: #f3f4f6;
+        --text-sec: #9ca3af;
+        --border-color: #374151;
+        --input-bg: #020617;
+        --primary: #60a5fa;
+        --primary-hover: #3b82f6;
+    }
+
+    /* LAYOUT */
+    .new-exam-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .form-card {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        padding: 40px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+        transition: transform 0.3s ease;
+    }
+
+    /* TÍTULO CON GRADIENTE */
+    .header-section {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px dashed var(--border-color);
+        padding-bottom: 20px;
+    }
+    
+    .card-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0 0 10px 0;
+        background: linear-gradient(135deg, var(--primary), #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .exam-meta-text {
+        color: var(--text-sec);
+        font-size: 1rem;
+    }
+
+    /* FORMULARIO */
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 14px;
+        background: var(--input-bg);
+        border: 2px solid transparent;
+        border-radius: 12px;
+        color: var(--text-main);
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: var(--bg-card);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Fechas en Grid */
+    .date-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    /* INPUT FECHA (Dark Mode Friendly) */
+    input[type="datetime-local"] {
+        color-scheme: light dark; /* Hace que el calendario nativo sea oscuro si el sistema lo es */
+    }
+
+    /* SELECCIÓN DE ALUMNOS (CHIPS) */
+    .students-wrapper {
+        background: var(--input-bg);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .students-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    /* Checkbox Escondido + Label Estilizado */
+    .student-item input[type="checkbox"] {
+        display: none;
+    }
+
+    .student-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 15px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        user-select: none;
+        color: var(--text-main);
+    }
+
+    .student-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+    }
+
+    /* Estado Seleccionado */
+    .student-item input:checked + .student-card {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .avatar-circle {
+        width: 30px;
+        height: 30px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8em;
+    }
+
+    /* BOTONES */
+    .create-btn {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, var(--primary), #2563eb);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 800;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .create-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -3px rgba(37, 99, 235, 0.3);
+    }
+
+    .back-btn {
+        display: block;
+        text-align: center;
+        margin-top: 25px;
+        color: var(--text-sec);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--primary); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+        .date-grid { grid-template-columns: 1fr; }
+        .form-card { padding: 25px; }
+    }
+</style>
+
+    <div class="new-exam-container">
+        
+        <div class="form-card">
+            
+            <div class="header-section">
+                <h2 class="card-title"><i class="fas fa-file-signature"></i> Crear Nuevo Examen</h2>
+                <p class="exam-meta-text">Configura los detalles generales y asigna estudiantes.</p>
+            </div>
 
             <form method="POST" class="exam-form">
                 
-                <!-- 🔥 TOKEN CSRF 🔥 -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-group">
-                    <label for="title">Título del Examen:</label>
-                    <input type="text" id="title" name="title" placeholder="Ej: Simulación Final 2025" required>
+                    <label class="form-label" for="title"><i class="fas fa-heading"></i> Título del Examen</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="Ej: Simulación Matemáticas II" required autofocus>
                 </div>
                 
                 <div class="form-group">
-                    <label for="description">Descripción del Examen (Opcional):</label>
-                    <textarea id="description" name="description" rows="4" placeholder="Breve resumen del contenido o reglas del examen."></textarea>
+                    <label class="form-label" for="description"><i class="fas fa-align-left"></i> Instrucciones / Descripción</label>
+                    <textarea id="description" name="description" rows="3" class="form-control" placeholder="Describe brevemente el contenido..."></textarea>
                 </div>
                 
-                <!-- 🔑 CAMPOS DE PROGRAMACIÓN DE TIEMPO 🔑 -->
-                <div class="form-group">
-                    <label for="start_datetime">Fecha y Hora de **Inicio** (Opcional - UTC):</label>
-                    <p class="exam-meta" style="margin-top: -5px; font-size: 0.85em;">Si se deja vacío, estará disponible inmediatamente.</p>
-                    <input type="datetime-local" id="start_datetime" name="start_datetime" class="datetime-input">
-                </div>
+                <div class="date-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="start_datetime"><i class="fas fa-calendar-check"></i> Inicio (Opcional)</label>
+                        <input type="datetime-local" id="start_datetime" name="start_datetime" class="form-control">
+                        <small style="color: var(--text-sec); font-size: 0.8em;">Dejar vacío para iniciar ya.</small>
+                    </div>
 
-                <div class="form-group">
-                    <label for="end_datetime">Fecha y Hora de **Fin** (Opcional - UTC):</label>
-                    <p class="exam-meta" style="margin-top: -5px; font-size: 0.85em;">Después de esta hora, el examen ya no podrá ser tomado.</p>
-                    <input type="datetime-local" id="end_datetime" name="end_datetime" class="datetime-input">
-                </div>
-                
-                <!-- 🔥 SECCIÓN DE ASIGNACIÓN DE ALUMNOS (AGREGADO) 🔥 -->
-                <div class="form-group" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: #34495e;">
-                        👥 Asignar a Alumnos:
-                        <br>
-                        <small style="color: #666; font-weight: normal; font-size: 0.9em;">(Solo los alumnos seleccionados podrán ver y realizar este examen)</small>
-                    </label>
-                    
-                    <div style="max-height: 200px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding-right: 5px;">
-                        {% if students %}
-                            {% for student in students %}
-                                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: white; padding: 8px; border-radius: 5px; border: 1px solid #eee;">
-                                    <input type="checkbox" 
-                                           name="assigned_students" 
-                                           value="{{ student.id }}"
-                                           {% if exam and student in exam.assigned_students %}checked{% endif %}>
-                                    <span style="font-size: 0.95em;">{{ student.username }}</span>
-                                </label>
-                            {% endfor %}
-                        {% else %}
-                            <p style="color: #999; font-style: italic;">No hay alumnos registrados.</p>
-                        {% endif %}
+                    <div class="form-group">
+                        <label class="form-label" for="end_datetime"><i class="fas fa-calendar-times"></i> Cierre (Opcional)</label>
+                        <input type="datetime-local" id="end_datetime" name="end_datetime" class="form-control">
+                        <small style="color: var(--text-sec); font-size: 0.8em;">Límite para entrar.</small>
                     </div>
                 </div>
-                <!-- FIN SECCIÓN ALUMNOS -->
+                
+                <div class="form-group">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label class="form-label" style="margin:0;"><i class="fas fa-users"></i> Asignar Alumnos</label>
+                        <button type="button" onclick="toggleAllStudents()" style="background:none; border:none; color:var(--primary); font-size:0.9em; cursor:pointer; font-weight:bold;">Seleccionar Todos</button>
+                    </div>
+                    
+                    <div class="students-wrapper">
+                        <div class="students-grid">
+                            {% if students %}
+                                {% for student in students %}
+                                    <label class="student-item">
+                                        <input type="checkbox" name="assigned_students" value="{{ student.id }}" class="student-check">
+                                        <div class="student-card">
+                                            <div class="avatar-circle">{{ student.username[0]|upper }}</div>
+                                            <span>{{ student.username }}</span>
+                                        </div>
+                                    </label>
+                                {% endfor %}
+                            {% else %}
+                                <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-sec);">
+                                    <i class="fas fa-user-slash" style="font-size: 2em; margin-bottom: 10px; display:block;"></i>
+                                    No hay alumnos registrados en el sistema.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
 
-                <button type="submit" class="button submit-button create-btn">Crear Examen</button>
+                <button type="submit" class="create-btn">
+                    <i class="fas fa-plus-circle"></i> CREAR Y CONFIGURAR PREGUNTAS
+                </button>
+
             </form>
         </div>
 
-        <a href="{{ url_for('admin_panel') }}" class="btn back-btn">⬅ Volver al Panel Admin</a>
+        <a href="{{ url_for('admin_panel') }}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Cancelar y volver al Panel
+        </a>
     </div>
 
-    <style>
-        /* --- Contenedor y Tarjeta Base --- */
-        .new-exam-container {
-            max-width: 700px;
-            margin: 30px auto;
+    <script>
+        // Función rápida para seleccionar/deseleccionar todos
+        function toggleAllStudents() {
+            const checks = document.querySelectorAll('.student-check');
+            const allChecked = Array.from(checks).every(c => c.checked);
+            checks.forEach(c => c.checked = !allChecked);
         }
+    </script>
 
-        .form-card {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-title {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #34495e;
-        }
-        
-        .exam-meta {
-            font-size: 0.95em;
-            color: #555;
-            margin-bottom: 20px;
-            border-bottom: 1px dashed #f0f0f0;
-            padding-bottom: 15px;
-        }
-
-        /* --- Estructura del Formulario (Responsive) --- */
-        .exam-form {
-            padding-top: 10px;
-        }
-        
-        .form-group { 
-            margin-bottom: 20px;
-        }
-
-        .form-group label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: bold; 
-            color: #333;
-        }
-        
-        .exam-form input[type="text"], 
-        .exam-form textarea,
-        .exam-form input[type="datetime-local"] { 
-            width: 100%; 
-            padding: 12px; 
-            border: 1px solid #ccc; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            transition: border-color 0.3s;
-        }
-        
-        .exam-form input[type="text"]:focus, 
-        .exam-form textarea:focus,
-        .exam-form input[type="datetime-local"]:focus {
-            border-color: #3498db;
-            outline: none;
-        }
-
-        /* --- Botón de Crear --- */
-        .create-btn { 
-            display: block;
-            width: 100%;
-            padding: 12px; 
-            margin-top: 25px;
-            background: #3498db; 
-            color: white;
-            border: none;
-            border-radius: 6px; 
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1.1em;
-            transition: background 0.3s;
-        }
-        .create-btn:hover {
-            background: #2980b9;
-        }
-
-        /* --- Botón Volver --- */
-        .back-btn {
-            margin-top: 20px;
-            display: inline-block;
-            background: #7f8c8d; 
-        }
-
-        /* --- Estilo Scrollbar para lista de alumnos --- */
-        .form-group div::-webkit-scrollbar {
-            width: 6px;
-        }
-        .form-group div::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        .form-group div::-webkit-scrollbar-thumb {
-            background: #ccc; 
-            border-radius: 3px;
-        }
-        .form-group div::-webkit-scrollbar-thumb:hover {
-            background: #aaa; 
-        }
-
-        /* --- MEDIA QUERY (Ajustes finos para móvil) --- */
-        @media (max-width: 600px) {
-            .new-exam-container {
-                width: 100%;
-                margin: 10px auto;
-            }
-            .form-card {
-                padding: 15px;
-            }
-            /* Hacer que los checkboxes se vean en una sola columna en móviles */
-            .form-group div[style*="grid-template-columns"] {
-                grid-template-columns: 1fr !important;
-            }
-        }
-    </style>
 {% endblock %}

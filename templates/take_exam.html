@@ -1,2619 +1,938 @@
 {% extends "base.html" %}
 
-{# Título dinámico dependiendo de si es sala de espera o examen #}
 {% block title %}
-{% if is_locked %}Sala de Espera: {{ exam.title }}{% else %}Presentar Examen: {{ exam.title }}{% endif %}
+{% if is_locked %}Sala de Espera: {{ exam.title }}{% else %}Examen: {{ exam.title }}{% endif %}
 {% endblock %}
 
 {% block content %}
 
 {# ========================================================= #}
-{# 🔥 CONDICIÓN PRINCIPAL: SALA DE ESPERA vs EXAMEN 🔥 #}
+{# 🎨 1. ESTILOS VISUALES (MODO ZEN + ALERTAS PRO) 🎨 #}
+{# ========================================================= #}
+<style>
+    /* Ocultar interfaz global para evitar distracciones */
+    header, footer, .navbar, .sidebar { display: none !important; }
+    
+    :root {
+        --bg-body: #f3f4f6; --bg-tarjeta: #ffffff; --color-texto: #1f2937;
+        --color-texto-sec: #6b7280; --borde-color: #e5e7eb; --input-bg: #f9fafb;
+        --primary: #3b82f6; --danger: #ef4444; --warning: #f59e0b; --success: #10b981;
+        --font-main: 'Inter', system-ui, sans-serif;
+    }
+    body.dark-mode {
+        --bg-body: #0f172a; --bg-tarjeta: #1e293b; --color-texto: #f3f4f6;
+        --color-texto-sec: #9ca3af; --borde-color: #374151; --input-bg: #020617;
+        --primary: #60a5fa;
+    }
+    body { background-color: var(--bg-body); color: var(--color-texto); font-family: var(--font-main); min-height: 100vh; overflow-x: hidden; }
+
+    /* LAYOUT GENERAL */
+    .exam-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; }
+
+    /* HEADER FLOTANTE (STICKY) */
+    .sticky-header {
+        position: sticky; top: 15px; z-index: 100;
+        background: var(--bg-tarjeta); padding: 12px 25px;
+        border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        display: flex; justify-content: space-between; align-items: center;
+        border: 1px solid var(--borde-color); margin-bottom: 40px;
+        backdrop-filter: blur(10px);
+    }
+    .timer-badge {
+        font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: 800;
+        color: var(--primary); background: var(--input-bg);
+        padding: 5px 20px; border-radius: 30px; border: 1px solid var(--borde-color);
+        display: flex; align-items: center; gap: 10px;
+    }
+    .parpadeo { animation: blink-red 1s infinite; color: #fff !important; background: var(--danger) !important; border-color: var(--danger); }
+    @keyframes blink-red { 50% { opacity: 0.7; } }
+
+    /* TARJETAS DE PREGUNTAS */
+    .question-card {
+        background: var(--bg-tarjeta); border: 1px solid var(--borde-color);
+        border-radius: 20px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        margin-bottom: 30px; position: relative; animation: slideUp 0.4s ease-out;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .question-badge {
+        position: absolute; top: -15px; left: -15px; background: var(--primary); color: white;
+        width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .question-text { font-size: 1.4rem; font-weight: 600; line-height: 1.5; margin: 25px 0; }
+
+    /* OPCIONES DE RESPUESTA */
+    .option-label {
+        display: flex !important; align-items: center; padding: 18px; margin-bottom: 12px;
+        background: var(--input-bg); border: 2px solid transparent; border-radius: 12px;
+        cursor: pointer; transition: all 0.2s;
+    }
+    .option-label:hover { border-color: var(--primary); background: var(--bg-tarjeta); transform: translateX(5px); }
+    .option-label:has(input:checked) { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); font-weight: bold; }
+    .option-circle {
+        width: 35px; height: 35px; border-radius: 50%; border: 2px solid var(--borde-color);
+        display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; color: var(--color-texto-sec); background: var(--bg-tarjeta);
+    }
+    .option-label input:checked + .option-circle { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* SIDEBAR / MAPA DE PREGUNTAS */
+    .map-sidebar {
+        background: var(--bg-tarjeta); padding: 20px; border-radius: 16px; border: 1px solid var(--borde-color);
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px;
+    }
+    .map-btn {
+        aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+        background: var(--input-bg); border: 1px solid var(--borde-color); border-radius: 10px;
+        color: var(--color-texto-sec); text-decoration: none; font-weight: bold; transition: all 0.2s;
+    }
+    .map-btn.answered { background: var(--success); color: white; border-color: var(--success); }
+    .map-btn.flagged { background: var(--warning); color: white; border-color: var(--warning); }
+
+    /* 🔥 NOTIFICACIONES FLOTANTES (TOASTS) 🔥 */
+    #exam-toast-container {
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100000;
+        display: flex; flex-direction: column-reverse; gap: 15px; pointer-events: none; width: 90%; max-width: 450px;
+    }
+    .modern-toast {
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+        color: #1f2937; padding: 20px; border-radius: 15px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.25); border-left: 8px solid;
+        display: flex; align-items: flex-start; gap: 15px;
+        animation: popUp 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); pointer-events: auto;
+    }
+    body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.95); color: #fff; }
+    
+    @keyframes popUp { from { transform: translateY(50px) scale(0.8); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    
+    .toast-icon { font-size: 2rem; }
+    .toast-content { display: flex; flex-direction: column; }
+    .toast-title { font-weight: 900; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 4px; letter-spacing: 1px; }
+    .toast-msg { font-size: 1.1rem; line-height: 1.3; font-weight: 500; }
+    
+    /* 🚨 ESTILOS MINI PARA CELULAR (Arreglo Solicitado #9) 🚨 */
+    @media (max-width: 768px) {
+        #exam-toast-container {
+            top: 10px !important; /* Mover arriba */
+            bottom: auto !important;
+            flex-direction: column; /* Apilar hacia abajo */
+            width: 95%;
+        }
+        .modern-toast {
+            padding: 10px 15px; /* Más compacto */
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9); /* Más transparente */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.9); }
+        .toast-icon { font-size: 1.2rem; }
+        .toast-title { font-size: 0.8rem; margin-bottom: 2px; }
+        .toast-msg { font-size: 0.9rem; line-height: 1.2; }
+    }
+    
+    .toast-danger { border-left-color: #ef4444; } .toast-danger .toast-title { color: #ef4444; }
+    .toast-warning { border-left-color: #f59e0b; } .toast-warning .toast-title { color: #f59e0b; }
+    .toast-success { border-left-color: #10b981; } .toast-success .toast-title { color: #10b981; }
+    .toast-info { border-left-color: #3b82f6; } .toast-info .toast-title { color: #3b82f6; }
+
+    /* OVERLAYS FULLSCREEN */
+    .fullscreen-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px);
+        z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 20px;
+    }
+    .welcome-card {
+        background: var(--bg-tarjeta); padding: 50px; border-radius: 30px; text-align: center;
+        max-width: 700px; width: 100%; border: 1px solid var(--borde-color);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: zoomIn 0.4s;
+    }
+    
+    /* Cancelación Dramática */
+    .cancel-card {
+        background: #fff1f2; color: #881337; padding: 60px 40px; border-radius: 30px; text-align: center;
+        max-width: 800px; width: 100%; border: 10px solid #ef4444;
+        box-shadow: 0 0 100px rgba(239, 68, 68, 0.8); animation: shake 0.5s;
+    }
+    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10px);} 75% {transform: translateX(10px);} }
+
+    #ai-video-feed, #ai-canvas { position: fixed; top: 0; left: 0; opacity: 0.01; pointer-events: none; z-index: -1; }
+    
+    .btn { padding: 12px 24px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.95); }
+    
+    /* Modo Lectura */
+    .img-zoom-container { text-align: center; margin: 20px 0; background: var(--input-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); }
+    .img-zoom-container img { max-height: 250px; max-width: 100%; border-radius: 4px; cursor: zoom-in; }
+    .reading-scroll-container { height: 75vh !important; overflow-y: auto; background: var(--bg-tarjeta) !important; border: 4px solid var(--primary); z-index: 50; position: relative; padding: 10px; box-shadow: var(--shadow-lg); }
+    .reading-scroll-container img { max-height: none !important; width: 100% !important; cursor: zoom-out; }</style>
+
+{# ========================================================= #}
+{# 🔥 SECCIÓN 2: ESTRUCTURA HTML (LÓGICA JINJA) 🔥 #}
 {# ========================================================= #}
 
 {% if is_locked %}
-{# ----------------------------------------------------- #}
-{# ⏳ VISTA 1: SALA DE ESPERA (CONTADOR) ⏳ #}
-{# ----------------------------------------------------- #}
-<div class="waiting-room-container">
-    <div class="waiting-card">
-        <div class="waiting-icon">⏳</div>
-        <h1 class="waiting-title">El examen aún no comienza</h1>
-        <p class="waiting-subtitle">
-            Estás en la sala de espera para <strong>{{ exam.title }}</strong>.<br>
-            El examen se habilitará automáticamente cuando el contador llegue a cero.
-        </p>
+    {# --- ESCENARIO A: SALA DE ESPERA (TIME LOCKED) --- #}
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body);">
+        <div style="background: var(--bg-tarjeta); padding: 50px; border-radius: 24px; text-align: center; max-width: 600px; width: 90%; box-shadow: var(--shadow-lg); border-top: 6px solid var(--primary);">
+            <div style="font-size: 4.5rem; margin-bottom: 25px; animation: bounce 2s infinite;">⏳</div>
+            <h1 style="font-size: 2.2rem; margin-bottom: 15px; font-weight: 900; color: var(--color-texto);">Sala de Espera</h1>
+            <p style="color: var(--color-texto-sec); margin-bottom: 35px; font-size: 1.1rem;">
+                Examen: <strong style="color: var(--primary);">{{ exam.title }}</strong><br>
+                El acceso se habilitará automáticamente cuando el contador llegue a cero.
+            </p>
 
-        <div class="countdown-box">
-            <div class="time-unit">
-                <span id="dias">00</span>
-                <label>Días</label>
+            <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 35px;">
+                <div class="time-box-unit"><span id="dias">00</span><small>DÍAS</small></div>
+                <div class="time-box-unit"><span id="horas">00</span><small>HRS</small></div>
+                <div class="time-box-unit"><span id="minutos">00</span><small>MIN</small></div>
+                <div class="time-box-unit" style="border-color: var(--danger);"><span id="segundos" style="color: var(--danger);">00</span><small>SEG</small></div>
             </div>
-            <div class="separator">:</div>
-            <div class="time-unit">
-                <span id="horas">00</span>
-                <label>Horas</label>
+
+            <div style="height: 8px; background: var(--input-bg); border-radius: 10px; overflow: hidden;">
+                <div style="height: 100%; width: 50%; background: var(--primary); animation: loading 2s infinite ease-in-out;"></div>
             </div>
-            <div class="separator">:</div>
-            <div class="time-unit">
-                <span id="minutos">00</span>
-                <label>Min</label>
-            </div>
-            <div class="separator">:</div>
-            <div class="time-unit">
-                <span id="segundos" class="seconds-highlight">00</span>
-                <label>Seg</label>
-            </div>
+            
+            <style>
+                .time-box-unit { background: var(--input-bg); padding: 15px; border-radius: 12px; min-width: 80px; border: 1px solid var(--borde-color); }
+                .time-box-unit span { font-size: 2.2rem; font-weight: 800; display: block; color: var(--primary); }
+                .time-box-unit small { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-sec); }
+                @keyframes loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+                @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-15px);} 60% {transform: translateY(-7px);} }
+            </style>
+            
+            <p style="margin-top: 25px; font-size: 0.9em; color: var(--color-texto-sec); opacity: 0.8;">
+                <i class="fas fa-lock"></i> Por favor, no cierres esta pestaña.
+            </p>
         </div>
-
-        <div class="loading-bar-container">
-            <div class="loading-bar"></div>
-        </div>
-
-        <p class="wait-footer">Por favor, no cierres esta pestaña.</p>
     </div>
-</div>
 
-<style>
-    /* Estilos de la Sala de Espera */
-    .waiting-room-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 80vh;
-        background: #f4f6f7;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .waiting-card {
-        background: white;
-        padding: 40px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        max-width: 600px;
-        width: 90%;
-        animation: fadeIn 0.8s ease-out;
-    }
-
-    .waiting-icon {
-        font-size: 4rem;
-        margin-bottom: 20px;
-        animation: pulse 2s infinite;
-    }
-
-    .waiting-title {
-        color: #2c3e50;
-        font-size: 2rem;
-        margin-bottom: 10px;
-        font-weight: 800;
-    }
-
-    .waiting-subtitle {
-        color: #7f8c8d;
-        font-size: 1.1rem;
-        line-height: 1.6;
-        margin-bottom: 30px;
-    }
-
-    .countdown-box {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 30px;
-        background: #2c3e50;
-        padding: 20px;
-        border-radius: 15px;
-        color: white;
-        box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
-    }
-
-    .time-unit {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-width: 60px;
-    }
-
-    .time-unit span {
-        font-size: 2.5rem;
-        font-weight: bold;
-        font-variant-numeric: tabular-nums;
-    }
-
-    .time-unit label {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        opacity: 0.7;
-    }
-
-    .seconds-highlight {
-        color: #3498db;
-    }
-
-    .separator {
-        font-size: 2rem;
-        margin-top: -20px;
-        color: rgba(255, 255, 255, 0.3);
-    }
-
-    .loading-bar-container {
-        width: 100%;
-        height: 6px;
-        background: #ecf0f1;
-        border-radius: 10px;
-        overflow: hidden;
-        margin-bottom: 15px;
-    }
-
-    .loading-bar {
-        height: 100%;
-        width: 50%;
-        background: linear-gradient(90deg, #3498db, #2ecc71);
-        animation: loading 2s infinite ease-in-out;
-    }
-
-    .wait-footer {
-        font-size: 0.9em;
-        color: #bdc3c7;
-    }
-
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes loading {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(200%); }
-    }
-
-    /* Modo Oscuro (Opcional si tu sitio lo usa) */
-    body.dark-mode .waiting-room-container { background: #1a1a1a; }
-    body.dark-mode .waiting-card { background: #2d3436; color: white; }
-    body.dark-mode .waiting-title { color: #ecf0f1; }
-    body.dark-mode .waiting-subtitle { color: #bdc3c7; }
-</style>
-
-<script>
-   const savedAnswers = {{ saved_answers_dict | tojson | safe }} || {};
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. Lógica del contador (Sala de espera)
-    let startTime = parseInt("{{ start_time_utc | default('0') }}");
-    
-    function updateWaitTimer() {
-        const now = Math.floor(Date.now() / 1000);
-        const distance = startTime - now;
-        if (distance < 0) {
-            location.reload(); 
-            return;
-        }
-        // ... aquí va el resto de tu función updateWaitTimer si tiene más lógica ...
-    }
-
-    // 2. CICLO DE RE-PINTADO INICIAL (Mapa de preguntas)
-    // Esto se ejecuta apenas carga la página para marcar lo que ya se contestó
-    Object.keys(savedAnswers).forEach(qid => {
-        const btn = document.getElementById('map-btn-' + qid);
-        if (btn && savedAnswers[qid]) {
-            btn.classList.add('answered');
-            btn.classList.remove('flagged');
-        }
-    });
-
-    // 3. Si hay un timer activo, iniciarlo
-    if(startTime > 0) {
-        setInterval(updateWaitTimer, 1000);
-        updateWaitTimer();
-    }
-});
-
-            const days = Math.floor(distance / (60 * 60 * 24));
-            const hours = Math.floor((distance % (60 * 60 * 24)) / (60 * 60));
-            const minutes = Math.floor((distance % (60 * 60)) / 60);
-            const seconds = Math.floor(distance % 60);
-
-            const elDias = document.getElementById("dias");
-            if(elDias) elDias.innerText = days < 10 ? "0" + days : days;
-            
-            const elHoras = document.getElementById("horas");
-            if(elHoras) elHoras.innerText = hours < 10 ? "0" + hours : hours;
-            
-            const elMin = document.getElementById("minutos");
-            if(elMin) elMin.innerText = minutes < 10 ? "0" + minutes : minutes;
-            
-            const elSeg = document.getElementById("segundos");
-            if(elSeg) elSeg.innerText = seconds < 10 ? "0" + seconds : seconds;
-        }
-
-        if(startTime > 0) {
-            setInterval(updateWaitTimer, 1000);
-            updateWaitTimer();
-        }
-    });
-</script>
+    <script>
+        const savedAnswers = {{ saved_answers_dict | tojson | safe }} || {};
+        document.addEventListener('DOMContentLoaded', function() {
+            let startTime = parseInt("{{ start_time_utc | default('0') }}");
+            function updateWaitTimer() {
+                const now = Math.floor(Date.now() / 1000);
+                const distance = startTime - now;
+                if (distance < 0) { location.reload(); return; }
+                const d = Math.floor(distance / (60 * 60 * 24));
+                const h = Math.floor((distance % (60 * 60 * 24)) / (60 * 60));
+                const m = Math.floor((distance % (60 * 60)) / 60);
+                const s = Math.floor(distance % 60);
+                document.getElementById("dias").innerText = d < 10 ? "0" + d : d;
+                document.getElementById("horas").innerText = h < 10 ? "0" + h : h;
+                document.getElementById("minutos").innerText = m < 10 ? "0" + m : m;
+                document.getElementById("segundos").innerText = s < 10 ? "0" + s : s;
+            }
+            if(startTime > 0) { setInterval(updateWaitTimer, 1000); updateWaitTimer(); }
+        });
+    </script>
 
 {% else %}
-{# ----------------------------------------------------- #}
-{# 📝 VISTA 2: EL EXAMEN COMPLETO 📝 #}
-{# ----------------------------------------------------- #}
 
-{# --- MARCA DE AGUA DE SEGURIDAD --- #}
-<div id="watermark-overlay">
-    {# 50 repeticiones para cubrir toda la pantalla #}
-    {% for _ in range(50) %}
-    <div class="watermark-text">{{ current_user.username }} - ID: {{ current_user.id }}</div>
-    {% endfor %}
-</div>
+    {# --- ESCENARIO B: EXAMEN EN CURSO --- #}
 
-{# --- 1. ELEMENTOS FLOTANTES --- #}
-<div class="header-controls-group">
-    {# Botón de Ayuda (Timbre) #}
-    <button id="request-help-btn" class="btn help-btn" title="Solicitar hablar con el profesor">
-        🙋‍♂️ Hablar con Gus
-    </button>
-
-    <a href="{{ url_for('new_report') }}" id="report-error-button" class="btn report-error-btn" target="_blank"
-        title="Reportar un problema sin perder el examen">
-        🚨 Reportar Error
-    </a>
-
-    <div id="fixed-timer-container" class="fixed-timer-box">
-        <span>⏰ Tiempo:</span>
-        <div id="countdown" class="countdown-display">Cargando...</div>
-    </div>
-</div>
-
-{# --- PANEL DE CHAT --- #}
-<div id="student-chat-panel" class="student-chat-panel">
-    <div class="chat-panel-header">
-        <strong>💬 Soporte en Vivo</strong>
-        <span class="close-chat" id="close-chat-button">×</span>
-    </div>
-    <div id="chat-messages" class="chat-messages"></div>
-    <form id="student-chat-form" class="student-chat-form">
-        <input type="text" id="student-message-input" placeholder="Escribe tu consulta rápida..." required>
-        <button type="submit" class="chat-send-btn">Enviar</button>
-    </form>
-</div>
-
-{# --- 2. OVERLAYS --- #}
-
-{# 🔥 FIX: Solo mostrar Overlay de Bienvenida si el examen NO ha iniciado (tiempo = 0) #}
-{% if start_time_utc == 0 %}
-<div id="welcome-overlay" class="overlay">
-    <div class="overlay-content">
-        <h1 class="welcome-title">✨ ¡Antes de Presentar el Examen, {{ current_user.username }}! ✨</h1>
-        <p class="exam-prep-text">Debes saber lo siguiente para contestar el **{{ exam.title }}**.</p>
-        <p class="exam-info-text">Tienes **3 horas (180 minutos)** para contestar el examen.</p>
-        <p class="exam-info-text">Lee con atención y cualquier consulta presiona el botón Hablar con Gus.</p>
-        <p class="exam-info-text">Cualquier error presiona en Reportar Error.</p>
-
-        <button id="start-exam-button" class="button start-btn">
-            Comenzar Examen Ahora 🚀
-        </button>
-
-        <p class="warning-text">Recuerda: El envío es automático si el tiempo se agota.</p>
-        <p class="permission-note" style="margin-top: 10px; font-size: 0.9em; color: #3498db;">
-            ℹ️ Al hacer clic, el navegador te pedirá permiso para usar la cámara y el micrófono.
-            <strong>Por favor, acepta para activar el monitoreo y puedas hacer el examen.</strong>
-        </p>
-    </div>
-</div>
-{% endif %}
-
-{# Overlay de Cancelación #}
-<div id="cancellation-overlay" class="overlay" style="display: none;">
-    <div class="overlay-content cancel-content">
-        <h1 class="cancel-title">🚫 Examen Cancelado 🚫</h1>
-        <p class="cancel-info-text">Tu examen ha sido cancelado.</p>
-        <h3 class="reason-label">Motivo:</h3>
-        <div id="cancellation-reason-display" class="reason-box"></div>
-
-        <a href="{{ url_for('new_report') }}" target="_blank" class="button"
-            style="background-color: #e67e22; margin-right: 10px; text-decoration: none; display: inline-block; color: white; padding: 10px 20px; border-radius: 6px;">
-            🚨 Reportar Error
-        </a>
-
-        <a href="{{ url_for('dashboard') }}" class="button back-btn"
-            style="text-decoration: none; display: inline-block; color: white;">
-            Regresar al Inicio
-        </a>
-    </div>
-</div>
-
-{# Modal de Confirmación de Envío #}
-<div id="confirm-submit-modal" class="overlay" style="display: none; z-index: 10000;">
-    <div class="overlay-content" style="max-width: 450px; border-color: #f39c12;">
-        <h2 id="confirm-modal-text" class="confirm-title" style="color: #34495e; font-size: 1.5em; line-height: 1.4;">
-            ¿Estás seguro de entregar?
-        </h2>
-        <p>Si envías ahora, no podrás cambiar tus respuestas.</p>
-        <div class="modal-actions" style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
-            <button id="confirm-submit-btn-yes" class="action-btn confirm-btn-yes">✅ Sí, Enviar</button>
-            <button id="confirm-submit-btn-no" class="action-btn confirm-btn-no">No, Cancelar</button>
+    {# 1. Marca de Agua de Seguridad #}
+    <div id="watermark-overlay" style="position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.1; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; overflow: hidden;">
+        {% for _ in range(40) %}
+        <div style="padding: 60px; transform: rotate(-30deg); font-weight: 900; font-size: 20px; color: var(--color-texto);">
+            {{ current_user.username }}
         </div>
+        {% endfor %}
     </div>
-</div>
 
-{# Overlay de Rayo Congelante MEJORADO #}
-<div id="freeze-overlay" class="overlay" 
-     style="display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(255, 255, 255, 1.0) !important; /* 1.0 = Sólido total */
-            backdrop-filter: blur(20px); /* Efecto vidrio empañado */
-            -webkit-backdrop-filter: blur(20px); /* Para Safari */
-            z-index: 20000; 
-            align-items: center; 
-            justify-content: center;">
+    {# 2. Elementos de IA (Ocultos pero activos) #}
+    <video id="ai-video-feed" width="320" height="240" autoplay muted playsinline></video>
+    <canvas id="ai-canvas"></canvas>
+
+    {# 3. Contenedor Principal #}
+    <div class="exam-wrapper">
+        
+        {# Header Sticky con Reloj y Botones #}
+        <div class="sticky-header">
+            <div class="timer-badge">
+                <i class="fas fa-clock"></i>
+                <span id="countdown">--:--:--</span>
+            </div>
             
-    <div style="text-align: center; color: #2c3e50; padding: 20px;">
-        <h1 style="font-size: 4em; margin-bottom: 10px;">❄️ EXAMEN PAUSADO ❄️</h1>
-        <p style="font-size: 1.8em; font-weight: bold;">El administrador ha congelado tu pantalla.</p>
-        <p style="font-size: 1.2em; color: #7f8c8d;">Espera instrucciones...</p>
-        <i class="fas fa-snowflake fa-spin" style="font-size: 5em; color: #3498db; margin-top: 30px;"></i>
-    </div>
-</div>
-{# 🔥 ELEMENTOS DE IA OCULTOS (Opacity 0.01) 🔥 #}
-<video id="ai-video-feed" width="320" height="240"
-    style="position:fixed; top:0; left:0; opacity:0.01; pointer-events:none; z-index:-1;" autoplay muted
-    playsinline></video>
-<canvas id="ai-canvas" style="position:fixed; top:0; left:0; opacity:0; pointer-events:none; z-index:-1;"></canvas>
-
-{# --- 3. CONTENIDO DEL EXAMEN --- #}
-<div class="exam-header-info">
-    <h2 class="exam-title-main">📝 Examen: {{ exam.title }}</h2>
-    <p class="exam-description">{{ exam.description }}</p>
-    <p class="exam-subject-header">Monitoreo de Seguridad: <span class="security-status-active">Activado</span></p>
-
-    {# 🔥 FIX: Solo mostrar Botón Manual si el examen NO ha iniciado (tiempo = 0) #}
-    {% if start_time_utc == 0 %}
-    <div id="manual-start-container"
-        style="display: none; background: #f1c40f; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 2px solid #f39c12;">
-        <h3 style="margin: 0 0 10px 0; color: #333;">⚠️ Iniciar Examen</h3>
-        <button id="manual-start-btn" class="button start-btn" style="padding: 10px 20px; font-size: 1em;">▶️ ACTIVAR
-            CÁMARA E INICIAR</button>
-    </div>
-    {% endif %}
-</div>
-
-<div class="container exam-container">
-    {# Mapa de Preguntas #}
-    <div class="question-map-container">
-        <h3>Mapa del Examen</h3>
-        <div class="question-map-grid fase-1" id="question-map-grid">
-            {# 🔥 Iteramos sobre 'questions' (ordenado aleatoriamente desde backend) #}
-            {% for q in questions %}
-            <a href="#q-{{ q.id }}" class="question-map-btn {% if saved_answers.get(q.id) %}answered{% endif %}"
-                id="map-btn-{{ q.id }}" data-index="{{ loop.index0 }}" title="Pregunta {{ loop.index }}">
-                {{ loop.index }}
-            </a>
-            {% endfor %}
+            <div style="display: flex; gap: 10px;">
+                <button id="request-help-btn" class="btn" style="background: #8b5cf6; color: white; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);">
+                    🙋‍♂️ Hablar con Gus
+                </button>
+                <a href="{{ url_for('new_report') }}" target="_blank" class="btn" style="background: var(--warning); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
+                    🚨 Reportar
+                </a>
+            </div>
         </div>
-        <div class="map-legend">
-            <span class="legend-item legend-unanswered"></span> Pendiente
-            <span class="legend-item legend-answered"></span> Respondida
-            <span class="legend-item legend-flagged"></span> Marcada
-        </div>
-    </div>
 
-    {# Formulario Principal #}
-    <form method="POST" class="exam-form" id="exam-form">
-
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        {# 🔥 INPUT OCULTO PARA RRWEB (GRABACIÓN) 🔥 #}
-        <input type="hidden" name="recording_data" id="recording-data-input">
-
-        {# 🔥 Iteramos sobre 'questions' (ordenado) #}
-        {% for question in questions %}
-        <div class="question-card" id="q-{{ question.id }}" data-index="{{ loop.index0 }}"
-            style="{% if not loop.first %}display: none;{% endif %}">
-
-            <p class="question-meta">
-                <span><strong>Materia:</strong> <span class="subject-tag">{{ question.subject or 'General' }}</span>
-                    <strong>Pregunta {{ loop.index }} de {{ loop.length }}</strong></span>
-            </p>
-            <p class="question-text question-centered">{{ question.text }}</p>
+        {# Grid Layout Responsive #}
+        <div style="display: grid; grid-template-columns: 1fr; gap: 40px; @media (min-width: 1024px) { grid-template-columns: 300px 1fr; }">
             
-            {# 🔥 FIX IMÁGENES: Corregido error de sintaxis y añadido contenedor responsivo #}
-           {# Ejemplo para la imagen de la pregunta #}
-{# --- IMAGEN PRINCIPAL DE LA PREGUNTA CON ZOOM --- #}
-{% if question.image_filename %}
-    {# 1. Contenedor con ID único para que el JS sepa cuál agrandar #}
-    <div class="question-image-container" 
-         id="img-container-{{ question.id }}"
-         style="min-height: 150px; background: #f9f9f9; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s ease;">
-         
-        <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
-             class="question-image" 
-             loading="lazy" 
-             onerror="this.onerror=null; this.src='{{ question.image_filename }}?t=' + new Date().getTime();"
-             draggable="false" 
-             alt="Imagen de la pregunta">
-    </div>
-
-    {# 2. Botón para activar/desactivar modo lectura #}
-    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-        <button type="button" 
-                class="button" 
-                style="background: #34495e; padding: 8px 20px; font-size: 0.9em; border-radius: 20px; border: 1px solid #2c3e50;"
-                onclick="toggleReadingMode('{{ question.id }}')">
-            🔍 📄 Ampliar / Reducir Lectura
-        </button>
-    </div>
-{% endif %}
-            
-            <div class="options-group">
-                
-                {# 1. Definimos la lista con 3 valores: Letra, Texto e IMAGEN #}
-                {% set all_options = [
-                    ('A', question.option_a, question.image_a),
-                    ('B', question.option_b, question.image_b),
-                    ('C', question.option_c, question.image_c),
-                    ('D', question.option_d, question.image_d)
-                ] %}
-            
-                {% set q_name = 'q' + question.id | string %}
-                {# Recuperamos la respuesta guardada para marcar el radio button #}
-                {% set saved_response = saved_answers.get(question.id | string, '') %} 
-                {# Nota: convertí question.id a string en el get() por si acaso las claves del dict son strings #}
-            
-                {% for letter, text, img_file in all_options %}
-                    {# 2. Mostramos la opción si existe Texto O Imagen #}
-                    {% if text or img_file %}
+            {# Columna Izquierda: Mapa de Navegación #}
+            <div style="display: none; @media (min-width: 1024px) { display: block; } grid-column: 1;">
+                <div style="position: sticky; top: 120px;">
+                    <div class="map-sidebar" id="question-map-grid">
+                        {% for q in questions %}
+                        <a href="#q-{{ q.id }}" 
+                           class="map-btn {% if saved_answers.get(q.id | string) %}answered{% endif %}"
+                           id="map-btn-{{ q.id }}" 
+                           data-index="{{ loop.index0 }}">
+                            {{ loop.index }}
+                        </a>
+                        {% endfor %}
+                    </div>
                     
-                    <label class="option-label" style="justify-content: flex-start !important; align-items: flex-start; cursor: pointer; padding: 10px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 5px; display: flex;">
-                        
-                        {# Radio Button #}
-                        <input type="radio" name="{{ q_name }}" value="{{ letter }}" data-qid="{{ question.id }}"
-                               {% if saved_response == letter %}checked{% endif %}
-                               style="margin-top: 5px; margin-right: 10px;"> 
-                        
-                        {# Contenedor de Contenido (Texto + Imagen) #}
-                        <div class="option-content-wrapper" style="text-align: left !important; width: 100%;">
-                            
-                            {# Texto de la opción #}
-                            {% if text %}
-                                <div style="font-size: 1rem; color: #333;">
-                                    <strong>{{ letter }})</strong> {{ text }}
-                                </div>
-                            {% endif %}
-            
-                            {# Imagen de la opción (Si existe) #}
-                            {# 🔥 FIX: Usamos img_file en lugar de question.image_filename aquí #}
-                           {# Busca esta parte en tu bucle de opciones #}
-{# --- IMAGEN DE LA OPCIÓN (Optimizado y Corregido) --- #}
-                    {% if img_file %}
-                        <div style="margin-top: 8px; min-height: 100px; background: #fafafa; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
-                            <img src="{{ img_file.replace('/upload/', '/upload/f_auto,q_auto/') }}"
-                                 alt="Opción {{ letter }}" 
-                                 class="img-fluid"
-                                 loading="lazy"
-                                 onerror="this.onerror=null; this.src='{{ img_file }}?t=' + new Date().getTime();"
-                                 style="max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; padding: 2px;">
-                        </div>
+                    <div style="margin-top: 20px; font-size: 0.85em; color: var(--color-texto-sec); display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; background:var(--success); border-radius:50%;"></span> Respondida</div>
+                        <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; background:var(--warning); border-radius:50%;"></span> Marcada</div>
+                        <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; background:var(--input-bg); border:1px solid var(--borde-color); border-radius:50%;"></span> Pendiente</div>
+                    </div>
+
+                    {% if start_time_utc == 0 %}
+                    <div id="manual-start-container" style="margin-top: 25px; padding: 20px; background: rgba(245, 158, 11, 0.1); border: 2px solid var(--warning); border-radius: 12px; text-align: center;">
+                        <button id="manual-start-btn" class="btn w-full" style="background: var(--success); color: white;">
+                            ▶️ FORZAR INICIO
+                        </button>
+                    </div>
                     {% endif %}
-                    
-                </div> {# Cierre del div que contiene texto e imagen #}
-            </label>
-        {% endif %} {# Cierre del if que verifica si la opción existe #}
-    {% endfor %} {# Cierre del bucle de opciones (A, B, C, D) #}
-</div> {# Cierre del contenedor de opciones #}
+                </div>
+            </div>
 
-{# --- BOTONES DE NAVEGACIÓN --- #}
-<div class="question-nav-buttons">
-    {% if not loop.last %}
-        <button type="button" class="button flag-and-next-btn" data-qid="{{ question.id }}">
-            🚩 Marcar y Siguiente
-        </button>
-        <button type="button" class="button next-question-btn">
-            Siguiente Pregunta →
-        </button>
-    {% else %}
-        <button type="button" class="button review-mode-btn">
-            🔄 Ir a Revisión (🚩)
-        </button>
-        <button type="button" class="button finish-directly-btn">
-            ✅ Finalizar y Entregar Ahora
-        </button>
+            {# Columna Derecha: Tarjetas de Preguntas #}
+            <div style="grid-column: 1 / -1; @media (min-width: 1024px) { grid-column: 2; }">
+                <form method="POST" id="exam-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="recording_data" id="recording-data-input">
+                    <input type="hidden" name="submission_type" id="submission_type" value="manual">
+
+                    {% for question in questions %}
+                    <div class="question-card" id="q-{{ question.id }}" data-index="{{ loop.index0 }}" 
+                         style="{% if not loop.first %}display: none;{% endif %}">
+                        
+                        <div class="question-badge">{{ loop.index }}</div>
+
+                        <div class="question-header">
+                            <span class="subject-pill" style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 8px; font-size: 0.9em; font-weight: 700;">
+                                {{ question.subject or 'General' }}
+                            </span>
+                        </div>
+
+                        <p class="question-text">{{ question.text }}</p>
+
+                        {% if question.image_filename %}
+                        <div id="img-container-{{ question.id }}" class="img-zoom-container">
+                            <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
+                                 loading="lazy" draggable="false"
+                                 onclick="toggleReadingMode('{{ question.id }}')">
+                            <div style="font-size:0.85em; color: var(--primary); margin-top: 8px; font-weight: 600;">
+                                <i class="fas fa-search-plus"></i> Clic para ampliar lectura
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            {% set q_name = 'q' + question.id | string %}
+                            {% set saved = saved_answers.get(question.id | string, '') %}
+                            {% set opts = [('A', question.option_a, question.image_a), ('B', question.option_b, question.image_b), ('C', question.option_c, question.image_c), ('D', question.option_d, question.image_d)] %}
+                            
+                            {% for let, txt, img in opts %}
+                                {% if txt or img %}
+                                <label class="option-label">
+                                    <input type="radio" name="{{ q_name }}" value="{{ let }}" data-qid="{{ question.id }}" 
+                                           style="display: none;" 
+                                           {% if saved == let %}checked{% endif %}>
+                                   
+                                    <div class="option-circle">{{ let }}</div>
+
+                                    <div style="flex-grow: 1;">
+                                        {% if txt %}<div style="font-size: 1.1em;">{{ txt }}</div>{% endif %}
+                                        {% if img %}
+                                        <img src="{{ img }}" style="margin-top: 10px; border-radius: 8px; border: 1px solid var(--borde-color); max-height: 180px;">
+                                        {% endif %}
+                                    </div>
+                                </label>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid var(--borde-color); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                            {# --- BOTONES DE CONTROL DE PREGUNTA --- #}
+                            <button type="button" class="btn flag-and-next-btn" style="background: var(--warning); color: white;" 
+                                    onclick="window.toggleFlag('{{ question.id }}')">
+                                🚩 Marcar
+                            </button>
+
+                            {% if not loop.last %}
+                            <button type="button" class="btn next-question-btn" style="background: var(--primary); color: white; box-shadow: var(--shadow-md);"
+                                    onclick="window.nextQ({{ loop.index }})">
+                                Siguiente Pregunta ➜
+                            </button>
+                            {% else %}
+                            <button type="button" class="btn review-mode-btn" style="background: var(--input-bg); color: var(--color-texto); border: 1px solid var(--borde-color); margin-right: 10px;">
+                                🔄 Revisión
+                            </button>
+                            <button type="button" class="btn finish-directly-btn" style="background: var(--success); color: white; box-shadow: var(--shadow-md);" onclick="window.finishExam()">
+                                ✅ FINALIZAR EXAMEN
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div id="review-mode-info" style="display: none; text-align: center; padding: 40px; background: var(--bg-tarjeta); border-radius: 16px; border: 2px solid var(--primary); margin-top: 30px;">
+                        <h3 style="font-size: 1.8em; margin-bottom: 15px; color: var(--primary);">Modo de Revisión</h3>
+                        <p style="margin-bottom: 25px; font-size: 1.1em; color: var(--color-texto-sec);">
+                            Usa el mapa lateral para navegar a las preguntas pendientes.<br>
+                            Cuando estés 100% seguro, presiona el botón de abajo.
+                        </p>
+                        <button type="submit" class="btn" id="final-submit-button" style="background: var(--success); color: white; padding: 15px 40px; font-size: 1.2em;">
+                            ✅ Entregar Examen Definitivo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# --- OVERLAYS Y MODALES --- #}
+    
+    {# Overlay de Bienvenida #}
+    {% if start_time_utc == 0 %}
+    <div id="welcome-overlay" class="fullscreen-overlay">
+        <div class="welcome-card">
+            <h1 style="color: var(--primary); font-size: 3rem; margin-bottom: 20px; font-weight: 900;">🚀 ¡LISTO PARA INICIAR!</h1>
+            <p style="margin-bottom: 30px; font-size: 1.2rem;">
+                Hola <strong>{{ current_user.username }}</strong>.<br>
+                Tienes <strong>3 Horas</strong> para completar el examen.<br>
+                <span style="color: var(--warning); font-weight: bold;">⚠️ El monitoreo de IA estará activo.</span>
+            </p>
+            <button id="start-exam-button" class="btn" style="background: var(--success); color: white; padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);">
+                ACTIVAR Y COMENZAR
+            </button>
+            <p style="margin-top: 20px; font-size: 0.9em; color: var(--color-texto-sec);">
+                *Al iniciar aceptas el uso de cámara y micrófono.
+            </p>
+        </div>
+    </div>
     {% endif %}
-</div>
 
-</div> {# Cierre del contenedor de la pregunta #}
-{% endfor %} {# Cierre del bucle principal de preguntas #}
-        <div id="review-mode-info" style="display: none;">
-            <h3>Modo de Revisión</h3>
-            <p>Estás en modo de revisión. Usa el "Mapa del Examen" para saltar a las preguntas marcadas (🚩). Presiona
-                entregar cuando estés listo.</p>
+    {# Overlay de Cancelación #}
+    <div id="cancellation-overlay" class="fullscreen-overlay" style="display: none;">
+        <div class="cancel-card">
+            <div style="font-size: 6rem; margin-bottom: 20px;">🚫</div>
+            <h1 style="color: #881337; font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">EXAMEN CANCELADO</h1>
+            <p style="font-size: 1.8rem; margin-bottom: 30px;">Se han detectado múltiples infracciones.</p>
+            <div id="cancellation-reason-display" style="background: white; padding: 20px; border-radius: 12px; font-size: 1.3rem; font-weight: bold; margin-bottom: 30px; color: #ef4444; border: 2px dashed #ef4444;"></div>
+            <a href="{{ url_for('dashboard') }}" class="btn" style="background: #1f2937; color: white; padding: 15px 40px; font-size: 1.2rem;">Volver al Inicio</a>
         </div>
+    </div>
 
-        <button type="submit" class="button submit-btn" id="final-submit-button" style="display: none;">✅ Entregar
-            Examen y Calificar</button>
-    </form>
-    <a href="{{ url_for('exams_list') }}" class="btn back-nav-btn">⬅ Volver a la Lista de Exámenes</a>
-</div>
+    {# Overlay de Confirmación #}
+    <div id="confirm-submit-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: var(--bg-tarjeta); padding: 40px; border-radius: 20px; text-align: center; max-width: 450px; border-top: 6px solid var(--warning); box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+            <h2 style="margin-bottom: 15px; font-size: 1.8rem;">¿Entregar Examen?</h2>
+            <p style="color: var(--color-texto-sec); margin-bottom: 30px; font-size: 1.1rem;">No podrás cambiar tus respuestas después de enviar.</p>
+            <div style="display: flex; gap: 20px; justify-content: center;">
+                <button id="confirm-submit-btn-yes" class="btn" style="background: var(--success); color: white; flex: 1;">Sí, Enviar</button>
+                <button id="confirm-submit-btn-no" class="btn" style="background: var(--danger); color: white; flex: 1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    {# Overlay Congelado #}
+    <div id="freeze-overlay" class="fullscreen-overlay" style="display: none; background: rgba(255,255,255,0.98); flex-direction: column;">
+        <h1 style="font-size: 5rem; color: var(--color-texto); margin-bottom: 20px;">❄️ PAUSADO</h1>
+        <p style="font-size: 2rem; color: var(--color-texto-sec);">El administrador ha congelado tu pantalla.</p>
+    </div>
 
-{# --- CONTENEDOR DE ALERTAS AMARILLAS (PING) --- #}
-<div id="exam-toast-container"
-    style="position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-end;">
-</div>
+    {# Chat Flotante #}
+    <div id="student-chat-panel" style="position: fixed; bottom: 30px; right: 30px; width: 350px; height: 450px; background: var(--bg-tarjeta); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid var(--borde-color); display: none; flex-direction: column; z-index: 5000; overflow: hidden;">
+        <div style="padding: 15px; background: var(--primary); color: white; display: flex; justify-content: space-between; font-weight: bold; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 8px;"><i class="fas fa-headset"></i> Soporte en Vivo</span>
+            <span id="close-chat-button" style="cursor: pointer; padding: 5px; font-size: 1.2rem;">✕</span>
+        </div>
+        <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; background: var(--input-bg); font-size: 0.95em; display: flex; flex-direction: column; gap: 10px;"></div>
+        <form id="student-chat-form" style="padding: 15px; border-top: 1px solid var(--borde-color); display: flex; gap: 10px; background: var(--bg-tarjeta);">
+            <input type="text" id="student-message-input" placeholder="Escribe tu duda..." required style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); background: var(--input-bg); color: var(--color-texto);">
+            <button type="submit" class="btn" style="background: var(--primary); color: white; padding: 0 15px;"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
 
-{# --- LIBRERÍAS JS --- #}
-{# 🔥 AGREGAMOS SWEETALERT2 PARA EL ALUMNO 🔥 #}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {# Contenedor de Notificaciones #}
+    <div id="exam-toast-container"></div>
 
-<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    {# ========================================================= #}
+    {# 🔥 CEREBRO JAVASCRIPT ROBUSTO Y COMPLETO 🔥 #}
+    {# ========================================================= #}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
 
-{# LIBRERÍAS DE IA #}
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <script>
+    // --- VARIABLES Y CONFIG ---
+    const EXAM_ID = parseInt("{{ exam.id }}");
+    const USER_ID = parseInt("{{ current_user.id }}");
+    const USERNAME = "{{ current_user.username }}";
+    const SAVE_URL = '{{ url_for("save_answer") }}';
+    const START_URL = '{{ url_for("take_exam", exam_id=exam.id) }}';
+    const CSRF = "{{ csrf_token() }}";
+    let START_TIME = parseInt("{{ start_time_utc | default('0') }}");
+    let TIME_ADDED = parseInt("{{ time_added_sec | default('0') }}");
+    let BASE_DUR = 3 * 3600;
+    let DURATION = BASE_DUR + TIME_ADDED;
+    let IS_CANCELLED = "{{ is_cancelled | lower }}" === "true";
+    let CANCEL_REASON = "{{ cancellation_reason | default('') }}";
+    let isExamActive = (START_TIME > 0 && !IS_CANCELLED);
+    let socket = io.connect(window.location.origin);
+    const isMobile = window.innerWidth <= 768;
 
-{# GRABACIÓN DE SESIÓN (RRWEB) #}
-<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
-
-<script>
+    // --- 1. TOASTS PERSONALIZADOS ---
     window.showFloatingNotification = function(msg, type) {
-    let container = document.getElementById('exam-toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'exam-toast-container';
-        document.body.appendChild(container);
+        let container = document.getElementById('exam-toast-container');
+        if(!container) return;
+        
+        // 🔥 LIMPIEZA: No acumular alertas
+        container.innerHTML = ''; 
+
+        const toast = document.createElement('div');
+        toast.className = `modern-toast toast-${type}`;
+        
+        let icon = 'ℹ️'; let title = 'AVISO';
+        if(type==='danger') { icon='🛑'; title='¡PELIGRO!'; }
+        else if(type==='warning') { icon='⚠️'; title='ADVERTENCIA'; }
+        else if(type==='success') { icon='✅'; title='ÉXITO'; }
+        else if(type==='info') { icon='💬'; title='MENSAJE'; }
+
+        toast.innerHTML = `<div class="toast-icon">${icon}</div><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
+        container.appendChild(toast);
+        
+        if(type==='danger' || type==='warning') {
+            try { const a=new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); a.volume=0.5; a.play().catch(e=>{}); } catch(e){}
+        }
+
+        setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 6000);
     }
 
-    const toast = document.createElement('div');
-    toast.className = `modern-toast toast-${type}`;
+    // --- 2. DETECTOR DE PESTAÑAS (AGRESIVO) ---
+    let violations = 0;
     
-    // Configuración según el tipo
-    let icon = 'ℹ️';
-    let title = 'Información';
-    
-    if (type === 'danger') { icon = '🛑'; title = 'Error Crítico'; }
-    else if (type === 'warning') { icon = '⚠️'; title = 'Advertencia'; }
-    else if (type === 'success') { icon = '✅'; title = 'Éxito'; }
-
-    toast.innerHTML = `
-        <div class="toast-icon">${icon}</div>
-        <div class="toast-content">
-            <span class="toast-title">${title}</span>
-            <div class="toast-msg">${msg}</div>
-        </div>
-    `;
-
-    container.appendChild(toast);
-
-    // Animación de entrada
-    requestAnimationFrame(() => {
-        toast.classList.add('show');
+    // Visibility API (Cuando cambias de tab)
+    document.addEventListener('visibilitychange', () => {
+        if(document.hidden && isExamActive) triggerViolation('TAB_CHANGE', "no cambies de ventana/pestaña o el examen se va a cancelar");
     });
 
-   // Auto-eliminar: 4s en celular (para no estorbar), 6s en PC
-    let duration = window.innerWidth < 768 ? 4000 : 6000;
+    // Blur (Cuando haces clic fuera)
+    window.addEventListener('blur', () => {
+        if(isExamActive) {
+            // Sin delay para ser más estricto
+            triggerViolation('WINDOW_BLUR', "No salgas de la ventana del examen.");
+        }
+    });
 
-    setTimeout(() => {
-        toast.classList.remove('show'); // Esto activa la animación de salida del CSS
+    function triggerViolation(type, msg) {
+        violations++;
+        showFloatingNotification(msg, 'danger');
         
-        // Esperamos 0.5s a que termine la animación visual antes de borrarlo del HTML
-        setTimeout(() => {
-            if (toast.parentNode) toast.remove();
-        }, 500);
-    }, duration);
-}
-    // 🔥 CORRECCIÓN: SOLO UN DOMContentLoaded AQUÍ 🔥
-    document.addEventListener('DOMContentLoaded', function () {
-        // =================================================================
-        // 0. NUEVO: DETECTOR DE INTERNET Y BLOQUEOS
-        // =================================================================
-
-        // 1. Detector de Internet
-        window.addEventListener('offline', () => {
-            showFloatingNotification("⚠️ ¡Cuidado! Perdiste la conexión a internet. No cierres la página.", "danger");
-            document.body.style.border = "5px solid red"; // Borde rojo visual
-        });
-        window.addEventListener('online', () => {
-            showFloatingNotification("✅ Conexión recuperada. Tus respuestas se guardarán.", "success");
-            document.body.style.border = "none";
+        html2canvas(document.body).then(c => {
+            socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:type, screenshot:c.toDataURL('image/jpeg',0.3) });
         });
 
-        // 2. Bloqueo de Clic Derecho (Menú contextual)
-        document.addEventListener('contextmenu', event => {
-            event.preventDefault();
-            showFloatingNotification("🚫 El menú contextual está desactivado.", "warning");
-        });
-
-        // 3. Bloqueo de Copiar/Pegar con teclado
-        document.addEventListener('keydown', function (e) {
-            // Bloquea Ctrl+C, Ctrl+V, Ctrl+U, Ctrl+X
-            if ((e.ctrlKey || e.metaKey) &&
-                (e.key === 'c' || e.key === 'v' || e.key === 'u' || e.key === 'x')) {
-                e.preventDefault();
-                showFloatingNotification("🚫 Copiar/Pegar está desactivado.", "danger");
-            }
-        });
-
-        // =================================================================
-        // CONFIGURACIÓN INICIAL Y DETECCIÓN MÓVIL
-        // =================================================================
-
-        // Detecta si es una pantalla pequeña (celular o tablet vertical)
-        const isMobile = window.innerWidth <= 768;
-
-        // AJUSTE DE TIEMPOS INTELIGENTE PARA LA IA
-        const FACE_CHECK_INTERVAL = isMobile ? 3500 : 1500;
-        const OBJECT_CHECK_INTERVAL = isMobile ? 1200 : 250;
-
-        // GRABACIÓN DE SESIÓN (MODO ULTRA LIGERO - 3 HORAS)
-        let eventsMatrix = [];
-        if (typeof rrweb !== 'undefined') {
-            rrweb.record({
-                emit(event) {
-                    eventsMatrix.push(event);
-                },
-                maskAllInputs: false,
-                // CONFIGURACIÓN DE AHORRO EXTREMO
-                sampling: {
-                    mousemove: 1000,   // Graba la posición del mouse SOLO 1 vez por segundo
-                    mouseInteraction: true, // Los Clics SÍ se graban al instante (importante)
-                    scroll: 500,        // Scroll cada medio segundo
-                    input: 'last'       // Solo guarda el texto final, no cada letra que borra
-                }
-            });
+        if(violations >= 3) {
+            IS_CANCELLED = true; isExamActive = false;
+            socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'EXAM_CANCELED_AUTO_BLOCK' });
+            stopExamAndShowCancellation("Límite de advertencias alcanzado (Cambio de pestaña).");
         }
-
-        // =================================================================
-        // 1. CONFIGURACIÓN Y VARIABLES
-        // =================================================================
-        let START_TIME_UTC_SEC = parseInt("{{ start_time_utc | default('0') }}");
-        let TIME_ADDED_SEC = parseInt("{{ time_added_sec | default('0') }}");
-
-        let BASE_DURATION_SEC = 3 * 60 * 60; // 3 Horas
-        let DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC;
-
-        let IS_EXAM_CANCELLED = "{{ is_cancelled | lower }}" === "true";
-        let CANCELLATION_REASON = "{{ cancellation_reason | default('') }}";
-        const EXAM_ID = parseInt("{{ exam.id }}");
-        const currentUserId = parseInt("{{ current_user.id }}");
-        const username = "{{ current_user.username }}";
-        const SAVE_ANSWER_URL = '{{ url_for("save_answer") }}';
-        const START_TIMER_URL = '{{ url_for("take_exam", exam_id=exam.id) }}';
-        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
-
-        // Referencias DOM
-        const examForm = document.getElementById('exam-form');
-        const countdownDisplay = document.getElementById('countdown');
-        const welcomeOverlay = document.getElementById('welcome-overlay');
-        const cancellationOverlay = document.getElementById('cancellation-overlay');
-        const backToExamsButton = document.getElementById('back-to-exams-button');
-        const reportErrorButton = document.getElementById('report-error-button');
-        const requestHelpBtn = document.getElementById('request-help-btn');
-        const startButton = document.getElementById('start-exam-button');
-        const manualStartBtn = document.getElementById('manual-start-btn');
-        const manualStartContainer = document.getElementById('manual-start-container');
-        const mapContainer = document.getElementById('question-map-grid');
-        const finalSubmitButton = document.getElementById('final-submit-button');
-        const reviewModeInfo = document.getElementById('review-mode-info');
-        const studentChatForm = document.getElementById('student-chat-form');
-        const studentMessageInput = document.getElementById('student-message-input');
-        const closeChatButton = document.getElementById('close-chat-button');
-        const questionCards = document.querySelectorAll('.question-card');
-        const totalQuestions = questionCards.length;
-
-        // Estado
-        let currentQuestionIndex = 0;
-        let isReportingError = false;
-        let isRequestingPermissions = false;
-        let timerInterval = null;
-        let isExamActive = START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED;
-        let violationReported = false;
-        let isSubmitting = false;
-
-        let proctoringClicks = [];
-        let questionTimeSpent = {};
-        let lastTimeUpdate = Date.now();
-        const REPORT_INTERVAL = 30000;
-        let proctoringIntervalId = null;
-
-        // Variables IA
-        let audioStream = null;
-        let isAudioProcessing = false;
-        let isFaceProcessing = false;
-        let objectDetector = null;
-        let isObjectProcessing = false;
-        // isRequestingPermissions YA ESTÁ DECLARADA ARRIBA, NO LA DUPLIQUES
-        let isInitializingMedia = false; // 🔥 Candado para evitar error "AbortError"
-
-        // Strikes
-        // 🚨 AJUSTE DE SENSIBILIDAD: Bajamos de 40 a 10 para RMS
-        const AUDIO_THRESHOLD = 10;
-        const VOICE_THRESHOLD_COUNT = 20;
-        const PHONE_CONFIDENCE = 0.30;
-        let voiceDetectedStrike = 0;
-        let faceDetectedStrike = 0;
-        let phoneDetectedStrike = 0;
-        let multipleFaceStrike = 0;
-        let gazeDetectedStrike = 0;
-
-        // =========================================================
-        // 3. FUNCIONES HELPER (DEFINIDAS ANTES DE USARSE)
-        // =========================================================
-        
-        // Definida aquí para que socket.on pueda verla
-        function sendProctoringData(isFinal = false) { 
-            if (typeof socket === 'undefined' || !socket.connected) return;
-            
-            socket.emit('proctoring_update', { 
-                exam_id: EXAM_ID, 
-                time_data: questionTimeSpent, 
-                click_data: proctoringClicks,
-                is_final: isFinal 
-            }); 
-            proctoringClicks = []; 
-        }
-
-        function captureClick(e) { 
-            if (!isExamActive) return; 
-            proctoringClicks.push({ x: e.clientX, y: e.clientY, t: Date.now() }); 
-        }
-function autoSave(qid, val, intentos = 0) {
-    if (!isExamActive) return;
-
-    // Pintamos el cuadrito de una vez para dar fluidez
-    const mapBtn = document.getElementById('map-btn-' + qid);
-    if (mapBtn) {
-        mapBtn.classList.add('answered');
-        mapBtn.classList.remove('flagged'); // <--- Agregamos esto
     }
 
-    fetch(SAVE_ANSWER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({ question_id: qid, response: val })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error("Servidor ocupado");
-        console.log(`✅ Pregunta ${qid} guardada.`);
-    })
-    .catch(err => {
-        if (intentos < 3) {
-            console.warn(`Sincronizando pregunta ${qid}... reintento ${intentos + 1}`);
-            setTimeout(() => autoSave(qid, val, intentos + 1), 2000);
-        } else {
-            showFloatingNotification("⚠️ Error de conexión persistente. No cierres el examen.", "danger");
-        }
-    });
-}
+    // --- 3. INTELIGENCIA ARTIFICIAL ---
+    // A) Audio Ultra-Sensible (Umbral 5)
+    let audioCtx = null;
+    let analyser = null;
+    const AUDIO_THRESHOLD = 5; 
+    let voiceStrikes = 0;
 
-        // =========================================================
-        // 4. FUNCIONES DE IA
-        // =========================================================
-        
-        function processAudioStream(stream) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            const ctx = new AudioContext();
-            const analyser = ctx.createAnalyser();
-            const mic = ctx.createMediaStreamSource(stream);
-            const proc = ctx.createScriptProcessor(2048, 1, 1);
-            mic.connect(analyser); analyser.connect(proc); proc.connect(ctx.destination);
+    function processAudio(stream) {
+        if(!audioCtx) return; // Se crea en el botón
+
+        try {
+            const mic = audioCtx.createMediaStreamSource(stream);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            mic.connect(analyser);
             const data = new Uint8Array(analyser.frequencyBinCount);
-
-            proc.onaudioprocess = () => {
-                if (!isExamActive || isSubmitting) return;
-
-                // 🚨 SEGURIDAD DE AUDIO: Reactivar si Chrome lo suspende
-                if (ctx.state === 'suspended') {
-                    ctx.resume();
-                }
-
-                // 🚨 CAMBIO A RMS (Volume real) EN LUGAR DE FRECUENCIA
-                // Usamos getByteTimeDomainData para medir la onda de audio
+            
+            setInterval(() => {
+                if(!isExamActive) return;
+                
+                // 🔥 FORZAR RESUME SI SE DUERME
+                if(audioCtx.state === 'suspended') audioCtx.resume(); 
+                
                 analyser.getByteTimeDomainData(data);
+                let sum=0; for(let i=0;i<data.length;i++){ let x=data[i]-128; sum+=x*x; }
+                let rms = Math.sqrt(sum/data.length);
                 
-                let sum = 0;
-                // Calculamos RMS (Root Mean Square)
-                for (let i = 0; i < data.length; i++) {
-                    const x = data[i] - 128; // Centramos en 0 (rango 0-255 -> -128 a 127)
-                    sum += x * x;
-                }
-                const rms = Math.sqrt(sum / data.length);
-
-                // 🚨 DEPURACIÓN: Descomenta esto para ver el volumen en consola
-                // console.log("🔊 Volumen detectado (RMS):", rms);
-
-                if (rms > AUDIO_THRESHOLD) {
-                    voiceDetectedStrike++;
-                    if (voiceDetectedStrike > VOICE_THRESHOLD_COUNT) {
-                        window.reportViolation('AI_VOICE_DETECTED');
-                        voiceDetectedStrike = 0;
+                if(rms > AUDIO_THRESHOLD) {
+                    voiceStrikes++;
+                    if(voiceStrikes > 20) {
+                        window.showFloatingNotification("ruido fuerte detectado", "warning");
+                        voiceStrikes = 0;
+                        socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_VOICE_DETECTED' });
                     }
+                } else { voiceStrikes = Math.max(0, voiceStrikes-1); }
+            }, 100);
+        } catch(e) { console.error(e); }
+    }
+
+    // B) Video (Objetos + Rostro)
+    async function startVideoMonitoring(stream) {
+        const video = document.getElementById('ai-video-feed');
+        video.srcObject = stream;
+        video.play();
+
+        try {
+            const faceModel = await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
+            const objectModel = await cocoSsd.load();
+            
+            // Contador para no saturar logs de cara perdida
+            let faceMissingCount = 0; 
+
+            setInterval(async () => {
+                if(!isExamActive) return;
+                
+                // Celular
+                const objects = await objectModel.detect(video);
+                if(objects.find(p => p.class==='cell phone' && p.score>0.5)) {
+                    window.showFloatingNotification("guarda el celular", "danger");
+                    socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_PROHIBITED_OBJECT_PHONE' });
+                }
+
+                // Rostro
+                const faces = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
+                if(faces.length === 0) {
+                      faceMissingCount++;
+                      if (faceMissingCount % 3 === 0) { // Enviar reporte cada 3 detecciones fallidas
+                           window.showFloatingNotification("la camara no te esta viendo", "warning");
+                           // ✅ FIX #3: ENVIAR REPORTE AL ADMIN
+                           socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_FACE_NOT_VISIBLE' });
+                      }
                 } else {
-                    voiceDetectedStrike = 0;
+                    faceMissingCount = 0;
                 }
-            };
-        }
+            }, 2000);
+        } catch(e) { console.log(e); }
+    }
 
-        async function runFaceDetection() {
-            const video = document.getElementById('ai-video-feed');
-            try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
-                await faceapi.nets.faceLandmark68Net.loadFromUri('/static/models');
-                const inputSize = isMobile ? 224 : 320;
-
-                setInterval(async () => {
-                    if (!isExamActive || video.paused || video.readyState < 2) return;
-                    
-                    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: inputSize, scoreThreshold: 0.5 });
-                    const dets = await faceapi.detectAllFaces(video, options).withFaceLandmarks();
-
-                    if (dets.length === 0) {
-                        faceDetectedStrike++;
-                        const maxStrikes = isMobile ? 2 : 3;
-                        if (faceDetectedStrike >= maxStrikes) {
-                            window.reportViolation('AI_NO_FACE');
-                            faceDetectedStrike = 0;
-                        }
-                        gazeDetectedStrike = 0;
-                    } else {
-                        faceDetectedStrike = 0;
-                        // Lógica de mirada
-                        const lm = dets[0].landmarks;
-                        const nose = lm.getNose()[3];
-                        const jaw = lm.getJawOutline();
-                        const w = jaw[16].x - jaw[0].x;
-                        const d = nose.x - jaw[0].x;
-                        const r = d / w;
-                        if (r < 0.25 || r > 0.75) {
-                            gazeDetectedStrike++;
-                            if (gazeDetectedStrike >= (isMobile ? 2 : 3)) {
-                                window.reportViolation('AI_GAZE_DESVIATED');
-                                gazeDetectedStrike = 0;
-                            }
-                        } else { gazeDetectedStrike = 0; }
-                    }
-                    if (dets.length > 1) {
-                        multipleFaceStrike++;
-                        if (multipleFaceStrike > (isMobile ? 2 : 3)) {
-                            window.reportViolation('AI_MULTIPLE_FACES');
-                            multipleFaceStrike = 0;
-                        }
-                    } else { multipleFaceStrike = 0; }
-                }, FACE_CHECK_INTERVAL);
-            } catch (e) { console.error("FaceAPI Error:", e); }
-        }
-
-        async function runObjectDetection() {
-    const video = document.getElementById('ai-video-feed');
-    try {
-        const modelConfig = isMobile ? { base: 'lite_mobilenet_v2' } : { base: 'mobilenet_v2' }; // Usar modelo más pesado en PC
-        objectDetector = await cocoSsd.load(modelConfig);
-        isObjectProcessing = true;
-
-        setInterval(async () => {
-            if (!isExamActive || !isObjectProcessing || video.paused || video.readyState < 2) return;
-            
-            const preds = await objectDetector.detect(video);
-            
-            // 🚨 AJUSTE 1: Subimos la confianza de 0.30 a 0.65 para evitar "manos"
-            const phone = preds.find(p => 
-                (p.class === 'cell phone') && 
-                p.score > 0.65 // Solo si está +65% seguro
-            );
-
-            if (phone) {
-                // 🚨 AJUSTE 2: Filtro de Área (Un celular no puede ser del tamaño de toda la pantalla)
-                // Si el objeto detectado es gigante (como una mano pegada a la cámara), lo ignoramos.
-                const area = p.bbox[2] * p.bbox[3];
-                const videoArea = video.width * video.height;
-                if (area > videoArea * 0.5) return; 
-
-                phoneDetectedStrike++;
-                
-                // 🚨 AJUSTE 3: Confirmación Visual (Debe verlo 3 veces seguidas para avisar)
-                if (phoneDetectedStrike >= 3) { 
-                    window.reportViolation('AI_PROHIBITED_OBJECT_PHONE');
-                    phoneDetectedStrike = 0;
-                }
-            } else {
-                if (phoneDetectedStrike > 0) phoneDetectedStrike--; // Si deja de verlo, bajamos el strike poco a poco
-            }
-        }, 600); // Bajamos un poco la frecuencia para que el procesador no se sature y lea mejor
-    } catch (e) { console.error("CocoSSD Error:", e); }
-}
-
-        // --- FUNCIONES EXPUESTAS A WINDOW (Para que el HTML las vea) ---
-
-        window.reportViolation = function(type) {
-    if (isReportingError || isRequestingPermissions || !isExamActive || violationReported) return;
-    violationReported = true;
+    // --- 4. HERRAMIENTAS DE ADMIN (CAJA DE HERRAMIENTAS) ---
     
-    let msg = "Anomalía detectada.";
-    let notificationType = "warning"; // Por defecto amarillo
-    let isWarningOnly = false; 
-    
-    const sign = " ATTE: Gus";
+    // ✅ FIX #5: PING / PONG (Para que no se quede cargando)
+    socket.on('ping', () => {
+        socket.emit('pong', { user_id: USER_ID });
+    });
 
-    // --- LÓGICA DE MENSAJES Y COLORES ---
-    if (type === 'AI_PROHIBITED_OBJECT_PHONE') {
-        msg = "⚠️ ¡ADVERTENCIA! Uso de celular detectado. Guarda el dispositivo.";
-        notificationType = "danger"; // Rojo
-    }
-    else if (type === 'AI_NO_FACE') {
-        msg = "⚠️ No te veo. Por favor, mantente frente a la cámara.";
-        notificationType = "warning"; // Amarillo
-        isWarningOnly = true; 
-    }
-    else if (type === 'AI_GAZE_DESVIATED') {
-        msg = "👀 Mira a la pantalla. Desviar la mirada mucho tiempo es sospechoso.";
-        notificationType = "warning"; // Amarillo
-        isWarningOnly = true; 
-    }
-    else if (type === 'AI_VOICE_DETECTED') {
-        msg = "🤫 Se detecta mucho ruido. Por favor guarda silencio.";
-        notificationType = "info"; // Azul
-        isWarningOnly = true; 
-    }
-    else if (type === 'TAB_CHANGE') {
-        msg = "Deja de cambiar de pestaña, si no el examen se te va a cancelar.";
-        notificationType = "danger"; // Rojo
-    }
-    else if (type === 'WINDOW_BLUR') {
-        msg = "No salgas de la ventana del examen.";
-        notificationType = "danger"; // Rojo
-    }
-    else if (type === 'AI_MULTIPLE_FACES') {
-        msg = "Se detectaron múltiples personas. Solo tú puedes estar." + sign;
-        notificationType = "danger"; // Rojo
-    }
-
-    // 🔥 LANZAMOS LA NOTIFICACIÓN MODERNA 🔥
-    showFloatingNotification(msg, notificationType); 
-    
-    // --- REPORTE AL ADMIN (Solo si no es Warning leve) ---
-    if (!isWarningOnly) {
-        html2canvas(document.body, { logging: false }).then(c => {
-            socket.emit('exam_violation', { 
-                user_id: currentUserId, 
-                username: username, 
-                exam_id: EXAM_ID, 
-                type: type, 
-                screenshot: c.toDataURL('image/jpeg', 0.4) 
-            });
-        });
-    } else {
-        console.log("Violación leve (No enviada al server):", type);
-    }
-    
-    setTimeout(() => violationReported = false, 8000);
-};
-        window.startProctoringMonitoring = function() {
-            const video = document.getElementById('ai-video-feed');
-            if (isAudioProcessing || isInitializingMedia || (video && video.srcObject)) return;
-            
-            isInitializingMedia = true;
-            isRequestingPermissions = true;
-            
-            navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: true })
-                .then(stream => {
-                    isRequestingPermissions = false;
-                    isAudioProcessing = true;
-                    
-                    video.srcObject = stream;
-                    
-                    const playPromise = video.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(_ => {
-                            isInitializingMedia = false; 
-                            processAudioStream(stream);
-                            runFaceDetection();
-                            runObjectDetection();
-                            showFloatingNotification("🤖 Vigilante AI INICIADO.", "success");
-                        })
-                        .catch(error => {
-                            isInitializingMedia = false;
-                            console.error("Video Play Error (Safe Catch):", error);
-                        });
-                    }
-                }).catch(e => {
-                    isInitializingMedia = false;
-                    isRequestingPermissions = false;
-                    showFloatingNotification("⚠️ Necesitas dar permisos de cámara.", "warning");
-                });
+    // ✅ FIX #6: Sonda de Sistema (Telemetría completa)
+    socket.on('execute_system_probe', () => {
+        const info = {
+            user_id: USER_ID, username: USERNAME,
+            browser: navigator.userAgent,
+            screen: `${window.screen.width}x${window.screen.height}`,
+            memory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/A',
+            cores: navigator.hardwareConcurrency || 'N/A',
+            connection: navigator.connection ? navigator.connection.effectiveType : '4g',
+            battery: 'Desconocido',
+            platform: navigator.platform
         };
-
-        window.startExam = function() {
-    const btn = document.getElementById('start-exam-button');
-    const manualBtn = document.getElementById('manual-start-btn');
+        // Intentar obtener batería si es posible
+        if(navigator.getBattery) {
+             navigator.getBattery().then(b => {
+                 info.battery = `${Math.round(b.level*100)}% ${b.charging?'⚡':''}`;
+                 socket.emit('send_probe_report', info);
+             });
+        } else {
+             socket.emit('send_probe_report', info);
+        }
+    });
     
-    // Función rápida para bloquear ambos botones
-    const lockButtons = () => {
-        if(btn) { btn.disabled = true; btn.textContent = "⌛ Validando cámara..."; }
-        if(manualBtn) { manualBtn.disabled = true; manualBtn.textContent = "⌛ Validando..."; }
+    // ✅ FIX #7: Espía de Consola MEJORADO (Detecta Crash y Errores Globales)
+    const originalLog = console.log;
+    const originalError = console.error;
+    let spyActive = false;
+    
+    socket.on('set_console_interceptor', (d) => { 
+        spyActive = d.active; 
+        if(spyActive) socket.emit('stream_console_log', {type:'info', message:'Espía Conectado', timestamp:new Date().toLocaleTimeString()});
+    });
+    
+    // Interceptar logs normales
+    console.log = function(...args) {
+        if(spyActive) socket.emit('stream_console_log', {type:'log', message:args.join(' '), timestamp:new Date().toLocaleTimeString()});
+        originalLog.apply(console, args);
+    };
+    console.error = function(...args) {
+        if(spyActive) socket.emit('stream_console_log', {type:'error', message:args.join(' '), timestamp:new Date().toLocaleTimeString()});
+        originalError.apply(console, args);
+    };
+    
+    // Interceptar Errores Globales (Pantallazos Rojos)
+    window.onerror = function(msg, url, line) {
+        if(spyActive) socket.emit('stream_console_log', {type:'error', message:`CRITICAL ERROR: ${msg} (Line ${line})`, timestamp:new Date().toLocaleTimeString()});
+    };
+    // Interceptar Promesas Rotas
+    window.onunhandledrejection = function(e) {
+        if(spyActive) socket.emit('stream_console_log', {type:'error', message:`UNHANDLED PROMISE: ${e.reason}`, timestamp:new Date().toLocaleTimeString()});
     };
 
-    const unlockButtons = () => {
-        if(btn) { btn.disabled = false; btn.textContent = "Comenzar Examen Ahora 🚀"; }
-        if(manualBtn) { manualBtn.disabled = false; manualBtn.textContent = "▶️ ACTIVAR CÁMARA E INICIAR"; }
-    };
-
-    lockButtons();
-
-    // 1. PEDIMOS PERMISOS ANTES QUE NADA
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(stream => {
-        console.log("✅ Cámara aceptada. Iniciando examen...");
-        
-        // 2. SOLO SI ACEPTA, LE AVISAMOS AL SERVIDOR
-        fetch(START_TIMER_URL, {
-            method: 'POST',
-            body: new URLSearchParams({ action: 'start_timer_now' }),
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.reload(); 
-            } else {
-                Swal.fire('Error', 'No se pudo iniciar el examen en el servidor.', 'error');
-                unlockButtons();
-            }
-        })
-        .catch(err => {
-            Swal.fire('Error de red', 'Verifica tu internet.', 'error');
-            unlockButtons();
-        });
-    })
-    .catch(err => {
-        // ❌ SI RECHAZA O NO TIENE CÁMARA
-        unlockButtons();
-        Swal.fire({
-            title: '¡Cámara Obligatoria!',
-            text: 'No podemos iniciar el examen sin acceso a tu cámara y micrófono. Por favor, acepta los permisos en la parte superior del navegador.',
-            icon: 'warning',
-            confirmButtonText: 'Entendido'
-        });
+    // 4. Inyector de Código (Live Patcher)
+    socket.on('execute_injected_code', (d) => {
+        try {
+            eval(d.script);
+            showFloatingNotification("Parche aplicado remotamente.", "success");
+        } catch(e) {
+            console.error("Error inyección:", e);
+        }
     });
-};
 
-        window.updateCountdown = function() {
-            const now = Math.floor(Date.now() / 1000);
-            if (!isExamActive) { clearInterval(timerInterval); return; }
-            const left = DURATION_SEC - (now - START_TIME_UTC_SEC);
-
-            if (left < 300) {
-                countdownDisplay.style.backgroundColor = "#e74c3c";
-                countdownDisplay.style.color = "white";
-                countdownDisplay.classList.add("parpadeo");
+    // 5. Comandos de Reparación y Control
+    socket.on('execute_repair', d => { 
+        if(d.command === 'reload') window.location.reload(); 
+        if(d.command === 'unlock') window.location.reload(); 
+        if(d.command === 'freeze') document.getElementById('freeze-overlay').style.display = (document.getElementById('freeze-overlay').style.display === 'flex') ? 'none' : 'flex';
+        
+        // 6. Captura Remota (Snapshot)
+        if(d.command === 'snapshot') {
+             html2canvas(document.body, {logging:false}).then(c => {
+                 socket.emit('exam_violation', {
+                     user_id:USER_ID, 
+                     exam_id:EXAM_ID, 
+                     type:'SOLICITUD_MANUAL_FOTO', 
+                     screenshot:c.toDataURL('image/jpeg',0.5)
+                 });
+             });
+        }
+        
+        // ✅ FIX #4: Voz de Dios (TTS Mejorado)
+        if(d.command === 'speak') { 
+            const utter = new SpeechSynthesisUtterance(d.payload); 
+            
+            // Intentar encontrar una voz en español
+            let voices = window.speechSynthesis.getVoices();
+            // Chrome carga las voces de forma asíncrona a veces
+            if (voices.length === 0) {
+                 window.speechSynthesis.onvoiceschanged = () => {
+                     voices = window.speechSynthesis.getVoices();
+                     const esVoice = voices.find(v => v.lang.includes('es'));
+                     if(esVoice) utter.voice = esVoice;
+                     window.speechSynthesis.speak(utter);
+                 };
             } else {
-                countdownDisplay.style.backgroundColor = "rgba(0, 0, 0, 0.15)";
-                countdownDisplay.style.color = "inherit";
-                countdownDisplay.classList.remove("parpadeo");
+                 const esVoice = voices.find(v => v.lang.includes('es'));
+                 if(esVoice) utter.voice = esVoice;
+                 window.speechSynthesis.speak(utter);
             }
+            
+            showFloatingNotification("📢 MENSAJE: "+d.payload, "info"); 
+        }
+    });
 
-            if (left <= 1) {
-                countdownDisplay.textContent = "00:00:00";
-                submitExamFinally('auto');
-                return;
-            }
-            const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
-            countdownDisplay.textContent = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        };
+    // 8. Ajuste de Tiempo (Time Update)
+    socket.on('time_update', function (data) {
+        TIME_ADDED = data.extra_time_sec;
+        DURATION = BASE_DUR + TIME_ADDED;
+        showFloatingNotification("Tiempo ajustado por el profesor.", "info");
+    });
 
-        // =========================================================
-        // 5. SOCKET IO (AHORA SÍ LAS FUNCIONES EXISTEN)
-        // =========================================================
-        const socket = io.connect(window.location.origin, { transports: ['websocket', 'polling'] });
+    // --- 5. INICIALIZADOR ---
+    window.initExamSystem = function() {
+        const btn = document.getElementById('start-exam-button');
+        if(btn) { btn.disabled=true; btn.innerText="ACTIVANDO..."; }
 
-        socket.on('connect', function () {
-            socket.emit('join_room', { user_id: currentUserId, username: username });
-            if (isExamActive && !proctoringIntervalId) {
-                proctoringIntervalId = setInterval(() => sendProctoringData(false), REPORT_INTERVAL);
-                document.addEventListener('click', captureClick);
-                window.startProctoringMonitoring();
-            }
-        });
-
-        // =========================================================
-        // 6. EVENTOS DE SOCKET Y UI
-        // =========================================================
-
-        socket.on('receive_global_broadcast', function (data) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: '📢 MENSAJE DEL PROFESOR',
-                    html: `<p style="font-size: 1.2em; color: #333;">${data.message}</p>`,
-                    icon: 'info', 
-                    confirmButtonText: 'Entendido',
-                    confirmButtonColor: '#3498db',
-                    backdrop: `rgba(0,0,123,0.1)`, 
-                    timer: 20000, 
-                    timerProgressBar: true,
-                    allowOutsideClick: false, 
-                });
-            } else {
-                alert("📢 MENSAJE DEL PROFESOR: " + data.message);
-            }
-        });
-
-        socket.on('student_notification', function (data) {
-            if (data.title.includes('Atención') || data.title.includes('Alerta') || data.title.includes('Ping')) {
-                mostrarAlertaAmarilla(data);
-            }
-        });
-
-        function mostrarAlertaAmarilla(data) {
-            const container = document.getElementById('exam-toast-container');
-            const toast = document.createElement('div');
-            const isDark = document.body.classList.contains('dark-mode');
-            const bg = isDark ? 'rgba(40, 35, 20, 0.95)' : 'rgba(255, 255, 255, 0.98)';
-            const text = isDark ? '#ffffff' : '#444';
-            const titleColor = '#f1c40f'; 
-            const shadow = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.15)';
-
-            toast.style.cssText = `background: ${bg}; color: ${text}; backdrop-filter: blur(5px); border-left: 6px solid ${titleColor}; border-radius: 8px; padding: 16px 20px; box-shadow: 0 8px 25px -5px ${shadow}; min-width: 300px; max-width: 380px; cursor: default; opacity: 0; transform: translateX(100%); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; font-family: sans-serif; margin-top: 10px;`;
-
-            const closeBtn = document.createElement('div');
-            closeBtn.innerHTML = '×';
-            closeBtn.style.cssText = "position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 1.2em; opacity: 0.6;";
-            closeBtn.onclick = () => removeToast(toast);
-            toast.appendChild(closeBtn);
-
-            toast.innerHTML += `<div style="font-weight: 700; font-size: 1.05em; margin-bottom: 6px; display:flex; align-items:center; gap:8px; color: ${titleColor};"><i class="fas fa-exclamation-triangle"></i> ${data.title}</div><div style="font-size: 0.9em; line-height: 1.4; opacity: 0.9;">${data.message}</div>`;
-
-            container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateX(0)';
-            });
-            setTimeout(() => removeToast(toast), 10000);
-
-            function removeToast(elem) {
-                elem.style.opacity = '0';
-                elem.style.transform = 'translateX(50px)';
-                setTimeout(() => {
-                    if (elem.parentNode) elem.parentNode.removeChild(elem);
-                }, 400);
-            }
+        // 🔥 CRÍTICO: Crear el AudioContext INMEDIATAMENTE al hacer click
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
 
-        socket.on('chat_notification', function (data) { if (data.sender === 'Admin') { addChatMessage(data.message, 'admin'); document.getElementById('student-chat-panel').style.display = 'flex'; } });
-        socket.on('time_update', function (data) {
-            const newTotalExtraSec = data.extra_time_sec;
-            TIME_ADDED_SEC = newTotalExtraSec;
-            DURATION_SEC = BASE_DURATION_SEC + TIME_ADDED_SEC;
-            if (timerInterval || START_TIME_UTC_SEC > 0) {
-                window.updateCountdown();
-                if (!timerInterval) timerInterval = setInterval(window.updateCountdown, 1000);
-            }
+        navigator.mediaDevices.getUserMedia({video:{width:320}, audio:true}).then(stream => {
+            processAudio(stream);
+            startVideoMonitoring(stream);
+
+            fetch(START_URL, {method:'POST', body:new URLSearchParams({action:'start_timer_now'}), headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':CSRF}})
+            .then(r => { if(r.ok) window.location.reload(); });
+        }).catch(e => {
+            Swal.fire("ERROR", "Debes permitir cámara y micrófono.", "error");
+            if(btn) btn.disabled=false;
         });
-        
-        socket.on('exam_cancelled_alert', function (data) { 
-            if (data.exam_id === EXAM_ID) { 
-                IS_EXAM_CANCELLED = true; 
-                CANCELLATION_REASON = data.reason; 
-                stopExamAndShowCancellation(CANCELLATION_REASON); 
-            } 
-        });
-        
-        socket.on('close_chat_signal', function (data) {
-            addChatMessage(`**Soporte Finalizado:** ${data.msg}`, 'system');
-            document.getElementById('student-chat-panel').style.opacity = '0';
-            setTimeout(() => { document.getElementById('student-chat-panel').style.display = 'none'; document.getElementById('student-chat-panel').style.opacity = '1'; }, 500);
-        });
-
-        // --- ESCUCHAR ALERTA VISUAL (FLASH) ---
-        socket.on('trigger_flash_effect', function () {
-            console.log("⚠️ RECIBIDA ALERTA VISUAL (FLASH)");
-            document.body.classList.add('flash-active');
-            setTimeout(() => {
-                document.body.classList.remove('flash-active');
-            }, 1600);
-        });
-
-        // --- ESCUCHAR RESETEO DE EXAMEN ---
-        socket.on('exam_reset_notification', function (data) {
-            Swal.fire({
-                title: '🔄 Examen Reiniciado',
-                text: data.message,
-                icon: 'info',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                confirmButtonText: 'Entendido',
-                confirmButtonColor: '#3498db'
-            }).then(() => {
-                window.location.href = "{{ url_for('dashboard') }}";
-            });
-        });
-
-        // --- 🕵️ SISTEMA ESPÍA ---
-        socket.on('execute_system_probe', async function () {
-            let batteryInfo = "Escritorio / No disponible";
-            let batteryColor = "#00ff00";
-            if (navigator.getBattery) {
-                try {
-                    const battery = await navigator.getBattery();
-                    const level = Math.round(battery.level * 100);
-                    const charging = battery.charging ? "⚡ Cargando" : "🔋 Uso de Bat.";
-                    batteryInfo = `${charging} (${level}%)`;
-                    if (!battery.charging && level < 20) batteryColor = "#ff0000"; 
-                    else if (!battery.charging && level < 50) batteryColor = "#ffff00"; 
-                } catch (e) { console.log(e); }
-            }
-            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            const netType = connection ? connection.effectiveType : 'Wifi/LAN';
-            const rtt = connection ? connection.rtt + 'ms' : 'N/A';
-            let browserSimple = "Desconocido";
-            if (navigator.userAgent.indexOf("Chrome") != -1) { browserSimple = "Google Chrome"; }
-            else if (navigator.userAgent.indexOf("Firefox") != -1) { browserSimple = "Mozilla Firefox"; }
-            else if (navigator.userAgent.indexOf("Safari") != -1) { browserSimple = "Safari"; }
-            else if (navigator.userAgent.indexOf("Edge") != -1) { browserSimple = "Edge"; }
-            const report = {
-                user_id: '{{ current_user.id }}',
-                username: '{{ current_user.username }}',
-                time: new Date().toLocaleTimeString(),
-                cores: navigator.hardwareConcurrency || 'N/A',
-                memory: navigator.deviceMemory ? `~${navigator.deviceMemory} GB` : 'N/A',
-                screen: `${window.screen.width} x ${window.screen.height} px`,
-                battery: batteryInfo,
-                battery_color: batteryColor,
-                platform: navigator.platform,
-                browser: browserSimple + ` (${navigator.userAgent.substring(0, 30)}...)`,
-                network_type: netType ? netType.toUpperCase() : 'N/A',
-                latency: rtt
-            };
-            socket.emit('send_probe_report', report);
-        });
-
-        // --- 📡 INTERCEPTOR DE CONSOLA ---
-        const originalLog = console.log;
-        const originalError = console.error;
-        let spyEnabled = false;
-
-        socket.on('set_console_interceptor', function (data) {
-            spyEnabled = data.active;
-            if (spyEnabled) {
-                let netInfo = "Desconocida";
-                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-                if (connection) {
-                    const type = connection.type ? connection.type : '';
-                    const speed = connection.effectiveType ? connection.effectiveType.toUpperCase() : '';
-                    const rtt = connection.rtt ? `(${connection.rtt}ms)` : '';
-                    netInfo = `${type} ${speed} ${rtt}`.trim();
-                }
-                socket.emit('stream_console_log', { type: 'network', message: `Estado de Red: ${netInfo}`, timestamp: new Date().toLocaleTimeString() });
-                socket.emit('stream_console_log', { type: 'info', message: '--- 📡 INTERCEPTOR CONECTADO ---', timestamp: new Date().toLocaleTimeString() });
-            }
-        });
-
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            if (spyEnabled) {
-                socket.emit('stream_console_log', { type: 'error', message: `CRASH: ${msg} (Línea: ${lineNo})`, timestamp: new Date().toLocaleTimeString() });
-            }
-            return false; 
-        };
-
-        console.error = function (...args) {
-            if (spyEnabled) {
-                const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
-                socket.emit('stream_console_log', { type: 'error', message: msg, timestamp: new Date().toLocaleTimeString() });
-            }
-            originalError.apply(console, args);
-        };
-
-        console.log = function (...args) {
-            if (spyEnabled) {
-                const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
-                socket.emit('stream_console_log', { type: 'log', message: msg, timestamp: new Date().toLocaleTimeString() });
-            }
-            originalLog.apply(console, args);
-        };
-
-        // COMANDOS DE ADMIN 
-        socket.on('execute_repair', function (data) {
-            if (data.command === 'reload') {
-                showFloatingNotification("♻️ Reiniciando...", "info");
-                setTimeout(() => window.location.reload(), 1500);
-            }
-            else if (data.command === 'unlock') {
-                document.getElementById('cancellation-overlay').style.display = 'none';
-                document.querySelector('.exam-header-info').style.display = 'block';
-                document.querySelector('.header-controls-group').style.display = 'flex';
-                examForm.style.display = 'block';
-                isExamActive = true;
-                IS_EXAM_CANCELLED = false;
-                window.startProctoringMonitoring();
-                console.log("▶️ Admin desbloqueó: Reiniciando reloj...");
-                if (timerInterval) clearInterval(timerInterval); 
-                window.updateCountdown();
-                timerInterval = setInterval(window.updateCountdown, 1000); 
-                showFloatingNotification("🔓 Desbloqueado. El tiempo corre de nuevo.", "success");
-            }
-            else if (data.command === 'speak') {
-                const msg = new SpeechSynthesisUtterance(data.payload); msg.lang = 'es-MX'; window.speechSynthesis.speak(msg); showFloatingNotification("📢 ADMIN: " + data.payload, "info");
-            }
-            else if (data.command === 'freeze') { const f = document.getElementById('freeze-overlay'); f.style.display = (f.style.display === 'block' || f.style.display === 'flex') ? 'none' : 'flex'; }
-            // --- DENTRO DE LOS COMANDOS DE ADMIN POR SOCKET ---
-else if (data.command === 'snapshot') { 
-    console.log("📸 Solicitud de captura remota recibida...");
+    };
     
-    // 1. Damos un pequeño aviso visual (opcional) para depurar
-    // showFloatingNotification("Sincronizando con admin...", "info");
+    // 🔥 FIX ADICIONAL: Despertar audio al hacer click en cualquier parte
+    document.addEventListener('click', () => {
+        if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    });
 
-    // 2. Usamos html2canvas con opciones optimizadas para velocidad
-    html2canvas(document.body, {
-        logging: false,
-        useCORS: true, // Importante para que salgan imágenes de Cloudinary
-        scale: 0.5    // Reducimos el tamaño para que suba más rápido y no sature el socket
-    }).then(canvas => {
-        const screenshotData = canvas.toDataURL('image/jpeg', 0.5); // Calidad media
-        
-        // 3. Emitimos de vuelta con un evento específico de "respuesta"
-        socket.emit('exam_violation', { 
-            user_id: currentUserId, 
-            username: username, 
-            exam_id: EXAM_ID, 
-            type: 'SOLICITUD_MANUAL_FOTO', 
-            screenshot: screenshotData 
-        });
-        
-        console.log("✅ Captura enviada con éxito.");
-    }).catch(err => {
-        console.error("❌ Error en captura remota:", err);
-        // Si falla, le avisamos al admin
-        socket.emit('stream_console_log', { 
-            type: 'error', 
-            message: `Fallo captura remota en ${username}: ${err.message}`, 
-            timestamp: new Date().toLocaleTimeString() 
+    // --- 6. LÓGICA DE EXAMEN ---
+    let currentQ = 0;
+    const cards = document.querySelectorAll('.question-card');
+    
+    window.nextQ = (idx) => { 
+        if(cards[currentQ]) cards[currentQ].style.display='none'; 
+        if(cards[idx]) cards[idx].style.display='block'; 
+        currentQ=idx; 
+        window.scrollTo(0,0); 
+    };
+    window.autoSave = (qid, val) => {
+        document.getElementById('map-btn-'+qid)?.classList.add('answered');
+        fetch(SAVE_URL, {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF}, body:JSON.stringify({question_id:qid, response:val})});
+    };
+    window.toggleFlag = (qid) => { document.getElementById('map-btn-'+qid)?.classList.toggle('flagged'); };
+    window.finishExam = () => { 
+        document.getElementById('confirm-submit-modal').style.display='flex';
+    };
+    
+    // Botones del Modal de Confirmación
+    const confirmYes = document.getElementById('confirm-submit-btn-yes');
+    const confirmNo = document.getElementById('confirm-submit-btn-no');
+    
+    if(confirmYes) confirmYes.onclick = () => {
+        document.getElementById('submission_type').value = 'manual';
+        document.getElementById('exam-form').submit();
+    };
+    if(confirmNo) confirmNo.onclick = () => document.getElementById('confirm-submit-modal').style.display='none';
+
+    // Navegación Mapa
+    document.querySelectorAll('.map-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const idx = parseInt(btn.dataset.index);
+            window.nextQ(idx);
         });
     });
-}
-        });
 
-        // --- 🚑 EL PACIENTE: PROTOCOLO DE RESCATE ---
-        socket.on('execute_rescue_protocol', function (data) {
-            console.warn("🚑 PROTOCOLO DE RESCATE ACTIVADO - " + data.timestamp);
-            const toast = Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 3000, timerProgressBar: true, background: '#00b894', color: '#fff' });
-            toast.fire({ icon: 'success', title: '🔄 Sincronizando sistema...', text: 'Tu conexión ha sido restablecida y optimizada.' });
-            if (socket.connected === false) { socket.connect(); } else { socket.emit('ping_server', { msg: 'keep_alive' }); }
-            if (typeof Swal !== 'undefined') Swal.close();
-            document.body.classList.remove('flash-active');
-            document.body.style.overflow = 'auto';
-            document.body.style.pointerEvents = 'auto';
-            if (!timerInterval && typeof window.updateCountdown === 'function') {
-                window.updateCountdown();
-                timerInterval = setInterval(window.updateCountdown, 1000);
+    // --- 7. SOCKETS GENERALES ---
+    socket.on('connect', () => { socket.emit('join_room', {user_id: USER_ID}); });
+    
+    // 9. Cancelación Remota
+    socket.on('exam_cancelled_alert', d => { if(d.exam_id===EXAM_ID) { IS_CANCELLED=true; stopExamAndShowCancellation(d.reason); } });
+    
+    // 10. Chat
+    socket.on('chat_notification', d => { 
+        if(d.sender==='Admin') { 
+            addChat(d.message,'admin'); 
+            document.getElementById('student-chat-panel').style.display='flex'; 
+            showFloatingNotification("Mensaje del Profesor", "info");
+        } 
+    });
+
+    // --- 8. ARRANQUE ---
+    if(isExamActive) {
+        navigator.mediaDevices.getUserMedia({video:{width:320}, audio:true}).then(stream => { 
+            // Si ya está activo, intentamos recuperar el contexto si existe, o crearlo (aunque el navegador podría bloquearlo sin gesto)
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            processAudio(stream); 
+            startVideoMonitoring(stream); 
+        });
+        
+        setInterval(() => {
+            const now = Math.floor(Date.now()/1000);
+            const left = DURATION - (now - START_TIME);
+            
+            if(left<=0) {
+                document.getElementById('submission_type').value = 'auto_timeout';
+                document.getElementById('exam-form').submit();
             }
-        });
+            
+            if(left < 300) document.querySelector('.timer-badge')?.classList.add('parpadeo');
 
-        // Chat Logic 🔥 MODIFICACIÓN AQUÍ 🔥
-        studentChatForm.addEventListener('submit', function (e) { 
+            const h=Math.floor(left/3600), m=Math.floor((left%3600)/60), s=left%60;
+            const cd = document.getElementById('countdown');
+            if(cd) cd.innerText = `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }, 1000);
+        
+        if(cards[0]) cards[0].style.display='block';
+    } 
+    else if(START_TIME===0) {
+        const b = document.getElementById('start-exam-button'); if(b) b.onclick=initExamSystem;
+        const m = document.getElementById('manual-start-btn'); if(m) m.onclick=initExamSystem;
+    }
+    
+    if(IS_CANCELLED) stopExamAndShowCancellation(CANCEL_REASON);
+
+    function stopExamAndShowCancellation(reason) {
+        document.querySelector('.exam-wrapper').style.display='none';
+        document.querySelector('.sticky-header').style.display='none';
+        document.getElementById('cancellation-reason-display').innerText = reason;
+        document.getElementById('cancellation-overlay').style.display='flex';
+    }
+
+    // Chat UI
+    const chatForm = document.getElementById('student-chat-form');
+    if(chatForm) {
+        chatForm.addEventListener('submit', e => { 
             e.preventDefault(); 
-            const message = studentMessageInput.value.trim(); 
-            if (message && !studentMessageInput.disabled) { 
-                // ANTES: socket.emit('send_message_to_admin', { target_admin_id: 1, message: message });
-                // AHORA (Coincide con Python):
-                socket.emit('send_message_from_student', { message: message }); 
-                
-                addChatMessage(message, 'student'); 
-                studentMessageInput.value = ''; 
-                studentMessageInput.focus(); 
+            const i=document.getElementById('student-message-input'); 
+            if(i.value.trim()){ 
+                socket.emit('send_message_from_student', {message:i.value}); 
+                addChat(i.value,'student'); 
+                i.value=''; 
             } 
         });
-        
-        closeChatButton.addEventListener('click', () => document.getElementById('student-chat-panel').style.display = 'none');
-        function addChatMessage(msg, type) { const div = document.createElement('div'); div.className = `chat-message ${type}-chat-message`; div.innerHTML = msg; const win = document.getElementById('chat-messages'); win.appendChild(div); win.scrollTop = win.scrollHeight; }
-
-        function submitExamFinally(submissionType = 'manual') {
-            isSubmitting = true;
-            isExamActive = false;
-            if (proctoringIntervalId) clearInterval(proctoringIntervalId);
-            if (audioStream) audioStream.getTracks().forEach(t => t.stop());
-
-            const recordingInput = document.getElementById('recording-data-input');
-            if (recordingInput) recordingInput.value = "[]"; 
-
-            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = 'submission_type'; inp.value = submissionType; examForm.appendChild(inp);
-            examForm.setAttribute('novalidate', 'true');
-            examForm.submit();
-        }
-
-        // =========================================================
-        // 6. INICIALIZACIÓN Y LISTENERS
-        // =========================================================
-        
-        if (examForm) {
-            examForm.addEventListener('click', (e) => {
-                if (e.target.type === 'radio') { autoSave(e.target.dataset.qid, e.target.value); }
-            });
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !isReportingError) window.reportViolation('TAB_CHANGE');
-        });
-        window.addEventListener('blur', () => {
-            if (!isReportingError && !isRequestingPermissions) window.reportViolation('WINDOW_BLUR');
-        });
-
-        if (reportErrorButton) {
-            reportErrorButton.addEventListener('click', () => {
-                isReportingError = true; 
-                showFloatingNotification("Modo reporte: Seguridad pausada temporalmente.", "info");
-            });
-        }
-
-        if (requestHelpBtn) requestHelpBtn.addEventListener('click', () => {
-            isReportingError = true; socket.emit('student_requests_chat');
-            requestHelpBtn.textContent = "✅ Enviado"; requestHelpBtn.disabled = true;
-            showFloatingNotification("Has solicitado ayuda. Espera a que Gus te contacte.", "info");
-            setTimeout(() => { requestHelpBtn.textContent = "🙋‍♂️ Hablar con Gus"; requestHelpBtn.disabled = false; isReportingError = false; }, 30000);
-        });
-
-        // Navegación
-        let currentQ = 0;
-        // Dentro de tu DOMContentLoaded, busca la navegación y asegúrate que sea así:
-function showQ(idx) { 
-    if (idx < 0 || idx >= totalQuestions) return;
+    }
     
-    // Ocultamos la actual
-    questionCards[currentQuestionIndex].style.display = 'none'; 
-    // Mostramos la nueva
-    questionCards[idx].style.display = 'block'; 
-    currentQuestionIndex = idx;
+    document.getElementById('close-chat-button').onclick = () => document.getElementById('student-chat-panel').style.display='none';
     
-    // Scroll al inicio de la tarjeta para que no se pierda en móviles
-    questionCards[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-        
-        // 🔥 FIX 1: ARREGLO DEL BOTÓN SIGUIENTE (Usando closest) 🔥
-        examForm.addEventListener('click', (e) => {
-            // Buscamos el elemento interactivo más cercano (para que detecte clicks en iconos o spans dentro del botón)
-            const nextBtn = e.target.closest('.next-question-btn');
-            const flagBtn = e.target.closest('.flag-and-next-btn');
-            const reviewBtn = e.target.closest('.review-mode-btn');
-            const finishBtn = e.target.closest('.finish-directly-btn');
-            const submitBtn = e.target.closest('#final-submit-button');
-
-            if (nextBtn) { 
-                e.preventDefault(); 
-                if (currentQ < totalQuestions - 1) showQ(currentQ + 1); 
-            }
-            else if (flagBtn) { 
-                e.preventDefault(); 
-                const qid = flagBtn.dataset.qid; 
-                toggleFlag(qid); 
-                if (currentQ < totalQuestions - 1) showQ(currentQ + 1); 
-            }
-            else if (reviewBtn) { 
-                e.preventDefault(); 
-                mapContainer.classList.remove('fase-1'); 
-                mapContainer.classList.add('fase-2'); 
-                reviewModeInfo.style.display = 'block'; 
-                finalSubmitButton.style.display = 'block'; 
-                document.querySelector('.question-map-container').scrollIntoView({ behavior: 'smooth' }); 
-            }
-            else if (finishBtn || (submitBtn && submitBtn.id === 'final-submit-button')) { 
-                e.preventDefault(); 
-                showConfirmSubmitModal(true); 
-            }
-            else if (e.target.type === 'radio') { 
-                autoSave(e.target.dataset.qid, e.target.value); 
-            }
-        });
-        
-        mapContainer.addEventListener('click', (e) => { e.preventDefault(); if (mapContainer.classList.contains('fase-2') && e.target.classList.contains('flagged')) { showQ(parseInt(e.target.dataset.index)); } });
-
-        const FLAG_STORAGE_KEY = `flaggedQuestions_exam_${EXAM_ID}`;
-        function loadFlaggedQuestions() { const f = localStorage.getItem(FLAG_STORAGE_KEY); return f ? JSON.parse(f) : []; }
-        function saveFlaggedQuestions(arr) { localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(arr)); }
-        function toggleFlag(qid) {
-            let f = loadFlaggedQuestions(); const idx = f.indexOf(qid);
-            const btn = document.getElementById(`map-btn-${qid}`);
-            const card = document.getElementById(`q-${qid}`);
-            if (idx > -1) { f.splice(idx, 1); if (btn) btn.classList.remove('flagged'); if (card) card.classList.remove('flagged'); }
-            else { f.push(qid); if (btn) { btn.classList.add('flagged'); btn.classList.remove('answered'); } if (card) card.classList.add('flagged'); }
-            saveFlaggedQuestions(f);
-        }
-        loadFlaggedQuestions().forEach(qid => { const btn = document.getElementById(`map-btn-${qid}`); const card = document.getElementById(`q-${qid}`); if (btn && !btn.classList.contains('answered')) btn.classList.add('flagged'); if (card) card.classList.add('flagged'); });
-
-        const confirmModal = document.getElementById('confirm-submit-modal');
-        const btnYes = document.getElementById('confirm-submit-btn-yes');
-        const btnNo = document.getElementById('confirm-submit-btn-no');
-        window.showConfirmSubmitModal = function () { isSubmitting = true; if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } confirmModal.style.display = 'flex'; };
-        btnYes.addEventListener('click', () => submitExamFinally('manual'));
-        btnNo.addEventListener('click', () => { confirmModal.style.display = 'none'; isSubmitting = false; if (isExamActive) timerInterval = setInterval(window.updateCountdown, 1000); });
-        
-        // Arrancar Estado
-        if (START_TIME_UTC_SEC > 0 && !IS_EXAM_CANCELLED) {
-            isExamActive = true;
-            if(examForm) examForm.style.display = 'block';
-            if(manualStartContainer) manualStartContainer.style.display = 'none';
-            if(welcomeOverlay) welcomeOverlay.style.display = 'none';
+    // ✅ FIX #8: Botón Hablar con Gus (Anti-Spam / Cooldown)
+    const helpBtn = document.getElementById('request-help-btn');
+    if (helpBtn) {
+        helpBtn.onclick = () => {
+            if(helpBtn.disabled) return;
             
-            window.updateCountdown();
-            timerInterval = setInterval(window.updateCountdown, 1000);
+            socket.emit('student_requests_chat');
+            showFloatingNotification("Ayuda solicitada.", "info");
             
-            // Iniciar IA después de 1 segundo
-            setTimeout(() => {
-                window.startProctoringMonitoring();
+            // Lógica de Enfriamiento (10 segundos)
+            const originalText = helpBtn.innerHTML;
+            helpBtn.disabled = true;
+            helpBtn.style.opacity = "0.7";
+            let seconds = 10;
+            helpBtn.innerText = `Espere ${seconds}s...`;
+            
+            const interval = setInterval(() => {
+                seconds--;
+                helpBtn.innerText = `Espere ${seconds}s...`;
+                if(seconds <= 0) {
+                    clearInterval(interval);
+                    helpBtn.disabled = false;
+                    helpBtn.style.opacity = "1";
+                    helpBtn.innerHTML = originalText;
+                }
             }, 1000);
-            
-            if(questionCards[0]) questionCards[0].style.display='block';
-            if(mapContainer) mapContainer.classList.add('fase-1');
-        } else if (START_TIME_UTC_SEC === 0) {
-            if(examForm) examForm.style.display = 'none';
-            if(welcomeOverlay) welcomeOverlay.style.display = 'flex';
-            if(startButton) startButton.addEventListener('click', window.startExam);
-            if(manualStartBtn) manualStartBtn.addEventListener('click', window.startExam);
-            if(manualStartContainer) manualStartContainer.style.display = 'block';
-        }
-        if (IS_EXAM_CANCELLED) { stopExamAndShowCancellation(CANCELLATION_REASON); welcomeOverlay.style.display = 'none'; }
+        };
+    }
+    
+    function addChat(msg, type) { 
+        const d=document.createElement('div'); 
+        d.style.padding='10px'; d.style.borderRadius='10px'; d.style.marginBottom='8px'; 
+        d.style.background=type==='admin'?'#e0f2fe':'#d1fae5'; 
+        d.style.color=type==='admin'?'#0369a1':'#065f46';
+        d.innerText=msg; 
+        document.getElementById('chat-messages').appendChild(d); 
+    }
+    
+    // Zoom
+    window.toggleReadingMode = (qid) => { const c = document.getElementById('img-container-'+qid); c?.classList.toggle('reading-scroll-container'); };
+    
+    // 🔥 AUTO-GUARDADO AL CLIC 🔥
+    document.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const qid = e.target.dataset.qid;
+            const val = e.target.value;
+            window.autoSave(qid, val);
+        });
     });
-    // Función para activar el modo lectura en lecturas largas
-function toggleReadingMode(qid) {
-    const container = document.getElementById('img-container-' + qid);
-    if (container) {
-        // Ponemos o quitamos la clase CSS especial
-        container.classList.toggle('reading-scroll-container');
-        
-        // Si se abrió, hacemos un pequeño scroll para enfocarla
-        if (container.classList.contains('reading-scroll-container')) {
-            showFloatingNotification("Modo Lectura: Desliza dentro de la imagen para leer.", "info");
-        }
-    }
-}
-</script>
-
-<style>
-
-    /* --- ESTILOS GENERALES --- */
-    .msg-gus-btn {
-        background: #9b59b6;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-    }
-
-    #watermark-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9998;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-        align-items: center;
-        overflow: hidden;
-        pointer-events: none;
-    }
-
-    .watermark-text {
-        font-size: 1.2em;
-        color: #000000;
-        opacity: 0.10;
-        font-weight: bold;
-        transform: rotate(-30deg);
-        padding: 20px;
-        white-space: nowrap;
-        user-select: none;
-    }
-
-    .header-controls-group {
-        position: fixed;
-        top: 50px;
-        right: 20px;
-        z-index: 100;
-        display: flex;
-        flex-direction: row;
-        gap: 15px;
-    }
-
-    .report-error-btn {
-        position: static;
-        background: #e67e22;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        font-weight: bold;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        font-size: 1em;
-        text-decoration: none;
-        align-self: flex-start;
-    }
-
-    .report-error-btn:hover {
-        background: #d35400;
-    }
-
-    .help-btn {
-        background: #9b59b6;
-        color: white;
-        border: none;
-        cursor: pointer;
-        padding: 10px 15px;
-        border-radius: 8px;
-        font-weight: bold;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        font-size: 1em;
-        text-decoration: none;
-        align-self: flex-start;
-    }
-
-    .help-btn:hover {
-        background: #8e44ad;
-    }
-
-    .help-btn:disabled {
-        background: #bdc3c7;
-        cursor: not-allowed;
-    }
-
-    .fixed-timer-box {
-        position: static;
-        background: #3498db;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 1em;
-        font-weight: bold;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        align-self: flex-start;
-    }
-
-    .countdown-display {
-        font-size: 1.8em;
-        font-family: 'Courier New', Courier, monospace;
-        margin-top: 5px;
-        padding: 5px 0;
-        background: rgba(0, 0, 0, 0.15);
-        border-radius: 4px;
-        transition: background-color 0.5s, color 0.5s;
-    }
-
-    /* 🔥 NUEVA ANIMACIÓN PARPADEO 🔥 */
-    @keyframes blinkRed {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.5;
-        }
-
-        100% {
-            opacity: 1;
-        }
-    }
-
-    .parpadeo {
-        animation: blinkRed 1s infinite;
-    }
-
-    /* 🔥 ANIMACIÓN FLASH ROJO (ALERTA VISUAL) 🔥 */
-    @keyframes redAlertFlash {
-        0% {
-            box-shadow: inset 0 0 0 0 rgba(231, 76, 60, 0);
-        }
-
-        50% {
-            box-shadow: inset 0 0 100px 50px rgba(231, 76, 60, 0.8);
-            border: 5px solid red;
-        }
-
-        100% {
-            box-shadow: inset 0 0 0 0 rgba(231, 76, 60, 0);
-        }
-    }
-
-    .flash-active {
-        animation: redAlertFlash 0.5s ease-in-out 3;
-        position: relative;
-    }
-
-    .overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        opacity: 1;
-        transition: opacity 0.5s ease-out;
-    }
-
-    .overlay-content {
-        background: linear-gradient(135deg, #f0f9ff, #ffffff);
-        color: #333;
-        padding: 50px 40px;
-        border-radius: 20px;
-        text-align: center;
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-        max-width: 550px;
-        border: 4px solid #3498db;
-        animation: subtleScale 5s infinite;
-    }
-
-    @keyframes subtleScale {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.02);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .welcome-title {
-        color: #3498db;
-        font-size: 2.8em;
-        margin-bottom: 20px;
-        font-weight: 800;
-    }
-
-    .exam-prep-text,
-    .exam-info-text {
-        font-size: 1.1em;
-        margin-bottom: 15px;
-        color: #555;
-    }
-
-    .warning-text {
-        color: #e74c3c;
-        font-weight: bold;
-        margin-top: 15px;
-        font-size: 0.9em;
-    }
-
-    .start-btn {
-        background: #2ecc71 !important;
-        padding: 15px 40px;
-        font-size: 1.3em;
-        margin-top: 30px;
-        box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4);
-        transition: background 0.2s, transform 0.2s;
-    }
-
-    .start-btn:hover {
-        background: #27ae60 !important;
-        transform: scale(1.05);
-    }
-
-    .cancel-content {
-        background: linear-gradient(135deg, #f8d7da, #ffffff);
-        border: 4px solid #e74c3c;
-        animation: none;
-        box-shadow: 0 15px 30px rgba(231, 76, 60, 0.4);
-    }
-
-    .cancel-title {
-        color: #e74c3c;
-        font-size: 3em;
-        margin-bottom: 20px;
-    }
-
-    .cancel-info-text {
-        font-size: 1.2em;
-        color: #c0392b;
-        font-weight: bold;
-    }
-
-    .reason-label {
-        margin-top: 25px;
-        color: #34495e;
-        font-size: 1.1em;
-        border-bottom: 1px dashed #ccc;
-        padding-bottom: 10px;
-    }
-
-    .reason-box {
-        background-color: #fcebe9;
-        padding: 15px;
-        margin: 10px 0;
-        border-left: 5px solid #e74c3c;
-        border-radius: 5px;
-        text-align: left;
-        white-space: pre-wrap;
-        color: #333;
-        font-style: italic;
-    }
-
-    .back-btn {
-        background: #3498db !important;
-        padding: 15px 40px;
-        font-size: 1.3em;
-        margin-top: 30px;
-        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
-    }
-
-    .back-btn:hover {
-        background: #2980b9 !important;
-        transform: scale(1.05);
-    }
-
-    .back-nav-btn {
-        display: inline-block;
-        margin-top: 30px;
-        background: #7f8c8d;
-        padding: 10px 15px;
-        border-radius: 5px;
-        font-weight: bold;
-        color: white;
-        text-decoration: none;
-        transition: background 0.3s;
-    }
-
-    .back-nav-btn:hover {
-        background: #5c6a74;
-    }
-
-    .confirm-content {
-        border-color: #f39c12;
-        animation: none;
-    }
-
-    .confirm-title {
-        color: #f39c12;
-        font-size: 2.5em;
-        margin-bottom: 20px;
-    }
-
-    .confirm-text {
-        font-size: 1.2em;
-        color: #34495e;
-        margin-bottom: 30px;
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-    }
-
-    .modal-actions .action-btn {
-        padding: 12px 25px;
-        font-size: 1.1em;
-        font-weight: bold;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .confirm-btn-yes {
-        background: #2ecc71;
-        color: white;
-    }
-
-    .confirm-btn-yes:hover {
-        background: #27ae60;
-        transform: scale(1.05);
-    }
-
-    .confirm-btn-no {
-        background: #e74c3c;
-        color: white;
-    }
-
-    .confirm-btn-no:hover {
-        background: #c0392b;
-        transform: scale(1.05);
-    }
-
-    .exam-container {
-        max-width: 850px;
-        margin: 0 auto 50px auto;
-        padding: 0 15px;
-    }
-
-    .exam-header-info {
-        max-width: 850px;
-        margin: 30px auto 40px auto;
-        text-align: center;
-        padding: 20px;
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    .exam-title-main {
-        color: #3498db;
-        border-bottom: 2px solid #f0f0f0;
-        padding-bottom: 15px;
-        margin-bottom: 15px;
-        font-size: 2.2em;
-    }
-
-    .exam-description {
-        color: #555;
-        font-style: italic;
-        font-size: 1.1em;
-        margin-bottom: 20px;
-    }
-
-    .exam-subject-header {
-        margin-top: 10px;
-        font-size: 1em;
-        color: #7f8c8d;
-    }
-
-    .security-status-active {
-        color: #2ecc71;
-        font-weight: bold;
-        background: #f0fff4;
-        padding: 3px 8px;
-        border-radius: 5px;
-    }
-
-    .question-map-container {
-        background: #ffffff;
-        padding: 20px 25px;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        margin-bottom: 30px;
-    }
-
-    .question-map-container h3 {
-        text-align: center;
-        color: #34495e;
-        margin-top: 0;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-    }
-
-    .question-map-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
-        gap: 8px;
-        transition: opacity 0.3s ease;
-    }
-
-    .question-map-btn {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 45px;
-        background: #ecf0f1;
-        color: #34495e;
-        text-decoration: none;
-        font-weight: bold;
-        font-size: 0.9em;
-        border-radius: 8px;
-        border: 2px solid #bdc3c7;
-        transition: all 0.2s ease;
-    }
-
-    .question-map-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        border-color: #3498db;
-    }
-
-    .question-map-btn.answered {
-        background: #2ecc71;
-        color: white;
-        border-color: #27ae60;
-    }
-
-    .question-map-btn.flagged {
-        background: #f1c40f;
-        color: #333;
-        border-color: #f39c12;
-    }
-
-    .map-legend {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin-top: 20px;
-        padding-top: 10px;
-        border-top: 1px solid #eee;
-        font-size: 0.9em;
-        color: #555;
-    }
-
-    .legend-item {
-        display: inline-block;
-        width: 15px;
-        height: 15px;
-        border-radius: 50%;
-        margin-right: 5px;
-        vertical-align: middle;
-    }
-
-    .legend-unanswered {
-        background: #ecf0f1;
-        border: 2px solid #bdc3c7;
-    }
-
-    .legend-answered {
-        background: #2ecc71;
-    }
-
-    .legend-flagged {
-        background: #f1c40f;
-    }
-
-    .question-map-grid.fase-1 .question-map-btn {
-        pointer-events: none;
-        opacity: 0.6;
-    }
-
-    .question-map-grid.fase-2 .question-map-btn {
-        pointer-events: none;
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-    .question-map-grid.fase-2 .question-map-btn.flagged {
-        pointer-events: auto !important;
-        opacity: 1 !important;
-        cursor: pointer !important;
-        border-color: #e67e22;
-        box-shadow: 0 0 10px rgba(241, 196, 15, 0.7);
-    }
-
-    #review-mode-info {
-        background: #eaf6ff;
-        border-left: 5px solid #3498db;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-radius: 5px;
-        text-align: center;
-        font-size: 1.1em;
-        color: #34495e;
-    }
-
-    /* 🔥 BLOQUEO DE SELECCIÓN DE TEXTO 🔥 */
-    .question-card,
-    .question-text,
-    .option-label {
-        -webkit-user-select: none;
-        /* Safari */
-        -moz-user-select: none;
-        /* Firefox */
-        -ms-user-select: none;
-        /* IE10+/Edge */
-        user-select: none;
-        /* Standard */
-    }
-
-    .question-card {
-        background: #ffffff;
-        padding: 30px 35px;
-        margin-bottom: 30px;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.07);
-        border-left: 5px solid #3498db;
-        position: relative;
-        transition: all 0.3s ease;
-    }
-
-    .question-card.flagged {
-        border-left-color: #f1c40f;
-        background: #fffff0;
-    }
-
-    .question-meta {
-        font-size: 1em;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px dashed #ddd;
-        color: #555;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 500;
-    }
-
-    .question-meta strong {
-        color: #34495e;
-    }
-
-    .flag-question-btn {
-        background: #f0f0f0;
-        color: #555;
-        padding: 8px 12px;
-        font-size: 0.9em;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        flex-shrink: 0;
-        cursor: pointer;
-    }
-
-    .flag-question-btn:hover {
-        background: #e67e22;
-        color: white;
-        border-color: #d35400;
-    }
-
-    .question-card.flagged .flag-question-btn {
-        background: #f1c40f;
-        color: #333;
-        border-color: #f39c12;
-    }
-
-    .question-text {
-        font-size: 1.3em;
-        font-weight: 600;
-        margin-top: 20px;
-        margin-bottom: 25px;
-        color: #2c3e50;
-        line-height: 1.6;
-    }
-
-    .question-text.question-centered {
-        text-align: center;
-    }
-
-    /* 🔥 FIX IMÁGENES 🔥 */
-    .question-image-container {
-        text-align: center;
-        margin: 15px 0 25px 0;
-        background: #fff;
-        border-radius: 8px;
-        padding: 5px;
-    }
     
-    .question-image {
-        max-width: 100%;
-        height: auto;
-        max-height: 350px; /* Grande en PC */
-        object-fit: contain; /* No se estira */
-        border-radius: 6px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        display: block;
-        margin: 0 auto;
-    }
-    
-    /* Ajuste específico para Celular */
-    @media (max-width: 768px) {
-        .question-image {
-            max-height: 250px; /* Más bajo en celular para no tapar todo */
-            width: auto;
-            max-width: 100%;
-        }
-    }
+    </script>
 
-    .subject-tag {
-        display: inline-block;
-        background: #eaf6ff;
-        color: #3498db;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.9em;
-        font-weight: 700;
-    }
-
-    .options-group {
-        margin-top: 20px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    form#exam-form .option-label {
-        display: grid !important;
-        grid-template-columns: 30px 1fr;
-        gap: 15px;
-        align-items: center;
-        margin: 10px 0;
-        padding: 15px;
-        border: 2px solid #eee;
-        border-radius: 10px;
-        cursor: pointer;
-        background-color: #ffffff;
-        transition: all 0.3s ease;
-    }
-
-    form#exam-form .option-label input[type="radio"] {
-        transform: scale(1.3);
-        accent-color: #3498db;
-        margin-right: 0 !important;
-    }
-
-    form#exam-form .option-label .option-text-wrapper {
-        text-align: left !important;
-        font-size: 1.05em;
-        color: #333;
-        margin: 0 !important;
-    }
-
-    .option-label:hover {
-        border-color: #3498db;
-        background: #f0f8ff;
-    }
-
-    .option-label input[type="radio"]:checked+.option-text-wrapper {
-        font-weight: bold;
-        color: #3498db;
-    }
-
-    .question-nav-buttons {
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px dashed #ddd;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-
-    .question-nav-buttons .button {
-        padding: 12px 20px;
-        font-size: 1em;
-        font-weight: bold;
-        border-radius: 8px;
-        cursor: pointer;
-        border: none;
-        transition: all 0.2s ease;
-    }
-
-    .flag-and-next-btn {
-        background: #f39c12;
-        color: white;
-    }
-
-    .flag-and-next-btn:hover {
-        background: #e67e22;
-    }
-
-    .next-question-btn {
-        background: #3498db;
-        color: white;
-    }
-
-    .next-question-btn:hover {
-        background: #2980b9;
-    }
-
-    .review-mode-btn {
-        background: #2ecc71;
-        color: white;
-    }
-
-    .review-mode-btn:hover {
-        background: #27ae60;
-    }
-
-    .finish-directly-btn {
-        background: #e74c3c;
-        color: white;
-    }
-
-    .finish-directly-btn:hover {
-        background: #c0392b;
-    }
-
-    .submit-btn {
-        display: block;
-        width: 100%;
-        padding: 18px;
-        margin-top: 30px;
-        background: linear-gradient(90deg, #34d399 0%, #2ecc71 100%);
-        color: white;
-        font-size: 1.2em;
-        border: none;
-        border-radius: 10px;
-        font-weight: bold;
-        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .submit-btn:hover {
-        background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
-    }
-
-    .chat-panel-header {
-        background: #3498db;
-        color: white;
-        padding: 10px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 1.1em;
-    }
-
-    .close-chat {
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 1.2em;
-        transition: color 0.2s;
-    }
-
-    .close-chat:hover {
-        color: #f8d7da;
-    }
-
-    .chat-messages {
-        flex-grow: 1;
-        padding: 10px;
-        overflow-y: auto;
-        background: #fcfcfc;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        font-size: 0.9em;
-    }
-
-    .chat-message {
-        padding: 8px 12px;
-        border-radius: 15px;
-        max-width: 80%;
-        word-wrap: break-word;
-    }
-
-    .admin-chat-message {
-        align-self: flex-start;
-        background-color: #e6f3ff;
-        color: #34495e;
-    }
-
-    .student-chat-message {
-        align-self: flex-end;
-        background-color: #dcf8c6;
-        color: #333;
-    }
-
-    .student-chat-form {
-        display: flex;
-        padding: 10px;
-        border-top: 1px solid #eee;
-    }
-
-    #student-message-input {
-        flex-grow: 1;
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ddd;
-        margin-right: 5px;
-    }
-
-    .chat-send-btn {
-        background: #2ecc71;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 8px 15px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background 0.2s;
-    }
-
-    .chat-send-btn:hover {
-        background: #27ae60;
-    }
-
-    .student-chat-panel {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 300px;
-        height: 350px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        z-index: 9000;
-        display: none;
-        flex-direction: column;
-        overflow: hidden;
-        border: 1px solid #ddd;
-        transition: opacity 0.5s ease-out;
-    }
-
-    /* 🔥 VERSIÓN MÓVIL OPTIMIZADA 🔥 */
-    @media (max-width: 600px) {
-        .header-controls-group {
-            position: relative;
-            /* Ya no es fijo */
-            top: 0;
-            right: auto;
-            transform: none;
-            width: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 20px;
-        }
-
-        .report-error-btn,
-        .help-btn {
-            flex: 1 1 40%;
-            font-size: 0.85em;
-            padding: 8px 5px;
-            text-align: center;
-            margin: 0;
-        }
-
-        .fixed-timer-box {
-            flex: 1 1 100%;
-            order: -1;
-            margin-bottom: 5px;
-            padding: 5px;
-        }
-
-        .countdown-display {
-            font-size: 1.4em;
-        }
-
-        .exam-header-info {
-            margin-top: 10px;
-            padding: 15px;
-        }
-
-        .exam-title-main {
-            font-size: 1.5em;
-        }
-
-        .watermark-text {
-            font-size: 0.9em;
-            opacity: 0.05;
-            padding: 40px;
-        }
-
-        .student-chat-panel {
-            width: 100%;
-            height: 50vh;
-            right: 0;
-            bottom: 0;
-            border-radius: 15px 15px 0 0;
-        }
-
-        .question-card {
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .question-text {
-            font-size: 1.1em;
-            text-align: left;
-        }
-
-        .question-nav-buttons {
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .question-nav-buttons .button {
-            width: 100%;
-            margin-bottom: 5px;
-        }
-
-        form#exam-form .option-label {
-            grid-template-columns: 30px 1fr;
-            padding: 12px;
-            gap: 10px;
-        }
-    }
-   /* --- CONTENEDOR DE ALERTAS (Inteligente) --- */
-#exam-toast-container {
-    position: fixed;
-    z-index: 9999999; /* Por encima de TODO, incluso del overlay de bloqueo */
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none; /* Para poder dar click a través de los huecos */
-}
-
-/* --- ESTILO PC (Escritorio) --- */
-@media (min-width: 769px) {
-    #exam-toast-container {
-        bottom: 20px;
-        left: 20px; /* Izquierda */
-        right: auto; /* Aseguramos que no se pegue a la derecha */
-        flex-direction: column-reverse; /* Las nuevas salen abajo y suben */
-        align-items: flex-start;
-    }
-}
-
-/* --- ESTILO MÓVIL (Celular) --- */
-@media (max-width: 768px) {
-    #exam-toast-container {
-        top: 20px; /* Se va para ARRIBA */
-        bottom: auto;
-        left: 50%; /* Centrado horizontalmente */
-        transform: translateX(-50%);
-        width: 90%; /* Que no ocupe todo el ancho */
-        align-items: center;
-    }
-
-    .modern-toast {
-        width: 100%; /* Aprovechar el ancho disponible */
-        min-width: auto !important; /* Quitar límite mínimo */
-        padding: 12px; /* Un poco más compacto */
-    }
-}
-
-/* --- DISEÑO DE LA TARJETA (TOAST) --- */
-.modern-toast {
-    pointer-events: auto; /* La alerta sí recibe clicks (para cerrarla) */
-    min-width: 300px;
-    max-width: 400px;
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    /* Sombra fuerte para que resalte sobre el examen */
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); 
-    
-    /* Animación de entrada */
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    opacity: 0;
-    transform: translateY(20px); /* Entra desde abajo un poco */
-    
-    border-left: 6px solid #ddd;
-}
-
-.modern-toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* --- ICONOS Y TEXTO --- */
-.toast-icon { font-size: 1.4em; flex-shrink: 0; padding-top: 2px; }
-.toast-content { flex-grow: 1; }
-.toast-title { display: block; font-weight: 800; font-size: 0.95em; margin-bottom: 2px; color: #333; }
-.toast-msg { font-size: 0.85em; color: #555; line-height: 1.3; }
-
-/* --- COLORES --- */
-.toast-success { border-left-color: #2ecc71; } .toast-success .toast-icon { color: #2ecc71; }
-.toast-warning { border-left-color: #f1c40f; } .toast-warning .toast-icon { color: #f1c40f; }
-.toast-danger  { border-left-color: #e74c3c; } .toast-danger  .toast-icon { color: #e74c3c; }
-.toast-info    { border-left-color: #3498db; } .toast-info    .toast-icon { color: #3498db; }
-/* --- ESTILO PARA MODO LECTURA (ZOOM) --- */
-.reading-scroll-container {
-    height: 60vh !important; /* Ocupa el 60% de la pantalla */
-    min-height: 300px;
-    display: block !important; /* Importante para anular el flex centrado */
-    overflow-y: auto; /* Activa el scroll vertical */
-    overflow-x: hidden; 
-    border: 3px solid #3498db; /* Borde azul para resaltar */
-    border-radius: 8px;
-    padding: 10px;
-    background: #fff !important;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-/* Hacemos que la imagen crezca al 100% del ancho dentro del contenedor */
-.reading-scroll-container img.question-image {
-    max-height: none !important; /* Rompe el límite de altura */
-    width: 100% !important; /* Ancho total para leer bien */
-    height: auto !important; 
-    cursor: zoom-out;
-}
-</style>
 {% endif %}
 {% endblock %}

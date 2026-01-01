@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="chat-container-wrapper">
-    
+
     <div class="chat-header-card">
         <div class="header-info">
             <div class="avatar-circle">{{ target_user.username[0] | upper }}</div>
@@ -24,10 +24,11 @@
             <div class="system-message">
                 <small>Has iniciado una sesión de soporte privado.</small>
             </div>
-            </div>
+        </div>
 
         <form id="admin-chat-form" class="chat-input-area">
-            <input type="text" id="message-input" placeholder="Escribe un mensaje al alumno..." required autocomplete="off">
+            <input type="text" id="message-input" placeholder="Escribe un mensaje al alumno..." required
+                autocomplete="off">
             <button type="submit" class="btn-send">
                 <i class="fas fa-paper-plane"></i>
             </button>
@@ -38,12 +39,11 @@
 
 <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const socket = io.connect(window.location.origin);
-        
-        // Asegurarse de que sean cadenas para la comparación
-        const TARGET_USER_ID = "{{ target_user.id }}"; 
-        const ADMIN_ID = "{{ current_user.id }}";
+
+        // Datos del usuario objetivo (Alumno)
+        const TARGET_USER_ID = "{{ target_user.id }}";
         const ADMIN_USERNAME = "{{ current_user.username }}";
 
         const chatWindow = document.getElementById('chat-window');
@@ -51,87 +51,135 @@
         const messageInput = document.getElementById('message-input');
         const endChatBtn = document.getElementById('end-chat-btn');
 
-      // 1. Conexión y Unión a salas
-        socket.on('connect', function() {
+        // --- 1. CARGAR HISTORIAL AL INICIAR (NUEVO) ---
+        loadChatHistory();
+
+        function loadChatHistory() {
+            // Mostrar mensaje de carga
+            chatWindow.innerHTML = '<div class="system-message"><small>Cargando historial...</small></div>';
+
+            fetch(`/api/chat/history/${TARGET_USER_ID}`)
+                .then(response => response.json())
+                .then(data => {
+                    chatWindow.innerHTML = ''; // Limpiar mensaje de carga
+                    
+                    // Agregar mensaje de sistema inicial
+                    const sysMsg = document.createElement('div');
+                    sysMsg.className = 'system-message';
+                    sysMsg.innerHTML = '<small>Has iniciado una sesión de soporte privado.</small>';
+                    chatWindow.appendChild(sysMsg);
+
+                    if (data.length === 0) {
+                        return; // No hay mensajes previos
+                    }
+
+                    // Pintar cada mensaje del historial
+                    data.forEach(msg => {
+                        // Determinar quién envió el mensaje
+                        // Si msg.is_me es true, fui yo (Admin). Si no, fue el alumno.
+                        const type = msg.is_me ? 'admin' : 'student';
+                        appendMessage(msg.message, type, msg.timestamp);
+                    });
+                })
+                .catch(err => {
+                    console.error("Error cargando historial:", err);
+                    chatWindow.innerHTML += '<div class="system-message"><small style="color:red">Error al cargar historial.</small></div>';
+                });
+        }
+
+        // --- 2. CONEXIÓN SOCKET ---
+        socket.on('connect', function () {
             console.log("Admin conectado al chat.");
-            // Nos unimos a la sala del alumno para recibir sus mensajes directos
             socket.emit('join_room', { user_id: TARGET_USER_ID });
-            // Nos unimos al canal global por si acaso
-            socket.emit('admin_join_pulse');
         });
 
-        // 2. ESCUCHAR MENSAJES DEL ALUMNO (Evento corregido)
-        socket.on('chat_notification', function(data) {
-            console.log("Evento recibido del servidor:", data);
+        // --- 3. RECIBIR MENSAJES EN VIVO ---
+        socket.on('chat_notification', function (data) {
+            console.log("Mensaje recibido:", data);
+
+            // Solo mostramos si pertenece a esta conversación
+            // (O sea, si el sender o el recipient es el alumno que estamos viendo)
             
-            // Verificamos que el mensaje sea del alumno con el que estamos hablando
-            const isFromCurrentStudent = String(data.user_id) === String(TARGET_USER_ID);
-            
-            // Si es del alumno y es un mensaje de estudiante, lo pintamos
-            if (isFromCurrentStudent && data.is_student) {
+            // Caso A: El alumno me escribe
+            if (String(data.user_id) === String(TARGET_USER_ID) && data.is_student) {
                 appendMessage(data.message, 'student', data.timestamp);
             }
+            
+            // Caso B: Yo le escribí (desde otra pestaña o se rebotó el evento)
+            // Esto evita duplicados si ya lo agregamos manualmente al enviar
+            // Pero es útil si tienes 2 pestañas de admin abiertas.
         });
 
-        // 3. ENVIAR MENSAJES (Mantenemos tu lógica de envío)
-        chatForm.addEventListener('submit', function(e) {
+        // --- 4. ENVIAR MENSAJE ---
+        chatForm.addEventListener('submit', function (e) {
             e.preventDefault();
             const msg = messageInput.value.trim();
-            
+
             if (msg) {
-                // Enviamos al servidor
+                // Enviar al servidor (que lo guardará en BD y lo retransmitirá)
                 socket.emit('send_message_to_student', {
                     target_user_id: TARGET_USER_ID,
                     message: msg
                 });
-                // Lo pintamos en nuestra pantalla de una vez (lado derecho)
-                appendMessage(msg, 'admin', new Date().toLocaleTimeString());
+
+                // Pintar localmente de inmediato (feedback instantáneo)
+                appendMessage(msg, 'admin', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
                 messageInput.value = '';
             }
         });
 
-        // ... (Resto del código igual: endChatBtn, appendMessage, etc.)
-        endChatBtn.addEventListener('click', function() {
-            if(confirm("¿Seguro que quieres finalizar la sesión de soporte para este alumno?")) {
+        // --- 5. FINALIZAR CHAT ---
+        endChatBtn.addEventListener('click', function () {
+            if (confirm("¿Seguro que quieres finalizar la sesión?")) {
                 socket.emit('close_student_chat_remote', {
                     target_user_id: TARGET_USER_ID,
                     admin_username: ADMIN_USERNAME
                 });
-                appendMessage("Has finalizado la sesión de chat.", 'system');
+                appendMessage("Sesión finalizada.", 'system');
                 messageInput.disabled = true;
                 endChatBtn.disabled = true;
             }
         });
 
+        // --- FUNCIONES AUXILIARES ---
         function appendMessage(text, type, time = '') {
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message-bubble', type);
+            
             let content = '';
             if (type === 'system') {
                 content = `<small>${text}</small>`;
             } else {
                 content = `<div class="msg-content">${text}</div><div class="msg-meta">${time}</div>`;
             }
+            
             msgDiv.innerHTML = content;
             chatWindow.appendChild(msgDiv);
+            
+            // Auto-scroll al final
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
     });
 </script>
 
 <style>
-    body { background-color: #f0f2f5; } /* Fondo gris claro tipo WhatsApp Web */
+    body {
+        background-color: #f0f2f5;
+    }
+
+    /* Fondo gris claro tipo WhatsApp Web */
 
     .chat-container-wrapper {
         max-width: 800px;
         margin: 20px auto;
         background: white;
         border-radius: 15px;
-        box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        height: 85vh; /* Ocupa casi toda la altura */
+        height: 85vh;
+        /* Ocupa casi toda la altura */
     }
 
     /* Header */
@@ -144,26 +192,52 @@
         align-items: center;
         border-bottom: 1px solid #ddd;
     }
+
     .header-info {
         display: flex;
         align-items: center;
         gap: 15px;
     }
-    .header-info h1 { margin: 0; font-size: 1.2em; }
-    .header-info p { margin: 0; font-size: 0.9em; opacity: 0.8; }
-    
+
+    .header-info h1 {
+        margin: 0;
+        font-size: 1.2em;
+    }
+
+    .header-info p {
+        margin: 0;
+        font-size: 0.9em;
+        opacity: 0.8;
+    }
+
     .avatar-circle {
-        width: 40px; height: 40px; background: #e67e22; color: white;
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        font-weight: bold; font-size: 1.2em;
+        width: 40px;
+        height: 40px;
+        background: #e67e22;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2em;
     }
 
     .header-actions .btn-danger-sm {
-        background: #e74c3c; color: white; border: none; padding: 8px 12px;
-        border-radius: 5px; cursor: pointer; font-size: 0.85em; margin-right: 10px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.85em;
+        margin-right: 10px;
     }
+
     .header-actions .btn-close-sm {
-        color: #ecf0f1; text-decoration: none; font-size: 0.9em;
+        color: #ecf0f1;
+        text-decoration: none;
+        font-size: 0.9em;
     }
 
     /* Ventana de Mensajes */
@@ -177,7 +251,8 @@
         flex-grow: 1;
         padding: 20px;
         overflow-y: auto;
-        background-color: #e5ddd5; /* Color fondo tipo WhatsApp */
+        background-color: #e5ddd5;
+        /* Color fondo tipo WhatsApp */
         display: flex;
         flex-direction: column;
         gap: 10px;
@@ -192,21 +267,23 @@
         font-size: 0.95em;
         line-height: 1.4;
     }
-    
+
     .message-bubble.admin {
         align-self: flex-end;
-        background-color: #dcf8c6; /* Verde claro (Mensaje propio) */
-        color: #333;
+        background-color: #dcf8c6;
+        /* Verde claro (Mensaje propio) */
+        color: var(--color-texto);
         border-bottom-right-radius: 0;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .message-bubble.student {
         align-self: flex-start;
-        background-color: #ffffff; /* Blanco (Mensaje recibido) */
-        color: #333;
+        background-color: #ffffff;
+        /* Blanco (Mensaje recibido) */
+        color: var(--color-texto);
         border-bottom-left-radius: 0;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .message-bubble.system {
@@ -235,6 +312,7 @@
         display: flex;
         gap: 10px;
     }
+
     .chat-input-area input {
         flex-grow: 1;
         padding: 12px;
@@ -242,6 +320,7 @@
         border-radius: 25px;
         outline: none;
     }
+
     .btn-send {
         background: #3498db;
         color: white;
@@ -256,6 +335,9 @@
         font-size: 1.1em;
         transition: background 0.2s;
     }
-    .btn-send:hover { background: #2980b9; }
+
+    .btn-send:hover {
+        background: #2980b9;
+    }
 </style>
 {% endblock %}

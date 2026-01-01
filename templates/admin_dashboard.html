@@ -4,429 +4,324 @@
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<div class="page-content-wrapper"> 
+<div class="min-h-screen pb-12 font-sans text-left">
     
-    <div class="header-card header-gradient">
-        <div class="header-content">
-            <h1><i class="fas fa-broadcast-tower"></i> Torre de Control</h1>
-            <p>Monitoreo de métricas y actividad en tiempo real.</p>
+    <div class="relative pb-24 pt-12 px-4 shadow-xl rounded-b-[3rem] overflow-hidden mb-[-4rem] z-0"
+         style="background: linear-gradient(135deg, #0f172a, #334155); border-bottom: 1px solid var(--borde-tarjeta);">
+        
+        <div class="absolute inset-0 opacity-10 pointer-events-none" 
+             style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 30px 30px;">
+        </div>
+
+        <div class="relative z-10 container mx-auto max-w-6xl text-center">
+            <h1 class="text-4xl font-extrabold text-white mb-2">
+                <i class="fas fa-broadcast-tower text-blue-400"></i> Torre de Control
+            </h1>
+            <p class="text-lg text-slate-300">Centro de Mando: <strong>{{ current_user.username }}</strong></p>
+            
+            <div class="mt-6">
+                <a href="{{ url_for('admin_panel') }}" class="btn text-sm py-2 px-4" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 8px;">
+                    <i class="fas fa-arrow-left"></i> Volver al Menú
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="container admin-container">
+    <div class="container mx-auto max-w-6xl px-4 relative z-10">
         
-        <div class="nav-actions">
-            <a href="{{ url_for('admin_panel') }}" class="btn-back-pill">
-                <i class="fas fa-arrow-left"></i> Volver al Panel
-            </a>
-        </div>
-
-        <div class="main-column">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <div class="card dashboard-card target-dark">
-                <h2 class="card-title"><i class="fas fa-tachometer-alt"></i> Métricas Clave</h2>
+            <div class="lg:col-span-2 space-y-8">
                 
-                <div class="stats-grid">
-                    <div class="stat-card stat-blue">
-                        <div class="stat-icon"><i class="fas fa-users"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ total_students }}</span>
-                            <span class="stat-label">Alumnos</span>
+                <div class="card !p-6">
+                    <h2 class="text-xl font-bold mb-6 flex items-center" style="color: var(--color-texto);">
+                        <i class="fas fa-tachometer-alt mr-3" style="color: var(--color-primario);"></i> Métricas Clave
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="p-4 rounded-xl text-white flex items-center shadow-lg" 
+                             style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                            <div class="text-3xl mr-4 opacity-80"><i class="fas fa-users"></i></div>
+                            <div>
+                                <div class="text-2xl font-bold">{{ total_students }}</div>
+                                <div class="text-xs uppercase font-bold opacity-80">Alumnos</div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl text-white flex items-center shadow-lg" 
+                             style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <div class="text-3xl mr-4 opacity-80"><i class="fas fa-check-circle"></i></div>
+                            <div>
+                                <div class="text-2xl font-bold">{{ completados_hoy }}</div>
+                                <div class="text-xs uppercase font-bold opacity-80">Exámenes Hoy</div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl text-white flex items-center shadow-lg" 
+                             style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <div class="text-3xl mr-4 opacity-80"><i class="fas fa-star-half-alt"></i></div>
+                            <div>
+                                <div class="text-2xl font-bold">{{ avg_score }}/128</div>
+                                <div class="text-xs uppercase font-bold opacity-80">Promedio Gral.</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="stat-card stat-green">
-                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ completados_hoy }}</span>
-                            <span class="stat-label">Exámenes Hoy</span>
+                </div>
+
+                <div class="card !p-6">
+                    <h3 class="text-lg font-bold mb-4 text-center" style="color: var(--color-texto-secundario);">
+                        <i class="fas fa-chart-bar"></i> Top 5 Materias con Errores
+                    </h3>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="materiasReprobadasChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card !p-6 mt-6 border-l-4" style="border-left-color: #10b981;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold flex items-center" style="color: var(--color-texto);">
+                            <i class="fas fa-microchip mr-2 text-emerald-500"></i> Rendimiento del Servidor
+                        </h3>
+                        
+                        <div class="flex gap-3 text-xs font-mono">
+                            <span class="px-2 py-1 rounded bg-black text-green-400 font-bold border border-green-900">
+                                CPU: <span id="cpu-val">--</span>%
+                            </span>
+                            <span class="px-2 py-1 rounded bg-black text-blue-400 font-bold border border-blue-900">
+                                RAM: <span id="ram-val">--</span>MB
+                            </span>
                         </div>
                     </div>
-                    <div class="stat-card stat-yellow">
-                        <div class="stat-icon"><i class="fas fa-star-half-alt"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-number">{{ avg_score }}/128</span>
-                            <span class="stat-label">Promedio Gral.</span>
+                    
+                    <div style="position: relative; height: 200px; width: 100%; background: #000; border-radius: 8px; border: 1px solid #333; overflow: hidden;">
+                        <div style="position: absolute; inset: 0; background-image: linear-gradient(#1a1a1a 1px, transparent 1px), linear-gradient(90deg, #1a1a1a 1px, transparent 1px); background-size: 20px 20px; pointer-events: none;"></div>
+                        
+                        <canvas id="serverLiveChart"></canvas>
+                    </div>
+                    
+                    <p class="text-xs font-mono mt-2 flex justify-between" style="color: var(--color-texto-secundario);">
+                        <span><i class="fas fa-circle text-green-500 text-[8px] animate-pulse"></i> Conexión Estable</span>
+                        <span>Latencia: <span id="latency-val">24</span>ms</span>
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-1 space-y-6">
+                
+                <div class="card !p-0 overflow-hidden border border-slate-200 dark:border-slate-700 shadow-xl">
+                    <div class="bg-slate-900 p-3 flex justify-between items-center border-b border-slate-700">
+                        <h3 class="font-bold text-white text-sm flex items-center">
+                            <i class="fas fa-bullhorn text-yellow-400 mr-2 animate-pulse"></i> BROADCAST SYSTEM
+                        </h3>
+                        <div class="flex gap-1.5">
+                            <div class="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-black">
+                        <div class="relative">
+                            <span class="absolute top-3 left-3 text-green-500 font-mono text-xs select-none">root@admin:~$</span>
+                            <textarea id="broadcastMessage" 
+                                      class="w-full h-24 pl-28 pr-3 py-3 bg-slate-900/50 text-green-400 font-mono text-sm border border-slate-700 rounded focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none resize-none transition-all placeholder-green-800"
+                                      placeholder="Escribe el mensaje urgente..."></textarea>
+                        </div>
+
+                        <button onclick="sendBroadcast()" 
+                                id="btnTransmit"
+                                class="w-full mt-3 py-2 bg-green-600 hover:bg-green-500 text-black font-bold font-mono uppercase tracking-widest rounded shadow-[0_0_15px_rgba(34,197,94,0.6)] transition-all active:scale-95 flex justify-center items-center gap-2"
+                                style="cursor: pointer;">
+                            <i class="fas fa-wifi"></i> TRANSMITIR AHORA
+                        </button>
+                    </div>
+                    
+                    <div class="p-2 bg-slate-900 text-center">
+                        <p class="text-[10px] text-slate-500 font-mono">
+                            STATUS: <span class="text-green-500">ONLINE</span> | CLIENTS: <span class="text-blue-400">{{ total_students }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card !p-0 overflow-hidden flex flex-col" style="height: 600px; border-top: 4px solid #ef4444;">
+                    <div class="p-4 border-b flex justify-between items-center" style="border-color: var(--borde-tarjeta); background: var(--bg-tabla-head);">
+                        <h2 class="font-bold text-lg flex items-center" style="color: var(--color-texto);">
+                            <i class="fas fa-wave-square mr-2 text-red-500"></i> El Pulso
+                        </h2>
+                        <span class="text-xs font-bold text-white px-2 py-1 rounded animate-pulse" style="background: #ef4444;">
+                            ● EN VIVO
+                        </span>
+                    </div>
+                    
+                    <div id="pulse-feed" class="flex-1 p-4 overflow-y-auto" style="background: var(--bg-pagina);">
+                        <div class="empty-pulse text-center mt-10" style="color: var(--color-texto-secundario);">
+                            <i class="fas fa-satellite-dish text-4xl mb-2 opacity-50"></i>
+                            <p class="text-sm">Esperando actividad...</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card chart-card target-dark">
-                <h3 class="chart-title"><i class="fas fa-chart-bar"></i> Top 5 Materias con Errores</h3>
-                <div class="chart-canvas-container">
-                    <canvas id="materiasReprobadasChart"></canvas>
-                </div>
-            </div>
         </div>
-        
-        <div class="side-column">
-            <div class="card pulse-card target-dark">
-                <div class="pulse-header">
-                    <h2 class="card-title pulse-title"><i class="fas fa-wave-square"></i> El Pulso</h2>
-                    <span class="live-badge">● EN VIVO</span>
-                </div>
-                
-                <div class="pulse-feed" id="pulse-feed">
-                    <div class="empty-pulse">
-                        <i class="fas fa-satellite-dish"></i>
-                        <p>Esperando actividad del sistema...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
-<style>
-    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
-
-    /* --- LAYOUT GENERAL --- */
-    .admin-container {
-        display: grid;
-        grid-template-columns: 2.5fr 1fr; /* Izquierda más ancha que derecha */
-        gap: 25px;
-        max-width: 1200px;
-        margin: -30px auto 30px auto; /* Subir un poco sobre el header */
-        padding: 0 20px;
-        position: relative;
-        z-index: 10;
-    }
-
-    /* --- HEADER ESTILIZADO --- */
-    .header-gradient {
-        background: linear-gradient(135deg, #2c3e50, #3498db);
-        color: white;
-        padding: 40px 20px 60px 20px; /* Padding extra abajo para efecto flotante */
-        text-align: center;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        margin-bottom: 0;
-    }
-    .header-content h1 { font-weight: 800; font-size: 2.2rem; margin: 0; }
-    .header-content p { opacity: 0.9; margin-top: 5px; font-size: 1.1rem; }
-
-    /* --- BOTÓN DE VOLVER (Píldora) --- */
-    .nav-actions { grid-column: 1 / -1; margin-bottom: 10px; }
-    
-    .btn-back-pill {
-        display: inline-flex;
-        align-items: center;
-        background-color: #ecf0f1;
-        color: #576574;
-        padding: 8px 20px;
-        border-radius: 50px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.9rem;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        transition: all 0.2s ease;
-        border: 1px solid #bdc3c7;
-    }
-    .btn-back-pill:hover {
-        background-color: #fff;
-        transform: translateX(-3px);
-        color: #2c3e50;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    .btn-back-pill i { margin-right: 8px; }
-
-    /* --- TARJETAS GENERALES --- */
-    .card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        border: 1px solid #f0f0f0;
-        margin-bottom: 25px;
-        transition: transform 0.3s;
-    }
-    .card:hover { transform: translateY(-2px); }
-
-    .card-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin-top: 0;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #f1f2f6;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .card-title i { color: #3498db; }
-
-    /* --- ESTADÍSTICAS (KPIs) --- */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-    }
-    .stat-card {
-        padding: 20px;
-        border-radius: 12px;
-        color: white;
-        display: flex;
-        align-items: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
-    }
-    .stat-card:hover { transform: scale(1.03); }
-    
-    .stat-icon { font-size: 2.5rem; opacity: 0.8; margin-right: 15px; }
-    .stat-info { display: flex; flex-direction: column; }
-    .stat-number { font-size: 1.8rem; font-weight: 800; line-height: 1; }
-    .stat-label { font-size: 0.85rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .stat-blue { background: linear-gradient(135deg, #3498db, #2980b9); }
-    .stat-green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
-    .stat-yellow { background: linear-gradient(135deg, #f1c40f, #f39c12); }
-    /* REGLA CRÍTICA: Texto blanco en stats */
-    .stat-card * { color: white !important; }
-
-    /* --- GRÁFICA --- */
-    .chart-canvas-container { position: relative; height: 300px; width: 100%; }
-    .chart-title { text-align: center; color: #7f8c8d; font-size: 1.1rem; margin-bottom: 15px; }
-
-    /* --- PULSO (SIDEBAR) --- */
-    .pulse-card {
-        height: 500px;
-        display: flex;
-        flex-direction: column;
-        border-top: 4px solid #e74c3c; /* Acento rojo */
-    }
-    .pulse-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .pulse-title { border-bottom: none; margin-bottom: 0; padding-bottom: 0; font-size: 1.2rem; }
-    .pulse-title i { color: #e74c3c; }
-    
-    .live-badge {
-        background: #e74c3c; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px;
-        font-weight: bold; animation: blink 2s infinite;
-    }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
-    .pulse-feed {
-        flex: 1;
-        overflow-y: auto;
-        background: #fdfdfd;
-        border: 1px solid #f0f0f0;
-        border-radius: 8px;
-        padding: 10px;
-    }
-    
-    /* Mensajes del pulso */
-    .pulse-message {
-        padding: 10px;
-        border-bottom: 1px dashed #eee;
-        font-size: 0.85rem;
-        color: #555;
-        animation: slideIn 0.3s ease-out;
-    }
-    .pulse-time { font-weight: bold; color: #95a5a6; margin-right: 5px; font-size: 0.8rem; }
-    .empty-pulse { text-align: center; color: #ccc; margin-top: 50px; }
-    .empty-pulse i { font-size: 3rem; margin-bottom: 10px; display: block; }
-
-    @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-    /* --- RESPONSIVE --- */
-    @media(max-width: 900px) {
-        .admin-container { grid-template-columns: 1fr; }
-        .side-column { order: -1; /* Poner el pulso arriba en móvil si quieres, o quítalo */ }
-        .stats-grid { grid-template-columns: 1fr; }
-    }
-</style>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- 1. CONEXIÓN REAL-TIME (SOCKETS) ---
-        const socket = io.connect(window.location.origin);
-        const feed = document.getElementById('pulse-feed');
-
-        socket.on('connect', () => {
-            socket.emit('join_room', { user_id: 1, username: 'Admin' });
-            socket.emit('join', { room: 'admin_pulse_room' });
-        });
-
-        socket.on('new_activity', (data) => {
-            // Quitar mensaje de "Esperando..." si existe
-            const emptyMsg = feed.querySelector('.empty-pulse');
-            if(emptyMsg) emptyMsg.remove();
-
-            const div = document.createElement('div');
-            
-            // Estilos dinámicos para modo oscuro al momento de crear
-            const isDark = document.body.classList.contains('dark-mode');
-            div.className = 'pulse-message';
-            // Aplicar estilo inline temporal para asegurar visibilidad inmediata
-            if(isDark) {
-                div.style.color = '#e0e0e0';
-                div.style.borderBottomColor = '#444';
-            }
-
-            div.innerHTML = `<span class="pulse-time" style="color:${isDark?'#00cec9':'#95a5a6'}">[${new Date().toLocaleTimeString()}]</span> ${data.msg}`;
-            
-            // Insertar al principio (feed nuevo arriba)
-            feed.prepend(div);
-            
-            // Limitar a 20 mensajes para no saturar memoria
-            if(feed.children.length > 20) feed.lastChild.remove();
-        });
-
-        // --- 2. GRÁFICA (CHART.JS) ---
+        
+        // --- 1. GRÁFICA DE BARRAS (Corrección de URL) ---
         const ctx = document.getElementById('materiasReprobadasChart');
         if (ctx) {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            fetch('{{ url_for("chart_data") }}', { headers: {'X-CSRF-Token': token} })
+            const isDark = document.body.classList.contains('dark-mode');
+            const textColor = isDark ? '#e2e8f0' : '#475569';
+            
+            // 🔥 AQUÍ ESTÁ LA CORRECCIÓN: Comillas simples dentro de las dobles
+            const CHART_URL = "{{ url_for('chart_data') }}"; 
+
+            fetch(CHART_URL)
             .then(r => r.json())
             .then(data => {
-                // Colores iniciales
-                const isDark = document.body.classList.contains('dark-mode');
-                const textColor = isDark ? '#e0e0e0' : '#666';
-                const gridColor = isDark ? '#444' : '#eee';
-
-                window.myChart = new Chart(ctx, {
+                new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: data.labels,
                         datasets: [{
-                            label: 'Respuestas Incorrectas',
+                            label: 'Errores',
                             data: data.data,
-                            backgroundColor: [
-                                'rgba(231, 76, 60, 0.8)', // Rojo
-                                'rgba(241, 196, 15, 0.8)', // Amarillo
-                                'rgba(52, 152, 219, 0.8)', // Azul
-                                'rgba(155, 89, 182, 0.8)', // Morado
-                                'rgba(26, 188, 156, 0.8)'  // Verde
-                            ],
-                            borderRadius: 4,
-                            borderWidth: 0
+                            backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(168, 85, 247, 0.8)', 'rgba(16, 185, 129, 0.8)'],
+                            borderRadius: 4
                         }]
                     },
                     options: {
                         maintainAspectRatio: false,
                         responsive: true,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { 
-                                backgroundColor: '#2c3e50',
-                                titleColor: '#fff',
-                                bodyColor: '#fff'
-                            }
-                        },
+                        plugins: { legend: { display: false } },
                         scales: {
-                            y: { 
-                                beginAtZero: true,
-                                ticks: { color: textColor }, 
-                                grid: { color: gridColor, borderDash: [5, 5] } 
-                            },
-                            x: { 
-                                ticks: { color: textColor }, 
-                                grid: { display: false } 
-                            }
+                            y: { beginAtZero: true, ticks: { color: textColor } },
+                            x: { ticks: { color: textColor }, grid: { display: false } }
                         }
                     }
                 });
-            });
+            })
+            .catch(err => console.warn("Gráfica no disponible aún"));
         }
 
-        // --- 3. 🔥 MODO OSCURO "MODO DIOS" (Fuerza Bruta Visual) 🔥 ---
-        function aplicarModoOscuroDashboard() {
-            const isDark = document.body.classList.contains('dark-mode');
-            
-            // Elementos a transformar
-            const targets = document.querySelectorAll('.target-dark');
-            const titulos = document.querySelectorAll('.card-title');
-            const textos = document.querySelectorAll('.pulse-message, .chart-title, p');
-            const header = document.querySelector('.header-card');
-            const pulseFeed = document.getElementById('pulse-feed');
-            const backBtn = document.querySelector('.btn-back-pill');
-
-            if (isDark) {
-                // Fondo Header
-                if(header) {
-                    header.style.background = 'linear-gradient(135deg, #000000, #1a1a1a)';
-                    header.style.boxShadow = '0 8px 20px rgba(0,0,0,0.8)';
+        // --- 2. GRÁFICA EN VIVO (SERVER STATS) ---
+        const ctxLive = document.getElementById('serverLiveChart');
+        if (ctxLive) {
+            const initialData = Array(50).fill(0);
+            const liveChart = new Chart(ctxLive, {
+                type: 'line',
+                data: {
+                    labels: Array(50).fill(''),
+                    datasets: [{
+                        data: initialData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        fill: true
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    animation: false,
+                    interaction: { intersect: false },
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { min: 0, max: 100, grid: { color: '#333' }, ticks: { display: false } } }
                 }
+            });
 
-                // Tarjetas
-                targets.forEach(card => {
-                    card.style.backgroundColor = '#1e1e1e';
-                    card.style.borderColor = '#333';
-                    card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
-                });
-
-                // Área del Pulso
-                if(pulseFeed) {
-                    pulseFeed.style.backgroundColor = '#121212';
-                    pulseFeed.style.borderColor = '#333';
-                }
-
-                // Botón Volver
-                if(backBtn) {
-                    backBtn.style.backgroundColor = '#333';
-                    backBtn.style.color = '#fff';
-                    backBtn.style.borderColor = '#555';
-                }
-
-                // Textos
-                textos.forEach(t => t.style.color = '#bbbbbb');
-                titulos.forEach(t => {
-                    t.style.color = '#ffffff';
-                    t.style.borderBottomColor = '#444';
-                    // Colorear iconos
-                    const icon = t.querySelector('i');
-                    if(icon) {
-                        if(t.classList.contains('pulse-title')) icon.style.color = '#ff6b6b'; // Rojo neón
-                        else icon.style.color = '#00cec9'; // Cian neón
-                    }
-                });
-
-                // Tiempos del pulso en neón
-                document.querySelectorAll('.pulse-time').forEach(pt => pt.style.color = '#00cec9');
-
-                // Actualizar Gráfica
-                if(window.myChart) {
-                    window.myChart.options.scales.x.ticks.color = '#e0e0e0';
-                    window.myChart.options.scales.y.ticks.color = '#e0e0e0';
-                    window.myChart.options.scales.y.grid.color = '#444';
-                    window.myChart.update();
-                }
-
-            } else {
-                // RESTAURAR MODO CLARO (Limpiar estilos inline)
-                if(header) header.style = "";
-                targets.forEach(card => card.style = "");
-                if(pulseFeed) pulseFeed.style = "";
-                if(backBtn) backBtn.style = "";
-                textos.forEach(t => t.style = "");
-                titulos.forEach(t => {
-                    t.style = "";
-                    const icon = t.querySelector('i');
-                    if(icon) icon.style = "";
-                });
-                document.querySelectorAll('.pulse-time').forEach(pt => pt.style = "");
-
-                if(window.myChart) {
-                    window.myChart.options.scales.x.ticks.color = '#666';
-                    window.myChart.options.scales.y.ticks.color = '#666';
-                    window.myChart.options.scales.y.grid.color = '#eee';
-                    window.myChart.update();
-                }
-            }
+            // Bucle de actualización (Server Stats)
+            setInterval(() => {
+                // 🔥 CORRECCIÓN AQUÍ TAMBIÉN
+                fetch("{{ url_for('server_stats') }}")
+                    .then(r => r.json())
+                    .then(data => {
+                        // Actualizar UI
+                        document.getElementById('cpu-val').innerText = data.cpu;
+                        document.getElementById('ram-val').innerText = data.ram_mb;
+                        
+                        // Actualizar Gráfica
+                        liveChart.data.datasets[0].data.push(data.cpu);
+                        liveChart.data.datasets[0].data.shift();
+                        liveChart.update();
+                    })
+                    .catch(e => console.log("Monitor offline"));
+            }, 2000);
         }
 
-        // Ejecutar al cargar
-        setTimeout(aplicarModoOscuroDashboard, 100);
+        // --- 3. SOCKETS (EL PULSO) ---
+        if (typeof io !== 'undefined') {
+            const socket = io.connect(window.location.origin);
+            const feed = document.getElementById('pulse-feed');
 
-        // Escuchar botón del navbar
-        const toggleBtn = document.getElementById('theme-toggle');
-        if(toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                setTimeout(aplicarModoOscuroDashboard, 50);
+            socket.on('connect', () => {
+                socket.emit('admin_join_pulse'); // Unirse a la sala de admins
             });
+
+            socket.on('new_activity', (data) => {
+                const emptyMsg = feed.querySelector('.empty-pulse');
+                if(emptyMsg) emptyMsg.remove();
+
+                const div = document.createElement('div');
+                div.style.cssText = "padding: 10px; border-bottom: 1px dashed var(--borde-tarjeta); font-size: 0.85rem; color: var(--color-texto); animation: slideIn 0.3s ease-out;";
+                
+                // Color según tipo
+                let color = "var(--color-primario)";
+                if(data.type === 'danger') color = "#ef4444";
+                if(data.type === 'success') color = "#10b981";
+
+                div.innerHTML = `<span style="font-weight:bold; color:${color}; margin-right:5px;">[${new Date().toLocaleTimeString()}]</span> ${data.msg}`;
+                
+                feed.prepend(div);
+                if(feed.children.length > 20) feed.lastChild.remove();
+            });
+
+            // --- 4. FUNCIÓN BROADCAST (Integrada aquí para acceso al socket) ---
+            window.sendBroadcast = function() {
+                const input = document.getElementById('broadcastMessage');
+                const btn = document.getElementById('btnTransmit');
+                const message = input.value.trim();
+
+                if (!message) {
+                    input.style.border = '2px solid #ef4444';
+                    setTimeout(() => input.style.border = '1px solid #334155', 500);
+                    return;
+                }
+
+                socket.emit('admin_broadcast_message', { message: message });
+
+                // Efecto visual
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> ENVIANDO...';
+                btn.disabled = true;
+                
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-check"></i> ¡ENVIADO!';
+                    btn.style.backgroundColor = '#22c55e';
+                    input.value = '';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.backgroundColor = '';
+                        btn.disabled = false;
+                    }, 1500);
+                }, 500);
+            };
         }
     });
 </script>
+
+<style>
+    @keyframes slideIn { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    /* Estilos extra para botones específicos */
+    .btn { cursor: pointer; transition: all 0.2s; }
+    .btn:active { transform: scale(0.95); }
+</style>
 {% endblock %}

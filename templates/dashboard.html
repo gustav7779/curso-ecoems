@@ -86,7 +86,7 @@
                                    class="btn shadow-lg">
                                     Revisar Detalle
                                 </a>
-                                <a href="{{ url_for('student_exam_history') }}" 
+                                <a href="{{ url_for('student_exams') }}" 
                                    class="btn" style="background: transparent; border: 2px solid var(--borde-input); color: var(--color-texto);">
                                     📜 Historial
                                 </a>
@@ -97,7 +97,7 @@
                                     <i class="fas fa-clipboard-check text-4xl"></i>
                                 </div>
                                 <p class="text-xl font-medium mb-6" style="color: var(--color-texto-secundario);">Aún no has completado ninguna simulación.</p>
-                                <a href="{{ url_for('exams_list') }}" 
+                                <a href="{{ url_for('student_exams') }}" 
                                    class="btn shadow-lg">
                                     ¡Comenzar Examen!
                                 </a>
@@ -128,7 +128,7 @@
                                 {% endfor %}
                             </div>
                             <div class="mt-6 text-center">
-                                <a href="{{ url_for('exams_list') }}" class="font-bold text-sm hover:underline" style="color: var(--color-primario);">
+                                <a href="{{ url_for('student_exams') }}" class="font-bold text-sm hover:underline" style="color: var(--color-primario);">
                                     Ir a practicar temas &rarr;
                                 </a>
                             </div>
@@ -218,7 +218,7 @@
                     <i class="fas fa-rocket text-4xl text-yellow-400 mb-3 drop-shadow-md"></i>
                     <h3 class="font-bold text-lg mb-1">¿Listo para practicar?</h3>
                     <p class="text-gray-300 text-sm mb-4">Hay nuevos exámenes disponibles.</p>
-                    <a href="{{ url_for('exams_list') }}" 
+                    <a href="{{ url_for('student_exams') }}" 
                        class="block w-full py-3 font-bold rounded-xl transition shadow-lg no-underline"
                        style="background: white; color: #111827;">
                         Ver Exámenes

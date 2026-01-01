@@ -2,289 +2,434 @@
 {% block title %}Editar Examen: {{ exam.title }}{% endblock %}
 
 {% block content %}
-    <div class="container edit-exam-container">
+
+{# ========================================================= #}
+{# 🎨 ESTILOS CENTRO DE COMANDO (MODO OSCURO + UI MODERNA) 🎨 #}
+{# ========================================================= #}
+<style>
+    :root {
+        /* Paleta Base Light */
+        --bg-body: #f3f4f6;
+        --bg-card: #ffffff;
+        --bg-input: #f9fafb;
+        --text-main: #111827;
+        --text-sec: #6b7280;
+        --border: #e5e7eb;
         
-        <!-- 🔑 CORRECCIÓN: Se usa un DIV en lugar de <header> para evitar conflictos con el HEADER principal de base.html 🔑 -->
-        <div class="page-title-bar">
-            <h1 class="header-title">✨ Centro de Comando de Examen</h1>
-            <p class="exam-meta">Gestión unificada de metadatos, horario y preguntas para **{{ exam.title }}**.</p>
+        /* Colores Acción */
+        --primary: #2563eb;       /* Azul fuerte */
+        --primary-hover: #1d4ed8;
+        --secondary: #8b5cf6;     /* Violeta */
+        --secondary-hover: #7c3aed;
+        --success: #10b981;       /* Verde */
+        --success-hover: #059669;
+        --info: #0ea5e9;          /* Cyan */
+        --info-hover: #0284c7;
+        
+        /* UI */
+        --radius: 12px;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    /* MODO OSCURO */
+    body.dark-mode {
+        --bg-body: #0f172a;
+        --bg-card: #1e293b;
+        --bg-input: #020617;
+        --text-main: #f3f4f6;
+        --text-sec: #94a3b8;
+        --border: #334155;
+        --primary: #3b82f6;
+        --primary-hover: #60a5fa;
+        --secondary: #a78bfa;
+        --secondary-hover: #c4b5fd;
+    }
+
+    /* Layout General */
+    .edit-exam-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 0 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    /* HEADER DE PÁGINA */
+    .page-title-bar {
+        text-align: center;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 30px;
+        position: static;
+        z-index: 1;
+    }
+    .header-title {
+        color: var(--text-main);
+        font-size: 2.2em;
+        font-weight: 800;
+        margin: 0 0 10px 0;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .exam-meta {
+        font-size: 1.1em;
+        color: var(--text-sec);
+        margin: 0;
+    }
+
+    /* GRID PRINCIPAL */
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 25px;
+    }
+    @media (min-width: 992px) {
+        .main-grid {
+            grid-template-columns: 1fr 2.5fr; /* Acciones (1) y Formulario (2.5) - Más ancho */
+            align-items: start;
+        }
+        .action-panel-card {
+            position: sticky;
+            top: 100px;
+        }
+    }
+
+    /* TARJETAS */
+    .card {
+        background: var(--bg-card);
+        padding: 30px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-subtitle {
+        font-size: 1.4em;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px dashed var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .card-subtitle i { color: var(--primary); }
+
+    .section-description {
+        color: var(--text-sec);
+        font-size: 0.95em;
+        margin-bottom: 25px;
+        line-height: 1.5;
+    }
+
+    /* BOTONES ACCIÓN (Panel Izquierdo) */
+    .full-width-btn {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 15px !important;
+        padding: 14px 0;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 10px;
+        gap: 10px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .full-width-btn:active { transform: scale(0.98); }
+
+    .primary-btn { 
+        background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
+        color: white; 
+    }
+    .secondary-btn { 
+        background: linear-gradient(135deg, var(--info), var(--info-hover)); 
+        color: white; 
+    }
+    .secondary-btn:hover { filter: brightness(1.1); }
+
+    .badge {
+        background: rgba(255, 255, 255, 0.25);
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 0.85em;
+    }
+
+    /* FORMULARIO */
+    .form-group { margin-bottom: 20px; }
+    .form-group label { 
+        display: block; 
+        margin-bottom: 8px; 
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+    
+    .exam-form input[type="text"], 
+    .exam-form textarea,
+    .exam-form input[type="datetime-local"] {
+        width: 100%; 
+        padding: 12px; 
+        background: var(--bg-input);
+        border: 1px solid var(--border); 
+        border-radius: 8px; 
+        color: var(--text-main);
+        font-family: inherit;
+        box-sizing: border-box; 
+        transition: all 0.2s;
+    }
+    
+    .exam-form input:focus, .exam-form textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        outline: none;
+    }
+
+    .separator {
+        border: 0;
+        border-top: 1px dashed var(--border);
+        margin: 30px 0;
+    }
+    .schedule-title {
+        font-size: 1.1em;
+        color: var(--primary);
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* ASIGNACIÓN DE ALUMNOS - REDISEÑADO */
+    .students-section-title {
+        font-size: 1.1em;
+        color: var(--primary);
+        font-weight: 700;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .students-box {
+        border: 1px solid var(--border);
+        padding: 20px;
+        border-radius: 12px;
+        background-color: var(--bg-input);
+    }
+
+    .students-box .help-text {
+        font-size: 0.9em;
+        color: var(--text-sec);
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .students-grid {
+        max-height: 300px; /* Un poco más alto */
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Tarjetas más compactas */
+        gap: 12px;
+        padding-right: 5px;
+    }
+    /* Scrollbar */
+    .students-grid::-webkit-scrollbar { width: 6px; }
+    .students-grid::-webkit-scrollbar-track { background: transparent; }
+    .students-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Estilo para la tarjeta del alumno */
+    .student-card-label {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--bg-card);
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    /* Ocultar el checkbox nativo */
+    .student-card-label input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+        height: 0;
+        width: 0;
+    }
+
+    /* Estilo cuando está seleccionado */
+    .student-card-label input[type="checkbox"]:checked + .student-info {
+        color: white;
+    }
+    .student-card-label:has(input[type="checkbox"]:checked) {
+        background-color: var(--primary);
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Icono y Nombre */
+    .student-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-main);
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    .student-info i {
+        font-size: 1.1em;
+        opacity: 0.8;
+    }
+
+
+    /* BOTÓN GUARDAR */
+    .save-btn {
+        background: linear-gradient(135deg, var(--success), var(--success-hover));
+        color: white;
+        font-size: 1.1em;
+        font-weight: 700;
+        margin-top: 30px;
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+        transition: transform 0.1s;
+    }
+    .save-btn:active { transform: scale(0.98); }
+
+    /* BOTÓN VOLVER */
+    .back-btn {
+        display: inline-block;
+        margin-top: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        color: var(--text-sec);
+        padding: 12px 20px;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .back-btn:hover {
+        color: var(--text-main);
+        border-color: var(--text-sec);
+        background: var(--bg-input);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 600px) {
+        .students-grid { grid-template-columns: 1fr; }
+        .page-title-bar { padding: 20px; }
+        .header-title { font-size: 1.8em; }
+    }
+</style>
+
+<div class="edit-exam-container">
+    
+    <div class="page-title-bar">
+        <h1 class="header-title">✨ Centro de Comando</h1>
+        <p class="exam-meta">Gestión unificada para <strong>{{ exam.title }}</strong></p>
+    </div>
+
+    <div class="main-grid">
+
+        <div class="card action-panel-card">
+            <h3 class="card-subtitle"><i class="fas fa-layer-group"></i> Contenido & Resultados</h3>
+            
+            <p class="section-description">Administra las preguntas o consulta el rendimiento de los alumnos.</p>
+
+            <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="full-width-btn primary-btn">
+                <i class="fas fa-pencil-alt"></i> Administrar Preguntas 
+                <span class="badge">{{ exam.questions | length | default(0) }}</span>
+            </a>
+
+            <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="full-width-btn secondary-btn">
+                <i class="fas fa-chart-pie"></i> Ver Resultados
+            </a>
         </div>
 
-        <div class="main-grid">
+        <div class="card form-card">
+            <h3 class="card-subtitle"><i class="fas fa-sliders-h"></i> Configuración General</h3>
+            
+            <form method="POST" class="exam-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <div class="card action-panel-card">
-                <h3 class="card-subtitle"><i class="fas fa-layer-group"></i> Gestión de Contenido</h3>
+                <div class="form-group">
+                    <label for="title">Título del Examen</label>
+                    <input type="text" id="title" name="title" value="{{ exam.title }}" required>
+                </div>
                 
-                <p class="section-description">Administra el contenido individual o consulta los resultados de los alumnos.</p>
-
-                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="button primary-btn full-width-btn">
-                    <i class="fas fa-pencil-alt"></i> Administrar Preguntas 
-                    <span class="badge">({{ exam.questions | length | default(0) }} Total)</span>
-                </a>
-
-                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="button secondary-btn full-width-btn view-results-btn">
-                    <i class="fas fa-chart-bar"></i> Ver Resultados de Alumnos
-                </a>
-            </div>
-
-
-            <div class="card form-card">
-                <h3 class="card-subtitle"><i class="fas fa-clock"></i> Programación y Metadatos</h3>
+                <div class="form-group">
+                    <label for="description">Descripción (Opcional)</label>
+                    <textarea id="description" name="description" rows="4">{{ exam.description }}</textarea>
+                </div>
                 
-                <form method="POST" class="exam-form">
-                    
-                    <!-- 🔥 ¡TOKEN CSRF CORREGIDO! 🔥 -->
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <hr class="separator">
+                <h4 class="schedule-title"><i class="far fa-clock"></i> Horario de Acceso (UTC)</h4>
 
-                    <div class="form-group">
-                        <label for="title">Título del Examen:</label>
-                        <input type="text" id="title" name="title" value="{{ exam.title }}" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="description">Descripción del Examen (Opcional):</label>
-                        <textarea id="description" name="description" rows="4">{{ exam.description }}</textarea>
-                    </div>
-                    
-                    <hr class="separator">
-                    <h4 class="schedule-title">Horario de Desbloqueo (UTC)</h4>
+                <div class="form-group">
+                    <label for="start_datetime">Fecha de Inicio</label>
+                    <input type="datetime-local" id="start_datetime" name="start_datetime" value="{{ start_date_str }}">
+                </div>
 
-                    <div class="form-group schedule-group">
-                        <label for="start_datetime">Fecha y Hora de **Inicio**:</label>
-                        <input type="datetime-local" id="start_datetime" name="start_datetime" value="{{ start_date_str }}" class="datetime-input">
-                    </div>
+                <div class="form-group">
+                    <label for="end_datetime">Fecha de Cierre</label>
+                    <input type="datetime-local" id="end_datetime" name="end_datetime" value="{{ end_date_str }}">
+                </div>
 
-                    <div class="form-group schedule-group">
-                        <label for="end_datetime">Fecha y Hora de **Fin**:</label>
-                        <input type="datetime-local" id="end_datetime" name="end_datetime" value="{{ end_date_str }}" class="datetime-input">
-                    </div>
+                <hr class="separator">
 
-                    <!-- 🔥 SECCIÓN DE ASIGNACIÓN DE ALUMNOS (AGREGADO) 🔥 -->
-                    <div class="form-group" style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 10px; color: #34495e;">
-                            👥 Asignar a Alumnos:
-                            <br>
-                            <small style="color: #666; font-weight: normal; font-size: 0.9em;">(Solo los alumnos seleccionados podrán ver y realizar este examen)</small>
-                        </label>
+                <div class="form-group">
+                    <div class="students-section-title">
+                        <i class="fas fa-users"></i> Asignar a Alumnos
+                    </div>
+                    <div class="students-box">
+                        <small class="help-text">Selecciona los alumnos que podrán acceder a este examen.</small>
                         
-                        <div style="max-height: 200px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding-right: 5px;">
+                        <div class="students-grid">
                             {% if students %}
                                 {% for student in students %}
-                                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: white; padding: 8px; border-radius: 5px; border: 1px solid #eee;">
-                                        <input type="checkbox" 
-                                               name="assigned_students" 
-                                               value="{{ student.id }}"
+                                    <label class="student-card-label">
+                                        <input type="checkbox" name="assigned_students" value="{{ student.id }}"
                                                {% if exam and student in exam.assigned_students %}checked{% endif %}>
-                                        <span style="font-size: 0.95em;">{{ student.username }}</span>
+                                        <div class="student-info">
+                                            <i class="fas fa-user-circle"></i>
+                                            <span>{{ student.username }}</span>
+                                        </div>
                                     </label>
                                 {% endfor %}
                             {% else %}
-                                <p style="color: #999; font-style: italic;">No hay alumnos registrados.</p>
+                                <p style="color: var(--text-sec); font-style: italic; text-align: center;">No hay alumnos registrados.</p>
                             {% endif %}
                         </div>
                     </div>
-                    <!-- FIN SECCIÓN ALUMNOS -->
-                    
-                    <button type="submit" class="button submit-button save-btn">💾 Guardar Cambios del Examen</button>
-                </form>
-            </div>
-            
+                </div>
+                
+                <button type="submit" class="save-btn">💾 Guardar Cambios</button>
+            </form>
         </div>
         
-        <a href="{{ url_for('admin_panel') }}" class="btn back-btn">⬅ Volver al Panel Admin</a>
     </div>
+    
+    <a href="{{ url_for('admin_panel') }}" class="back-btn">⬅ Volver al Panel Admin</a>
+</div>
 
-    <style>
-        /* Aseguramos íconos para Font Awesome */
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
-
-        /* --- Contenedor y Layout --- */
-        .edit-exam-container {
-            max-width: 1200px; /* Más ancho para el diseño de dos columnas */
-            margin: 30px auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.2s;
-        }
-        .card:hover {
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        /* BARRA DE TÍTULO PRINCIPAL (Antes .edit-header) */
-        .page-title-bar {
-            text-align: center;
-            background: linear-gradient(135deg, #f0f4f8, #ffffff);
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            padding: 30px;
-            /* 🔑 Aseguramos que NO sea sticky para evitar la superposición 🔑 */
-            position: static; 
-            z-index: 1; 
-        }
-        .header-title {
-            color: #34495e;
-            font-size: 2.2em;
-            font-weight: 800;
-        }
-        .exam-meta {
-            font-size: 1em;
-            color: #7f8c8d;
-        }
-        
-        /* SUBTÍTULOS DE TARJETA */
-        .card-subtitle {
-            font-size: 1.4em;
-            font-weight: 600;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 1px dashed #e0e0e0;
-        }
-        .schedule-title {
-            font-size: 1.1em;
-            color: #2980b9;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .separator {
-            border: 0;
-            border-top: 1px solid #eee;
-            margin: 20px 0;
-        }
-
-        /* 🔑 LAYOUT DE ESCRITORIO (Dos Columnas) 🔑 */
-        @media (min-width: 768px) {
-            .main-grid {
-                grid-template-columns: 1fr 2fr; /* Acciones (1) y Formulario (2) */
-                align-items: start;
-            }
-            .action-panel-card {
-                order: 0; 
-                height: fit-content;
-                /* CORRECCIÓN: Ajustamos el 'top' para que el menú principal lo respete. */
-                position: sticky;
-                top: 100px; /* Baja 100px para evitar el menú principal (Header) */
-            }
-        }
-        
-        /* --- Formulario y Controles --- */
-        .form-group { margin-bottom: 15px; }
-
-        .form-group label { 
-            display: block; 
-            margin-bottom: 5px; 
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .exam-form input[type="text"], 
-        .exam-form textarea,
-        .exam-form input[type="datetime-local"] {
-            width: 100%; 
-            padding: 12px; 
-            border: 1px solid #ccc; 
-            border-radius: 8px; 
-            box-sizing: border-box; 
-            transition: border-color 0.2s;
-        }
-        
-        .exam-form input:focus, .exam-form textarea:focus {
-            border-color: #2ecc71;
-            box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
-            outline: none;
-        }
-
-        /* --- Botones --- */
-        .full-width-btn {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            margin: 10px 0 !important;
-            padding: 12px 0;
-            font-weight: 700;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 8px;
-            gap: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-        }
-
-        .save-btn {
-            background: #2ecc71; 
-            font-size: 1.2em;
-            margin-top: 30px;
-            width: 100%;
-            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4);
-        }
-        .save-btn:hover { background: #27ae60; }
-        
-        /* Paleta de Colores Vivos */
-        .primary-btn { background: #3498db; color: white; } /* Azul Brillante */
-        .primary-btn:hover { background: #2980b9; }
-
-        .secondary-btn { background: #9b59b6; color: white; } /* Púrpura Suave */
-        .secondary-btn:hover { background: #8e44ad; } 
-
-        .view-results-btn { background: #1abc9c !important; color: white; } /* Turquesa */
-        .view-results-btn:hover { background: #16a085 !important; }
-
-        .back-btn {
-            margin-top: 20px;
-            display: inline-block;
-            background: #7f8c8d; 
-            padding: 10px 15px;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-        }
-        
-        .section-description {
-            color: #7f8c8d;
-            font-size: 0.9em;
-            margin-bottom: 20px;
-        }
-
-        /* Estilos para scrollbar de la lista de alumnos */
-        .form-group div::-webkit-scrollbar {
-            width: 6px;
-        }
-        .form-group div::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        .form-group div::-webkit-scrollbar-thumb {
-            background: #ccc; 
-            border-radius: 3px;
-        }
-        .form-group div::-webkit-scrollbar-thumb:hover {
-            background: #aaa; 
-        }
-        
-        /* Ajuste móvil para checkboxes */
-        @media (max-width: 600px) {
-            .form-group div[style*="grid-template-columns"] {
-                grid-template-columns: 1fr !important;
-            }
-        }
-    </style>
 {% endblock %}

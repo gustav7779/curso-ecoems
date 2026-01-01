@@ -5,33 +5,40 @@
 {% block content %}
     
     <div class="header-exam-review-title">
-        <h1>🔍 Revisión de Examen: {{ exam.title }}</h1>
+        <h1>🔍 Revisión de Examen</h1>
+        <h2 class="exam-subtitle">{{ exam.title }}</h2>
         {% if result.submission_type == 'auto' %}
-            <p id="exam-submitted-message" class="auto">Tu tiempo se agotó y el examen fue enviado automáticamente.</p>
+            <p id="exam-submitted-message" class="auto"><i class="fas fa-clock"></i> El tiempo se agotó y el examen fue enviado automáticamente.</p>
         {% else %}
-            <p id="exam-submitted-message" class="manual">Ya has enviado tu examen. Estas son tus respuestas.</p>
+            <p id="exam-submitted-message" class="manual"><i class="fas fa-check-double"></i> Examen enviado correctamente. Estas son tus respuestas.</p>
         {% endif %}
     </div>
 
     <div class="container review-container">
         
-        <a href="{{ url_for('student_exams') }}" class="btn back-nav-btn">⬅ Volver al Historial</a>
+        <div class="nav-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn dashboard-nav-btn">
+                <i class="fas fa-th-large"></i> Ir al Panel Principal
+            </a>
+        </div>
         
         {% if exam.questions %}
             {% for question in exam.questions %}
                 {% set answer = answers_dict.get(question.id) %}
                 
                 <div class="question-card {% if answer %}answered{% else %}unanswered{% endif %}">
-                    <h3 class="question-title">Pregunta {{ loop.index }}:</h3>
+                    <div class="card-header">
+                        <h3 class="question-title">Pregunta {{ loop.index }}</h3>
+                        <span class="subject-tag">{{ question.subject or 'General' }}</span>
+                    </div>
                     
                     <p class="question-text">{{ question.text }}</p>
-                    <p class="question-subject">Materia: <strong>{{ question.subject or 'General' }}</strong></p>
 
                     {% if question.image_filename %}
-                        <p class="image-label">Imagen de apoyo:</p>
-                       <img src="{{ question.image_filename }}">
-                             alt="Imagen de apoyo para la pregunta" 
-                             class="question-image">
+                       <div class="image-wrapper">
+                           <p class="image-label"><i class="fas fa-image"></i> Imagen de apoyo:</p>
+                           <img src="{{ question.image_filename }}" alt="Apoyo visual" class="question-image">
+                       </div>
                     {% endif %}
                     
                     <div class="options-and-feedback">
@@ -42,318 +49,230 @@
                                 {% if option_text %}
                                     
                                     {% if exam.answers_released %}
-                                        
                                         {% set is_correct = (letter == question.correct_option) %}
                                         {% set is_student_choice = (answer and letter == answer.response) %}
                                         
                                         <div class="option-item 
                                             {% if is_correct %}correct-option-bg{% endif %}
-                                            {% if is_student_choice and not is_correct %}wrong-response-bg{% endif %}
-                                            ">
+                                            {% if is_student_choice and not is_correct %}wrong-response-bg{% endif %}">
                                             <span class="option-letter">{{ letter }})</span>
                                             <span class="option-text">{{ option_text }}</span>
-                                            
-                                            {% if is_correct %}
-                                                <span class="correct-mark">(Correcta)</span>
-                                            {% endif %}
+                                            {% if is_correct %}<span class="correct-mark"><i class="fas fa-check-circle"></i></span>{% endif %}
                                         </div>
-
                                     {% else %}
-
-                                        <div class="option-item 
-                                            {% if answer and letter == answer.response %}student-choice-bg{% endif %}
-                                            ">
+                                        <div class="option-item {% if answer and letter == answer.response %}student-choice-bg{% endif %}">
                                             <span class="option-letter">{{ letter }})</span>
                                             <span class="option-text">{{ option_text }}</span>
                                         </div>
-
                                     {% endif %}
-                                    
-                                    {% endif %}
+                                {% endif %}
                             {% endfor %}
                         </div>
 
                         <div class="student-review-info">
-                            <h4>Tu Respuesta:</h4>
-                            <p class="response-display">
-                                <strong>{{ (answer.response if answer else None) or '--- Sin Responder ---' }}</strong>
-                            </p>
-
-                            <h4>Resultado:</h4>
-                            
-                            {% if exam.answers_released %}
-                                <p class="grade-display">
-                                    {% if answer and answer.grade == 1.0 %}
-                                        <span class="grade-correct">✅ Correcto</span>
-                                    {% elif answer %}
-                                        <span class="grade-incorrect">❌ Incorrecto</span>
-                                    {% else %}
-                                        <span class="grade-manual">⚠️ Sin Respuesta</span>
-                                    {% endif %}
+                            <div class="info-section">
+                                <h4>Tu Respuesta:</h4>
+                                <p class="response-display">
+                                    <span class="letter-badge">{{ (answer.response if answer else '-') }}</span>
+                                    <strong>{{ (answer.response if answer else '--- Sin Responder ---') }}</strong>
                                 </p>
-                                
-                                {% if answer and answer.feedback %}
-                                    <div class="feedback-box">
-                                        <strong>Retroalimentación:</strong><br>
-                                        {{ answer.feedback }}
-                                    </div>
-                                {% endif %}
-
-                            {% else %}
-                                <p class="grade-display">
-                                     <span class="grade-manual">⌛ Las respuestas se liberarán pronto.</span>
-                                </p>
-                            {% endif %}
-
                             </div>
+
+                            <div class="info-section">
+                                <h4>Resultado:</h4>
+                                {% if exam.answers_released %}
+                                    <p class="grade-display">
+                                        {% if answer and answer.grade == 1.0 %}
+                                            <span class="grade-correct"><i class="fas fa-check"></i> Correcto</span>
+                                        {% elif answer %}
+                                            <span class="grade-incorrect"><i class="fas fa-times"></i> Incorrecto</span>
+                                        {% else %}
+                                            <span class="grade-manual"><i class="fas fa-exclamation-triangle"></i> No contestada</span>
+                                        {% endif %}
+                                    </p>
+                                    
+                                    {% if answer and answer.feedback %}
+                                        <div class="feedback-box">
+                                            <i class="fas fa-comment-dots"></i> <strong>Retroalimentación:</strong><br>
+                                            {{ answer.feedback }}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="grade-display">
+                                         <span class="grade-manual"><i class="fas fa-hourglass-half"></i> Respuestas protegidas.</span>
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
         {% else %}
-            <p class="no-items-message">No se encontraron preguntas o respuestas para este examen.</p>
+            <div class="no-items-message">
+                <i class="fas fa-info-circle"></i> No se encontraron preguntas o respuestas para este examen.
+            </div>
         {% endif %}
 
-        <a href="{{ url_for('student_exams') }}" class="btn back-nav-btn">⬅ Volver al Historial</a>
+        <div class="nav-actions bottom">
+            <a href="{{ url_for('dashboard') }}" class="btn dashboard-nav-btn">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
     </div>
 
     <style>
-        /* --- Título de la Página --- */
+        /* --- Modernización y Modo Nocturno --- */
+        :root {
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-sec: #7f8c8d;
+            --border-color: #eee;
+            --option-bg: #f8fbfc;
+            --info-bg: #fffbe6;
+            --info-border: #f39c12;
+            --header-grad: linear-gradient(135deg, #3498db, #1e3c72);
+        }
+
+        body.dark-mode {
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-sec: #94a3b8;
+            --border-color: #334155;
+            --option-bg: #0f172a;
+            --info-bg: #2d2613;
+            --info-border: #b45309;
+            --header-grad: linear-gradient(135deg, #1e293b, #0f172a);
+        }
+
         .header-exam-review-title {
-            background: linear-gradient(90deg, #3498db, #2980b9);
+            background: var(--header-grad);
             color: white; 
-            padding: 25px;
+            padding: 40px 20px;
             text-align: center; 
-            border-radius: 0 0 10px 10px;
+            border-radius: 0 0 30px 30px;
             margin-bottom: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
-        .header-exam-review-title h1, .header-exam-review-title p {
-            margin: 0;
-        }
-        /* --- Estilos para el mensaje de envío --- */
+
+        .exam-subtitle { font-size: 1.2rem; opacity: 0.9; font-weight: 300; margin-top: 5px; }
+
         #exam-submitted-message {
-            font-size: 1.1em;
-            font-weight: 500;
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            display: inline-block;
-        }
-        #exam-submitted-message.manual {
-            background: rgba(46, 204, 113, 0.2); /* Verde claro */
-            color: #fff;
-        }
-        #exam-submitted-message.auto {
-            background: rgba(241, 196, 15, 0.2); /* Amarillo claro */
-            color: #fff;
-        }
-
-        /* --- Contenedor Principal (Centrado) --- */
-        .review-container {
-            max-width: 950px;
-            margin: 20px auto;
-        }
-
-        .back-nav-btn {
-            background: #7f8c8d;
-            padding: 10px 15px;
-            margin-bottom: 20px;
-            transition: background 0.3s, transform 0.2s;
-            display: inline-block;
-        }
-        .back-nav-btn:hover {
-            background: #5c6a74;
-            transform: translateX(-3px);
-        }
-
-        /* --- Tarjeta de Pregunta --- */
-        .question-card {
-            background: white;
-            padding: 25px;
-            margin-bottom: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-left: 5px solid #bdc3c7; /* Gris por defecto */
-        }
-        
-        .question-card.answered {
-            border-left-color: #3498db;
-        }
-        .question-card.unanswered {
-            border-left-color: #e74c3c; /* Roja si no la respondió */
-        }
-        
-        .question-title {
-            font-size: 1.4em;
-            color: #34495e;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .question-text {
-            font-size: 1.1em;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .question-subject {
-            font-size: 0.9em;
-            color: #7f8c8d;
-        }
-        .question-image { 
-            max-width: 100%; 
-            height: auto; 
-            border: 5px solid #ecf0f1; 
-            margin-top: 10px;
-            border-radius: 8px;
-        }
-        .image-label {
-            margin-bottom: 5px;
-        }
-
-        /* --- Grupo de Opciones y Feedback (FLEX) --- */
-        .options-and-feedback {
-            display: flex;
-            gap: 20px;
+            font-size: 0.95rem;
             margin-top: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
         }
 
-        .options-group, .student-review-info {
-            flex: 1; /* Distribución uniforme */
-            padding: 15px;
+        .review-container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+
+        /* Botón Panel */
+        .nav-actions { margin-bottom: 25px; }
+        .nav-actions.bottom { margin-top: 40px; text-align: center; }
+
+        .dashboard-nav-btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        .dashboard-nav-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+            color: white;
+        }
+
+        /* Tarjeta de Pregunta */
+        .question-card {
+            background: var(--card-bg);
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease;
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .subject-tag {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 12px;
             border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
         }
+        body.dark-mode .subject-tag { background: #0c4a6e; color: #7dd3fc; }
 
-        .options-group {
-            background: #f8fbfc;
-            border: 1px solid #f0f0f0;
-        }
-        .student-review-info {
-            background: #fdfae5; /* Amarillo muy suave para la respuesta */
-            border: 1px solid #f39c12;
-        }
-        
-        .student-review-info h4 {
-            font-size: 1.1em;
-            color: #2c3e50;
-            margin-top: 0;
-            border-bottom: 1px dashed #ddd;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
+        .question-title { font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin: 0; }
+        .question-text { font-size: 1.15rem; color: var(--text-main); line-height: 1.5; margin-bottom: 20px; }
 
-        /* --- Estilos de Opciones --- */
+        .image-wrapper { margin-bottom: 25px; padding: 15px; background: var(--option-bg); border-radius: 15px; }
+        .question-image { border-radius: 10px; max-height: 400px; width: auto; max-width: 100%; display: block; margin: 0 auto; }
+
+        .options-and-feedback { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+
+        .options-group { background: var(--option-bg); padding: 20px; border-radius: 15px; }
+        .student-review-info { background: var(--info-bg); border: 1px solid var(--info-border); padding: 20px; border-radius: 15px; }
+
         .option-item {
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            border-radius: 5px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             display: flex;
-            align-items: flex-start;
-            font-size: 0.95em;
-            position: relative;
-            border: 1px solid transparent; /* Borde base */
-        }
-        .option-letter {
-            font-weight: bold;
-            margin-right: 10px;
-            flex-shrink: 0;
-        }
-        
-        /* --- 🔥 ESTILOS PARA LOS DOS MODOS 🔥 --- */
-        
-        /* 1. MODO "CIEGO" (Solo resalta la elección del alumno) */
-        .student-choice-bg {
-            background: #eaf6ff; /* Azul claro */
-            border-color: #3498db;
-            font-weight: bold;
-            color: #2980b9;
+            align-items: center;
+            color: var(--text-main);
         }
 
-        /* 2. MODO "LIBERADO" (Muestra verdes y rojos) */
-        .correct-option-bg {
-            background: #d4edda; /* Verde */
-            border-color: #2ecc71;
+        .letter-badge {
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-right: 12px;
             font-weight: bold;
         }
-        .wrong-response-bg {
-            background: #f8d7da; /* Rojo */
-            border-color: #e74c3c;
-            text-decoration: line-through;
-        }
-        .correct-mark {
-            font-weight: bold;
-            color: #27ae60;
-            margin-left: auto;
-            font-size: 0.9em;
-        }
+
+        /* Colores de validación */
+        .correct-option-bg { background: #dcfce7 !important; border-color: #22c55e !important; color: #166534 !important; }
+        .wrong-response-bg { background: #fee2e2 !important; border-color: #ef4444 !important; color: #991b1b !important; }
+        .student-choice-bg { border-color: #3498db !important; background: #f0f9ff !important; }
         
-        /* --- Visualización de Calificación --- */
-        .response-display {
-            font-size: 1.1em;
-            color: #34495e;
-        }
-        .grade-display {
-            margin-top: 15px;
-            font-weight: bold;
-        }
-        .grade-correct { 
-            color: #27ae60; /* Verde */
-            font-size: 1.1em;
-        }
-        .grade-incorrect { 
-            color: #e74c3c; /* Rojo */
-            font-size: 1.1em;
-        }
-        .grade-manual { 
-            color: #e67e22; /* Naranja */
-            font-size: 1.1em; 
-        }
+        body.dark-mode .correct-option-bg { background: #064e3b !important; color: #a7f3d0 !important; }
+        body.dark-mode .wrong-response-bg { background: #450a0a !important; color: #fecaca !important; }
+
+        .grade-display span { padding: 6px 16px; border-radius: 10px; font-weight: 700; }
+        .grade-correct { background: #dcfce7; color: #166534; }
+        .grade-incorrect { background: #fee2e2; color: #991b1b; }
+        .grade-manual { background: #fef3c7; color: #92400e; }
 
         .feedback-box {
-            border-top: 1px dashed #f1c40f;
-            padding-top: 10px;
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #555;
-            background: #fff;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        /* --- 🔥 FIN DE ESTILOS DE MODO 🔥 --- */
-
-        .no-items-message {
-            padding: 15px;
-            background: #fdf3c7;
-            border-left: 5px solid #f1c40f;
-            border-radius: 5px;
             margin-top: 15px;
-            font-weight: bold;
+            padding: 12px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            border-left: 4px solid #3498db;
         }
 
-        /* --- MEDIA QUERY (Móvil) --- */
         @media (max-width: 768px) {
-            .review-container {
-                width: 100%;
-                padding: 0 10px;
-            }
-            .question-card {
-                padding: 15px;
-            }
-
-            .options-and-feedback {
-                flex-direction: column; /* Apilamos las secciones */
-                gap: 15px;
-            }
-            
-            .student-review-info {
-                order: -1; /* Mueve la info del alumno al principio de la tarjeta */
-            }
-            
-            .back-nav-btn {
-                width: 100%;
-                text-align: center;
-                transform: none;
-            }
+            .options-and-feedback { grid-template-columns: 1fr; }
+            .header-exam-review-title h1 { font-size: 1.5rem; }
+            .question-card { padding: 20px; }
         }
     </style>
 {% endblock %}
