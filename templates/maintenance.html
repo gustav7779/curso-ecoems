@@ -3,140 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sitio en Mantenimiento | Curso ECOEMS</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Mantenimiento | Curso ECOEMS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap');
+
         :root {
-            --bg-dark: #0f172a;
-            --primary: #6366f1;
-            --accent: #8b5cf6;
-            --glass: rgba(255, 255, 255, 0.05);
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-color: #050505;
+            --accent-color: #7000ff;
+            --text-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
         }
 
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
-            background-color: var(--bg-dark);
+            background-color: var(--bg-color);
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #fff;
+                radial-gradient(circle at 50% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 0%, rgba(124, 58, 237, 0.1) 0%, transparent 40%);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
         }
 
-        .container {
-            text-align: center;
+        /* --- FONDO DE ESTRELLAS ANIMADAS --- */
+        .stars {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* --- TARJETA PRINCIPAL (GLASSMORPHISM) --- */
+        .maintenance-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
             padding: 3rem;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            max-width: 500px;
-            width: 90%;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 480px;
+            width: 85%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
             position: relative;
             z-index: 10;
+            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        /* Animación del Cohete */
-        .icon-box {
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- COHETE INTERACTIVO --- */
+        .rocket-container {
             font-size: 5rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             display: inline-block;
+            cursor: pointer;
+            transition: transform 0.3s;
             animation: float 3s ease-in-out infinite;
-            filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.5));
+            filter: drop-shadow(0 0 25px rgba(112, 0, 255, 0.4));
+        }
+        .rocket-container:hover {
+            transform: scale(1.1);
+        }
+        .rocket-container.launching {
+            animation: launch 1.5s ease-in-out forwards;
         }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
+        }
+        @keyframes launch {
+            0% { transform: translateY(0) scale(1); }
+            40% { transform: translateY(20px) scale(0.8); }
+            100% { transform: translateY(-1000px) scale(1.5); opacity: 0; }
         }
 
+        /* --- TEXTOS --- */
         h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin: 0 0 1rem 0;
-            background: linear-gradient(to right, #fff, #94a3b8);
+            font-size: 2rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(90deg, #fff, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: -1px;
         }
 
         p {
             color: #94a3b8;
-            font-size: 1.1rem;
+            font-size: 1rem;
             line-height: 1.6;
             margin-bottom: 2rem;
         }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 50px;
-            color: #818cf8;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
+        /* --- BARRA DE PROGRESO "FAKE" --- */
+        .loader-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .loader-bar {
+            height: 100%;
+            width: 40%;
+            background: linear-gradient(90deg, #7c3aed, #2563eb);
+            border-radius: 10px;
+            position: absolute;
+            animation: loading 2s infinite ease-in-out;
+            box-shadow: 0 0 15px #7c3aed;
+        }
+        @keyframes loading {
+            0% { left: -40%; }
+            100% { left: 100%; }
         }
 
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #818cf8;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(129, 140, 248, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(129, 140, 248, 0); }
-        }
-
-        .admin-link {
-            display: block;
-            margin-top: 2rem;
-            color: #475569;
+        .status-text {
             font-size: 0.85rem;
+            color: #8b5cf6;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* --- FOOTER / ADMIN --- */
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        .admin-trigger {
+            color: #334155;
             text-decoration: none;
             transition: color 0.3s;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 10px;
         }
-        .admin-link:hover { color: #fff; }
+        .admin-trigger:hover { color: #64748b; }
 
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="icon-box">🚀</div>
+    <div class="stars" id="stars"></div>
+
+    <div class="maintenance-card">
         
-        <div class="status-badge">
-            <div class="pulse-dot"></div>
-            Actualización en Curso
+        <div class="rocket-container" onclick="lanzarCohete(this)" title="¡Hazme clic!">
+            🚀
         </div>
 
-        <h1>Mejorando tu Experiencia</h1>
+        <span class="status-text">Actualización de Sistema</span>
         
-        <p>Estamos aplicando mejoras importantes a la plataforma del <strong>Curso ECOEMS</strong>. Volveremos a estar en línea muy pronto con nuevas funcionalidades.</p>
+        <h1>Estamos cocinando algo increíble</h1>
+        
+        <p>
+            La plataforma <strong>Curso ECOEMS</strong> está recibiendo mejoras importantes. 
+            Estamos ajustando los motores para brindarte una experiencia más rápida y segura.
+        </p>
 
-        <div style="font-size: 0.9rem; color: #64748b;">
-            Gracias por tu paciencia.<br>
-            — Gus (Admin)
+        <div class="loader-container">
+            <div class="loader-bar"></div>
         </div>
+        <small style="color: #64748b;">Progreso de la actualización...</small>
 
-        <a href="{{ url_for('login') }}" class="admin-link">
-            <i class="fas fa-lock"></i> Acceso Administrativo
-        </a>
+        <div class="footer">
+            &copy; 2026 Curso ECOEMS<br>
+            <a href="{{ url_for('login') }}" class="admin-trigger">
+                <i class="fas fa-lock"></i> Acceso Administrativo
+            </a>
+        </div>
     </div>
+
+    <script>
+        // 1. Generar Estrellas Aleatorias
+        const starsContainer = document.getElementById('stars');
+        const starCount = 50;
+
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            
+            // Posición aleatoria
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            // Tamaño aleatorio
+            const size = Math.random() * 3;
+            // Duración aleatoria
+            const duration = Math.random() * 3 + 2;
+
+            star.style.left = x + '%';
+            star.style.top = y + '%';
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.setProperty('--duration', duration + 's');
+
+            starsContainer.appendChild(star);
+        }
+
+        // 2. Función para lanzar el cohete
+        function lanzarCohete(element) {
+            element.classList.add('launching');
+            setTimeout(() => {
+                element.classList.remove('launching');
+                // Efecto sorpresa: Cambiar el emoji
+                element.innerHTML = '✨'; 
+                setTimeout(() => element.innerHTML = '🚀', 1000);
+            }, 1500);
+        }
+    </script>
 
 </body>
 </html>
