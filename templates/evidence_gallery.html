@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Galería Forense | Evidencias{% endblock %}
+
+{% block content %}
+
+<div class="gallery-container">
+    
+    <div class="gallery-header">
+        <div class="header-text">
+            <h1>📸 Galería de Evidencias</h1>
+            <p>Muro de incidencias detectadas por la IA en tiempo real.</p>
+        </div>
+        <div class="header-actions">
+            <button onclick="location.reload()" class="btn-refresh">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn-back">
+                <i class="fas fa-times"></i> Salir
+            </a>
+        </div>
+    </div>
+
+    <div class="evidence-grid">
+        {% for log in logs %}
+        <div class="evidence-card" onclick="openZoom('{{ log.id }}')">
+            
+            <div class="img-wrapper">
+                <img src="{{ url_for('static', filename='uploads/evidence/' + log.image_filename) }}" 
+                     alt="Evidencia" 
+                     loading="lazy"
+                     class="evidence-img"
+                     onerror="this.src='https://via.placeholder.com/300x200?text=Sin+Imagen'">
+                
+                <div class="overlay-info">
+                    <span class="timestamp"><i class="far fa-clock"></i> {{ log.timestamp.strftime('%H:%M') }}</span>
+                </div>
+            </div>
+
+            <div class="card-meta">
+                <div class="meta-header">
+                    <span class="user-badge">{{ log.user.username }}</span>
+                    <span class="exam-id">#{{ log.exam_id }}</span>
+                </div>
+                <div class="violation-tag {{ 'tag-red' if 'celular' in log.violation_type|lower or 'persona' in log.violation_type|lower else 'tag-yellow' }}">
+                    ⚠️ {{ log.violation_type }}
+                </div>
+            </div>
+
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-shield-alt"></i>
+            <h3>Todo tranquilo por aquí</h3>
+            <p>No hay evidencias fotográficas recientes.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<style>
+    :root {
+        --bg-dark: #0f172a;
+        --card-dark: #1e293b;
+        --text-main: #f1f5f9;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --accent: #3b82f6;
+    }
+
+    body { background-color: var(--bg-dark); color: var(--text-main); }
+
+    .gallery-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* HEADER */
+    .gallery-header { 
+        display: flex; justify-content: space-between; align-items: center; 
+        margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #334155;
+    }
+    .gallery-header h1 { margin: 0; font-size: 2rem; background: linear-gradient(90deg, #f87171, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gallery-header p { color: #94a3b8; margin: 5px 0 0; }
+
+    .btn-refresh, .btn-back {
+        background: var(--card-dark); border: 1px solid #334155; color: white;
+        padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold;
+    }
+    .btn-refresh:hover { background: var(--accent); border-color: var(--accent); }
+    .btn-back:hover { background: #334155; }
+
+    /* GRID */
+    .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    /* CARD */
+    .evidence-card {
+        background: var(--card-dark);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #334155;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: zoom-in;
+    }
+    .evidence-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); border-color: var(--accent); }
+
+    .img-wrapper { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #000; }
+    
+    /* Nota: Tu CSS original ya cubre la imagen dentro de .img-wrapper, 
+       así que la clase .evidence-img heredará estos estilos correctamente */
+    .img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+    
+    .evidence-card:hover img { transform: scale(1.05); opacity: 0.8; }
+
+    .overlay-info {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        padding: 20px 10px 10px;
+        color: white; font-size: 0.8rem; font-weight: bold;
+    }
+
+    .card-meta { padding: 12px; }
+    .meta-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; font-weight: bold; }
+    .user-badge { color: white; }
+    .exam-id { color: #64748b; font-size: 0.8rem; }
+
+    .violation-tag {
+        display: block; padding: 6px; border-radius: 6px; 
+        font-size: 0.75rem; text-transform: uppercase; font-weight: 800; text-align: center;
+    }
+    .tag-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .tag-yellow { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+    .empty-state { grid-column: 1 / -1; text-align: center; padding: 50px; color: #64748b; }
+    .empty-state i { font-size: 3rem; margin-bottom: 20px; opacity: 0.5; }
+
+</style>
+{% endblock %}

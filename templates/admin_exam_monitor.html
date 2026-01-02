@@ -174,6 +174,31 @@
         font-family: monospace;
     }
 
+    /* 🔥 NUEVO: Estilos Semáforo de Red 🔥 */
+    .ping-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        font-weight: bold;
+    }
+    .ping-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #bdc3c7; /* Gris por defecto */
+        transition: all 0.3s ease;
+    }
+    .ping-good { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+    .ping-fair { background-color: #f1c40f; }
+    .ping-bad { 
+        background-color: #e74c3c; 
+        box-shadow: 0 0 10px #e74c3c;
+        animation: flash-alert 1s infinite; 
+    }
+    @keyframes flash-alert { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
     /* Estilos de Celda: Estado */
     .status-badge {
         padding: 6px 12px;
@@ -318,10 +343,10 @@
             <thead>
                 <tr>
                     <th style="width: 20%;">Estudiante</th>
-                    <th style="width: 15%;">Estado</th>
+                    <th style="width: 10%; text-align: center;">📶 Red</th> <th style="width: 15%;">Estado</th>
                     <th style="width: 15%;">Radar de Seguridad</th>
                     <th style="width: 30%;">Caja de Herramientas</th>
-                    <th style="width: 15%;">Gestión de Tiempo</th>
+                    <th style="width: 10%;">Tiempo</th>
                     <th style="width: 5%;">Acción</th>
                 </tr>
             </thead>
@@ -339,6 +364,13 @@
                                 <strong>{{ data.username }}</strong>
                                 <span>ID: {{ data.user_id }}</span>
                             </div>
+                        </div>
+                    </td>
+
+                    <td style="text-align: center;">
+                        <div class="ping-display" id="ping-wrapper-{{ data.user_id }}">
+                            <div class="ping-dot" id="ping-dot-{{ data.user_id }}" title="Esperando datos..."></div>
+                            <span id="ping-text-{{ data.user_id }}" style="color: var(--text-light);">--</span>
                         </div>
                     </td>
 
@@ -384,7 +416,7 @@
                             <button class="cmd-btn btn-voice" onclick="sendRepairCommand('{{ data.user_id }}', 'speak')" data-tooltip="Voz TTS">
                                 <i class="fas fa-bullhorn"></i>
                             </button>
-                            <button class="cmd-btn btn-logs" style="background:#555;" onclick="sendRepairCommand('{{ data.user_id }}', 'ping')" data-tooltip="Ping">
+                            <button class="cmd-btn btn-logs" style="background:#555;" onclick="sendRepairCommand('{{ data.user_id }}', 'ping')" data-tooltip="Solicitar Ping">
                                 <i class="fas fa-wifi"></i>
                             </button>
 
@@ -490,6 +522,34 @@
     const EXAM_ID = "{{ exam.id }}";
 
     socket.on('connect', () => console.log("📡 Torre de Control Conectada"));
+
+    // --- 🔥 0. LISTENER DEL SEMÁFORO DE RED (NUEVO) 🔥 ---
+    socket.on('client_ping_update', (data) => {
+        // data trae: { user_id: 123, latency: 45 }
+        const dot = document.getElementById(`ping-dot-${data.user_id}`);
+        const text = document.getElementById(`ping-text-${data.user_id}`);
+        
+        if (dot && text) {
+            // Limpiar clases anteriores
+            dot.className = 'ping-dot';
+            
+            // Asignar color según velocidad
+            if (data.latency < 150) {
+                dot.classList.add('ping-good');
+                text.style.color = '#2ecc71';
+            } else if (data.latency < 500) {
+                dot.classList.add('ping-fair');
+                text.style.color = '#f1c40f';
+            } else {
+                dot.classList.add('ping-bad');
+                text.style.color = '#e74c3c';
+            }
+            
+            // Actualizar texto
+            text.innerText = `${data.latency}ms`;
+            dot.title = `Ping: ${data.latency}ms (Último: Hace instantes)`;
+        }
+    });
 
     // --- 1. COMANDOS DE REPARACIÓN (Grid Tools) ---
     function sendRepairCommand(userId, command) {

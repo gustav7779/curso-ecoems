@@ -420,6 +420,7 @@ class ViolationLog(db.Model):
     violation_type = db.Column(db.String(100), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.Text, nullable=True)
+    image_filename = db.Column(db.String(255), nullable=True)
 
 # ======================================================================
 # --- MANEJADORES DE SOCKETIO ---
@@ -497,7 +498,52 @@ def handle_student_message(data):
         emit("chat_notification", message_data, room="admin_pulse_room", namespace="/")
         
         app.logger.info(f"CHAT LIVE: Alumno {current_user.username} envió: {message_content}")
+        
+@socketio.on('record_violation')
+def handle_violation(data):
+    # data trae: {'violation_type': 'Celular', 'image': 'data:image/jpeg;base64...'}
+    
+    user_id = current_user.id
+    violation_type = data.get('violation_type', 'Conducta sospechosa')
+    image_base64 = data.get('image') # El texto gigante
+    
+    filename = None
 
+    # Lógica para convertir Texto Base64 -> Archivo JPG
+    if image_base64:
+        try:
+            # 1. Limpiar el encabezado del string (data:image/jpeg;base64,)
+            if ',' in image_base64:
+                header, encoded = image_base64.split(",", 1)
+            else:
+                encoded = image_base64
+            
+            # 2. Convertir a bytes
+            image_data = base64.b64decode(encoded)
+            
+            # 3. Generar nombre único
+            filename = f"evidencia_{user_id}_{uuid.uuid4().hex[:8]}.jpg"
+            
+            # 4. Ruta donde guardar (static/uploads/evidence)
+            # Asegúrate de crear la carpeta 'evidence' dentro de 'uploads' manualmente primero
+            save_path = os.path.join(app.root_path, 'static', 'uploads', 'evidence', filename)
+            
+            # 5. Guardar el archivo
+            with open(save_path, "wb") as f:
+                f.write(image_data)
+                
+        except Exception as e:
+            print(f"Error guardando imagen: {e}")
+
+    # Guardar en Base de Datos (Solo el nombre del archivo)
+    log = ViolationLog(
+        user_id=user_id,
+        exam_id=current_user.current_exam_id, # Asegúrate de tener este dato o pasarlo
+        violation_type=violation_type,
+        image_filename=filename # <--- Aquí guardamos "evidencia_123.jpg"
+    )
+    db.session.add(log)
+    db.session.commit()
 @socketio.on("send_individual_ping")
 @login_required
 def handle_individual_ping(data):
@@ -1758,7 +1804,26 @@ def new_announcement():
         return redirect(url_for("admin_panel"))
 
     return render_template("new_announcement.html")
-
+# ==========================================
+# 📸 GALERÍA DE EVIDENCIAS (MURO DE LA VERGÜENZA)
+# ==========================================
+@app.route('/admin/evidence_gallery')
+@login_required
+def evidence_gallery():
+    if current_user.role != 'admin':
+        flash("Acceso restringido.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    # 1. Obtenemos las últimas 50 evidencias que tengan FOTO
+    # Asumimos que tu modelo ViolationLog tiene un campo 'image_filename' o 'proof_data'
+    # Ajusta 'ViolationLog.image_filename' al nombre real de tu columna de imagen
+    evidence_logs = ViolationLog.query\
+        .filter(ViolationLog.image_filename != None)\
+        .order_by(ViolationLog.timestamp.desc())\
+        .limit(60)\
+        .all()
+    
+    return render_template('evidence_gallery.html', logs=evidence_logs)
 @app.route("/admin/announcements/edit/<int:announcement_id>", methods=["GET", "POST"])
 @login_required
 def edit_announcement(announcement_id):
@@ -1856,6 +1921,7 @@ def edit_exam(exam_id):
         start_date_str=format_datetime_local(exam.start_datetime),
         end_date_str=format_datetime_local(exam.end_datetime),
     )
+    
 
 @app.route("/admin/exams/new", methods=["GET", "POST"])
 @login_required
@@ -1898,7 +1964,6 @@ def new_exam():
         return redirect(url_for("admin_panel"))
 
     return render_template("new_exam.html", students=students)
-
 @app.route("/admin/exams/duplicate/<int:exam_id>", methods=["POST"])
 @login_required
 def duplicate_exam(exam_id):
@@ -1906,19 +1971,26 @@ def duplicate_exam(exam_id):
         return redirect(url_for("dashboard"))
 
     original_exam = Exam.query.get_or_404(exam_id)
+    
     try:
+        # 1. Crear la Copia del Examen
         new_exam = Exam(
-            title=f"{original_exam.title} (Copia - {datetime.now().strftime('%Y%m%d%H%M%S')})",
+            title=f"Copia de {original_exam.title}", # Título más limpio
             description=original_exam.description,
             start_datetime=original_exam.start_datetime,
             end_datetime=original_exam.end_datetime,
-            is_cancelled=False,
+            duration_minutes=original_exam.duration_minutes, # 🔥 IMPORTANTE: Copiar duración
+            is_active=False, # Nace apagado para que lo edites tranquilo
+            # is_cancelled=False, # (Si tu modelo lo tiene, descomenta)
+            # password=original_exam.password # (Si usas contraseña, cópiala o déjala vacía)
         )
         db.session.add(new_exam)
-        db.session.flush()
+        db.session.flush() # Generamos el ID nuevo antes de seguir
 
+        # 2. Clonar Preguntas (Limpiando estadísticas)
         for question in original_exam.questions:
             new_question = Question(
+                exam_id=new_exam.id,
                 text=question.text,
                 option_a=question.option_a,
                 option_b=question.option_b,
@@ -1927,23 +1999,28 @@ def duplicate_exam(exam_id):
                 correct_option=question.correct_option,
                 image_filename=question.image_filename,
                 subject=question.subject,
-                exam_id=new_exam.id,
-                times_answered=question.times_answered,
-                correct_answers=question.correct_answers,
-                difficulty_score=question.difficulty_score,
-                manual_difficulty=question.manual_difficulty,
+                
+                # 🔥 REINICIO DE ESTADÍSTICAS (Esto debe empezar en cero)
+                times_answered=0,
+                correct_answers=0,
+                
+                # Mantener dificultad calculada si quieres, o resetearla a 0.5
+                difficulty_score=question.difficulty_score, 
+                manual_difficulty=question.manual_difficulty
             )
             db.session.add(new_question)
 
         db.session.commit()
-        flash("Examen duplicado.", "success")
+        flash(f"✅ Examen duplicado: '{new_exam.title}'", "success")
+        
+        # 3. Redirigir directo a EDITAR la copia
+        return redirect(url_for("edit_exam", exam_id=new_exam.id))
+
     except Exception as e:
         db.session.rollback()
         flash(f"Error al duplicar: {e}", "danger")
-
-    return redirect(url_for("admin_panel"))
-
-@app.route("/admin/exam/<int:exam_id>/questions", methods=["GET", "POST"])
+        return redirect(url_for("admin_panel"))@app.route("/admin/exam/<int:exam_id>/questions", methods=["GET", "POST"])
+@app.route("/admin/exam/<int:exam_id>/add_question", methods=["GET", "POST"])
 @login_required
 def add_question(exam_id):
     if current_user.role not in ["admin", "ayudante"]:
@@ -2365,13 +2442,18 @@ def manage_users():
             return redirect(url_for("manage_users"))
 
         hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
+        
         new_user = User(
             username=username,
-            password=hashed_password,
+            password=hashed_password, # Contraseña encriptada (para Login)
             role=role,
             is_active=True,
             phone_number=phone_number if phone_number else None,
+            
+            # 🔥 AQUÍ ESTÁ EL CAMBIO CLAVE 🔥
+            visible_password=password  # Contraseña normal (para Impresión)
         )
+        
         db.session.add(new_user)
         try:
             db.session.commit()
@@ -2386,7 +2468,6 @@ def manage_users():
         return redirect(url_for("manage_users"))
 
     return render_template("manage_users.html", users=users, show_inactive=show_inactive)
-
 @app.route("/admin/users/toggle_status/<int:user_id>", methods=["POST"])
 @login_required
 def toggle_user_status(user_id):
@@ -2888,19 +2969,16 @@ def repair_scores(exam_id):
     except Exception as e:
         db.session.rollback()
         return f"❌ Error: {str(e)}"
-
-# --- RUTA TEMPORAL (Borrar después de usar) --
-
-@app.route('/fix_db_password')
-def fix_db_password():
+@app.route('/fix_db_evidence')
+def fix_db_evidence():
     try:
-        # Intentamos agregar la columna
-        db.session.execute(text('ALTER TABLE "user" ADD COLUMN visible_password VARCHAR(150)'))
+        # Intentamos agregar la columna a la tabla 'violation_log'
+        # Nota: Flask-SQLAlchemy suele llamar a la tabla 'violation_log' (minúsculas)
+        db.session.execute(text('ALTER TABLE violation_log ADD COLUMN image_filename VARCHAR(255)'))
         db.session.commit()
-        return "<h1>✅ ¡Misión Cumplida! Columna 'visible_password' creada.</h1>"
+        return "<h1>✅ ¡Listo! Columna 'image_filename' creada en ViolationLog.</h1>"
     except Exception as e:
-        # Si falla, probablemente es porque ya existe.
-        return f"<h1>⚠️ Aviso:</h1> <p>{str(e)}</p>"
+        return f"<h1>⚠️ Aviso (quizás ya existe):</h1> <p>{str(e)}</p>"
 # --- RUTA DE HISTORIAL (Opcional, si quieres que el botón funcione como historial) ---
 @app.route("/student/history")
 @login_required

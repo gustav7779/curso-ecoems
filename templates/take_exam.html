@@ -931,7 +931,43 @@
             window.autoSave(qid, val);
         });
     });
-    
+    // --- 9. MONITOREO DE CONEXIÓN DE RED ---
+    document.addEventListener("DOMContentLoaded", function() {
+        // Configuramos el sensor para que se ejecute cada 5 segundos
+        setInterval(measureLatency, 5000);
+    });
+
+    async function measureLatency() {
+        const start = Date.now();
+        
+        try {
+            // 1. Hacemos una petición ligera al servidor (sólo cabeceras, sin descargar nada)
+            await fetch(window.location.href, { 
+                method: 'HEAD', 
+                cache: 'no-cache' 
+            });
+            
+            // 2. Calculamos cuánto tardó en ir y volver
+            const end = Date.now();
+            const latency = end - start;
+
+            // 3. Enviamos el dato al Admin (si el socket está conectado)
+            if (typeof socket !== 'undefined' && socket.connected) {
+                socket.emit('report_network_status', { latency: latency });
+                
+                // Opcional: Mostrarle al alumno su propia velocidad en la consola (F12)
+                // console.log(`📡 Ping: ${latency}ms`);
+            }
+
+        } catch (error) {
+            // Si falla el fetch, es que no hay internet
+            console.error("⚠️ Sin conexión a internet");
+            if (typeof socket !== 'undefined') {
+                // Enviamos un valor alto (9999) para que aparezca ROJO en tu monitor
+                socket.emit('report_network_status', { latency: 9999 });
+            }
+        }
+    }
     </script>
 
 {% endif %}
