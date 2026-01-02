@@ -290,10 +290,17 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(50), nullable=False, default="student")
+    
+    # --- 🔥 AQUÍ AGREGAMOS EL BOLSILLO SECRETO 🔥 ---
+    visible_password = db.Column(db.String(150), nullable=True)
+    # -----------------------------------------------
+
     two_factor_secret = db.Column(db.String(32), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     phone_number = db.Column(db.String(20), nullable=True)
     current_session_token = db.Column(db.String(100), nullable=True, unique=True)
+    
+    # Relaciones (No las borres)
     results = db.relationship("ExamResult", backref="user", lazy=True)
     violation_logs = db.relationship("ViolationLog", backref="user", lazy=True)
 
@@ -417,7 +424,26 @@ class ViolationLog(db.Model):
 # ======================================================================
 # --- MANEJADORES DE SOCKETIO ---
 # ======================================================================
+# ==========================================
+# 🚦 SEMÁFORO DE RED (PING REAL)
+# ==========================================
 
+@socketio.on('report_network_status')
+def handle_network_report(data):
+    """
+    Recibe la velocidad del alumno y la reenvía a la Torre de Control.
+    Data esperada: {'latency': 150} (en milisegundos)
+    """
+    if not current_user.is_authenticated:
+        return
+    
+    # Solo reenviamos si hay un administrador escuchando
+    # Esto actualiza el puntito verde/rojo en tu tabla
+    socketio.emit('client_ping_update', {
+        'user_id': current_user.id,
+        'latency': data.get('latency', 0)
+    }, room='admin_pulse_room') # 'admin_pulse_room' es donde vive tu monitor
+    
 @socketio.on("connect")
 def handle_connect():
     app.logger.info("Socket CONNECTED. Attempting to get user context.")
@@ -1181,7 +1207,18 @@ def chart_data():
 
     return jsonify(labels=chart_labels, data=chart_data)
 
-
+# --- GENERADOR DE CREDENCIALES PDF ---
+@app.route('/admin/print_credentials')
+@login_required
+def print_credentials():
+    if current_user.role != 'admin':
+        flash("Acceso denegado.", "danger")
+        return redirect(url_for('dashboard'))
+    
+    # Buscamos solo a los alumnos activos
+    students = User.query.filter_by(role='student', is_active=True).all()
+    
+    return render_template('credentials_print.html', students=students)
 
 @app.route("/admin/api/exam_performance/<int:exam_id>")
 @login_required
@@ -2276,7 +2313,30 @@ def release_answers(exam_id):
         flash("Las respuestas ya estaban liberadas.", "info")
 
     return redirect(url_for("view_answers", exam_id=exam_id))
+# --- RUTA PARA IMPERSONAR (LOGIN AS) ---
+@app.route('/admin/impersonate/<int:user_id>')
+@login_required
+def impersonate_user(user_id):
+    # 1. Seguridad: Solo el admin puede hacer esto
+    if current_user.role != 'admin':
+        flash("🚫 Acceso denegado. No eres administrador.", "danger")
+        return redirect(url_for('dashboard'))
 
+    # 2. Buscar al usuario víctima
+    user_to_impersonate = User.query.get_or_404(user_id)
+
+    # 3. Evitar que un admin se impersone a sí mismo (sería tonto, pero pasa)
+    if user_to_impersonate.id == current_user.id:
+        flash("No puedes auto-impersonarte.", "warning")
+        return redirect(url_for('admin_users')) # O tu panel de usuarios
+
+    # 4. LA MAGIA: Logout Admin -> Login Alumno
+    logout_user() # Cerramos tu sesión
+    login_user(user_to_impersonate) # Abrimos la del alumno SIN pedir password
+
+    # 5. Redirigir al Dashboard del alumno
+    flash(f"🕵️‍♂️ Modo Espía Activado: Ahora eres '{user_to_impersonate.username}'", "info")
+    return redirect(url_for('dashboard'))
 @app.route("/admin/users", methods=["GET", "POST"])
 @login_required
 def manage_users():
@@ -2828,6 +2888,20 @@ def repair_scores(exam_id):
     except Exception as e:
         db.session.rollback()
         return f"❌ Error: {str(e)}"
+    
+    from sqlalchemy import text  # Asegúrate de importar esto arriba si no lo tienes
+
+# --- RUTA DE EMERGENCIA PARA ACTUALIZAR DB ---
+@app.route('/fix_db_password')
+def fix_db_password():
+    try:
+        # Este comando le dice a Postgres: "Agrega la columna visible_password a la tabla user"
+        # OJO: En Postgres la tabla suele llamarse "user" (con comillas) o user (sin). Probamos genérico.
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN visible_password VARCHAR(150)'))
+        db.session.commit()
+        return "✅ ¡ÉXITO! Columna visible_password creada correctamente."
+    except Exception as e:
+        return f"⚠️ Ocurrió un error (o la columna ya existía): {str(e)}"
 # --- RUTA DE HISTORIAL (Opcional, si quieres que el botón funcione como historial) ---
 @app.route("/student/history")
 @login_required
