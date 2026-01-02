@@ -2888,20 +2888,19 @@ def repair_scores(exam_id):
     except Exception as e:
         db.session.rollback()
         return f"❌ Error: {str(e)}"
-    
-    from sqlalchemy import text  # Asegúrate de importar esto arriba si no lo tienes
 
-# --- RUTA DE EMERGENCIA PARA ACTUALIZAR DB ---
+# --- RUTA TEMPORAL (Borrar después de usar) --
+
 @app.route('/fix_db_password')
 def fix_db_password():
     try:
-        # Este comando le dice a Postgres: "Agrega la columna visible_password a la tabla user"
-        # OJO: En Postgres la tabla suele llamarse "user" (con comillas) o user (sin). Probamos genérico.
+        # Intentamos agregar la columna
         db.session.execute(text('ALTER TABLE "user" ADD COLUMN visible_password VARCHAR(150)'))
         db.session.commit()
-        return "✅ ¡ÉXITO! Columna visible_password creada correctamente."
+        return "<h1>✅ ¡Misión Cumplida! Columna 'visible_password' creada.</h1>"
     except Exception as e:
-        return f"⚠️ Ocurrió un error (o la columna ya existía): {str(e)}"
+        # Si falla, probablemente es porque ya existe.
+        return f"<h1>⚠️ Aviso:</h1> <p>{str(e)}</p>"
 # --- RUTA DE HISTORIAL (Opcional, si quieres que el botón funcione como historial) ---
 @app.route("/student/history")
 @login_required
