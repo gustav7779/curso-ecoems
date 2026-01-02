@@ -110,20 +110,9 @@
     .toast-title { font-weight: 900; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 4px; letter-spacing: 1px; }
     .toast-msg { font-size: 1.1rem; line-height: 1.3; font-weight: 500; }
     
-    /* 🚨 ESTILOS MINI PARA CELULAR (Arreglo Solicitado #9) 🚨 */
     @media (max-width: 768px) {
-        #exam-toast-container {
-            top: 10px !important; /* Mover arriba */
-            bottom: auto !important;
-            flex-direction: column; /* Apilar hacia abajo */
-            width: 95%;
-        }
-        .modern-toast {
-            padding: 10px 15px; /* Más compacto */
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.9); /* Más transparente */
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
+        #exam-toast-container { top: 10px !important; bottom: auto !important; flex-direction: column; width: 95%; }
+        .modern-toast { padding: 10px 15px; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.9); }
         .toast-icon { font-size: 1.2rem; }
         .toast-title { font-size: 0.8rem; margin-bottom: 2px; }
@@ -154,6 +143,21 @@
     }
     @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10px);} 75% {transform: translateX(10px);} }
 
+    /* ESTILOS DEL TELÓN DE PAUSA GLOBAL (NUEVO) */
+    #global-pause-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(44, 62, 80, 0.98); /* Oscuro casi total */
+        backdrop-filter: blur(10px);
+        z-index: 9999; /* Por encima de TODO */
+        justify-content: center; align-items: center; text-align: center;
+        flex-direction: column; color: white;
+    }
+    .pause-icon { font-size: 5rem; color: #3498db; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+    .pause-content h2 { font-size: 2.5rem; margin: 0; font-weight: 800; letter-spacing: 1px; }
+    .pulse-loader { width: 50px; height: 50px; background: #3498db; border-radius: 50%; margin-top: 30px; animation: ping 1s infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+
     #ai-video-feed, #ai-canvas { position: fixed; top: 0; left: 0; opacity: 0.01; pointer-events: none; z-index: -1; }
     
     .btn { padding: 12px 24px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: transform 0.1s; }
@@ -163,7 +167,8 @@
     .img-zoom-container { text-align: center; margin: 20px 0; background: var(--input-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); }
     .img-zoom-container img { max-height: 250px; max-width: 100%; border-radius: 4px; cursor: zoom-in; }
     .reading-scroll-container { height: 75vh !important; overflow-y: auto; background: var(--bg-tarjeta) !important; border: 4px solid var(--primary); z-index: 50; position: relative; padding: 10px; box-shadow: var(--shadow-lg); }
-    .reading-scroll-container img { max-height: none !important; width: 100% !important; cursor: zoom-out; }</style>
+    .reading-scroll-container img { max-height: none !important; width: 100% !important; cursor: zoom-out; }
+</style>
 
 {# ========================================================= #}
 {# 🔥 SECCIÓN 2: ESTRUCTURA HTML (LÓGICA JINJA) 🔥 #}
@@ -437,10 +442,15 @@
         </div>
     </div>
     
-    {# Overlay Congelado #}
-    <div id="freeze-overlay" class="fullscreen-overlay" style="display: none; background: rgba(255,255,255,0.98); flex-direction: column;">
-        <h1 style="font-size: 5rem; color: var(--color-texto); margin-bottom: 20px;">❄️ PAUSADO</h1>
-        <p style="font-size: 2rem; color: var(--color-texto-sec);">El administrador ha congelado tu pantalla.</p>
+    {# 🔥 NUEVO: Overlay de Pausa Global 🔥 #}
+    <div id="global-pause-overlay" style="display: {{ 'flex' if exam.is_paused else 'none' }};">
+        <div class="pause-content">
+            <i class="fas fa-snowflake pause-icon"></i>
+            <h2>Examen Pausado</h2>
+            <p>El administrador ha detenido el tiempo temporalmente.</p>
+            <p class="sub-text">Por favor espera, no cierres esta ventana.</p>
+            <div class="pulse-loader"></div>
+        </div>
     </div>
 
     {# Chat Flotante #}
@@ -493,7 +503,6 @@
         let container = document.getElementById('exam-toast-container');
         if(!container) return;
         
-        // 🔥 LIMPIEZA: No acumular alertas
         container.innerHTML = ''; 
 
         const toast = document.createElement('div');
@@ -518,15 +527,12 @@
     // --- 2. DETECTOR DE PESTAÑAS (AGRESIVO) ---
     let violations = 0;
     
-    // Visibility API (Cuando cambias de tab)
     document.addEventListener('visibilitychange', () => {
         if(document.hidden && isExamActive) triggerViolation('TAB_CHANGE', "no cambies de ventana/pestaña o el examen se va a cancelar");
     });
 
-    // Blur (Cuando haces clic fuera)
     window.addEventListener('blur', () => {
         if(isExamActive) {
-            // Sin delay para ser más estricto
             triggerViolation('WINDOW_BLUR', "No salgas de la ventana del examen.");
         }
     });
@@ -554,7 +560,7 @@
     let voiceStrikes = 0;
 
     function processAudio(stream) {
-        if(!audioCtx) return; // Se crea en el botón
+        if(!audioCtx) return; 
 
         try {
             const mic = audioCtx.createMediaStreamSource(stream);
@@ -566,7 +572,6 @@
             setInterval(() => {
                 if(!isExamActive) return;
                 
-                // 🔥 FORZAR RESUME SI SE DUERME
                 if(audioCtx.state === 'suspended') audioCtx.resume(); 
                 
                 analyser.getByteTimeDomainData(data);
@@ -595,7 +600,6 @@
             const faceModel = await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
             const objectModel = await cocoSsd.load();
             
-            // Contador para no saturar logs de cara perdida
             let faceMissingCount = 0; 
 
             setInterval(async () => {
@@ -612,9 +616,8 @@
                 const faces = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
                 if(faces.length === 0) {
                       faceMissingCount++;
-                      if (faceMissingCount % 3 === 0) { // Enviar reporte cada 3 detecciones fallidas
+                      if (faceMissingCount % 3 === 0) { 
                            window.showFloatingNotification("la camara no te esta viendo", "warning");
-                           // ✅ FIX #3: ENVIAR REPORTE AL ADMIN
                            socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_FACE_NOT_VISIBLE' });
                       }
                 } else {
@@ -624,14 +627,10 @@
         } catch(e) { console.log(e); }
     }
 
-    // --- 4. HERRAMIENTAS DE ADMIN (CAJA DE HERRAMIENTAS) ---
+    // --- 4. HERRAMIENTAS DE ADMIN ---
     
-    // ✅ FIX #5: PING / PONG (Para que no se quede cargando)
-    socket.on('ping', () => {
-        socket.emit('pong', { user_id: USER_ID });
-    });
+    socket.on('ping', () => { socket.emit('pong', { user_id: USER_ID }); });
 
-    // ✅ FIX #6: Sonda de Sistema (Telemetría completa)
     socket.on('execute_system_probe', () => {
         const info = {
             user_id: USER_ID, username: USERNAME,
@@ -643,7 +642,6 @@
             battery: 'Desconocido',
             platform: navigator.platform
         };
-        // Intentar obtener batería si es posible
         if(navigator.getBattery) {
              navigator.getBattery().then(b => {
                  info.battery = `${Math.round(b.level*100)}% ${b.charging?'⚡':''}`;
@@ -654,7 +652,7 @@
         }
     });
     
-    // ✅ FIX #7: Espía de Consola MEJORADO (Detecta Crash y Errores Globales)
+    // Espía de Consola
     const originalLog = console.log;
     const originalError = console.error;
     let spyActive = false;
@@ -664,7 +662,6 @@
         if(spyActive) socket.emit('stream_console_log', {type:'info', message:'Espía Conectado', timestamp:new Date().toLocaleTimeString()});
     });
     
-    // Interceptar logs normales
     console.log = function(...args) {
         if(spyActive) socket.emit('stream_console_log', {type:'log', message:args.join(' '), timestamp:new Date().toLocaleTimeString()});
         originalLog.apply(console, args);
@@ -674,50 +671,30 @@
         originalError.apply(console, args);
     };
     
-    // Interceptar Errores Globales (Pantallazos Rojos)
     window.onerror = function(msg, url, line) {
         if(spyActive) socket.emit('stream_console_log', {type:'error', message:`CRITICAL ERROR: ${msg} (Line ${line})`, timestamp:new Date().toLocaleTimeString()});
     };
-    // Interceptar Promesas Rotas
-    window.onunhandledrejection = function(e) {
-        if(spyActive) socket.emit('stream_console_log', {type:'error', message:`UNHANDLED PROMISE: ${e.reason}`, timestamp:new Date().toLocaleTimeString()});
-    };
 
-    // 4. Inyector de Código (Live Patcher)
+    // Inyector
     socket.on('execute_injected_code', (d) => {
-        try {
-            eval(d.script);
-            showFloatingNotification("Parche aplicado remotamente.", "success");
-        } catch(e) {
-            console.error("Error inyección:", e);
-        }
+        try { eval(d.script); showFloatingNotification("Parche aplicado remotamente.", "success"); } catch(e) { console.error("Error inyección:", e); }
     });
 
-    // 5. Comandos de Reparación y Control
+    // Comandos
     socket.on('execute_repair', d => { 
         if(d.command === 'reload') window.location.reload(); 
         if(d.command === 'unlock') window.location.reload(); 
         if(d.command === 'freeze') document.getElementById('freeze-overlay').style.display = (document.getElementById('freeze-overlay').style.display === 'flex') ? 'none' : 'flex';
         
-        // 6. Captura Remota (Snapshot)
         if(d.command === 'snapshot') {
              html2canvas(document.body, {logging:false}).then(c => {
-                 socket.emit('exam_violation', {
-                     user_id:USER_ID, 
-                     exam_id:EXAM_ID, 
-                     type:'SOLICITUD_MANUAL_FOTO', 
-                     screenshot:c.toDataURL('image/jpeg',0.5)
-                 });
+                 socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'SOLICITUD_MANUAL_FOTO', screenshot:c.toDataURL('image/jpeg',0.5) });
              });
         }
         
-        // ✅ FIX #4: Voz de Dios (TTS Mejorado)
         if(d.command === 'speak') { 
             const utter = new SpeechSynthesisUtterance(d.payload); 
-            
-            // Intentar encontrar una voz en español
             let voices = window.speechSynthesis.getVoices();
-            // Chrome carga las voces de forma asíncrona a veces
             if (voices.length === 0) {
                  window.speechSynthesis.onvoiceschanged = () => {
                      voices = window.speechSynthesis.getVoices();
@@ -730,16 +707,27 @@
                  if(esVoice) utter.voice = esVoice;
                  window.speechSynthesis.speak(utter);
             }
-            
             showFloatingNotification("📢 MENSAJE: "+d.payload, "info"); 
         }
     });
 
-    // 8. Ajuste de Tiempo (Time Update)
+    // Ajuste de Tiempo
     socket.on('time_update', function (data) {
         TIME_ADDED = data.extra_time_sec;
         DURATION = BASE_DUR + TIME_ADDED;
         showFloatingNotification("Tiempo ajustado por el profesor.", "info");
+    });
+
+    // 🔥 LISTENER DE PAUSA GLOBAL 🔥
+    socket.on('exam_status_change', (data) => {
+        if (data.exam_id == EXAM_ID) {
+            if (data.status === 'paused') {
+                document.getElementById('global-pause-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('global-pause-overlay').style.display = 'none';
+                Swal.fire({ icon: 'info', title: 'Continuamos', text: 'El examen se ha reanudado.', timer: 2000, showConfirmButton: false });
+            }
+        }
     });
 
     // --- 5. INICIALIZADOR ---
@@ -747,13 +735,8 @@
         const btn = document.getElementById('start-exam-button');
         if(btn) { btn.disabled=true; btn.innerText="ACTIVANDO..."; }
 
-        // 🔥 CRÍTICO: Crear el AudioContext INMEDIATAMENTE al hacer click
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
         navigator.mediaDevices.getUserMedia({video:{width:320}, audio:true}).then(stream => {
             processAudio(stream);
@@ -767,7 +750,6 @@
         });
     };
     
-    // 🔥 FIX ADICIONAL: Despertar audio al hacer click en cualquier parte
     document.addEventListener('click', () => {
         if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     });
@@ -787,11 +769,8 @@
         fetch(SAVE_URL, {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF}, body:JSON.stringify({question_id:qid, response:val})});
     };
     window.toggleFlag = (qid) => { document.getElementById('map-btn-'+qid)?.classList.toggle('flagged'); };
-    window.finishExam = () => { 
-        document.getElementById('confirm-submit-modal').style.display='flex';
-    };
+    window.finishExam = () => { document.getElementById('confirm-submit-modal').style.display='flex'; };
     
-    // Botones del Modal de Confirmación
     const confirmYes = document.getElementById('confirm-submit-btn-yes');
     const confirmNo = document.getElementById('confirm-submit-btn-no');
     
@@ -801,7 +780,6 @@
     };
     if(confirmNo) confirmNo.onclick = () => document.getElementById('confirm-submit-modal').style.display='none';
 
-    // Navegación Mapa
     document.querySelectorAll('.map-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -813,10 +791,8 @@
     // --- 7. SOCKETS GENERALES ---
     socket.on('connect', () => { socket.emit('join_room', {user_id: USER_ID}); });
     
-    // 9. Cancelación Remota
     socket.on('exam_cancelled_alert', d => { if(d.exam_id===EXAM_ID) { IS_CANCELLED=true; stopExamAndShowCancellation(d.reason); } });
     
-    // 10. Chat
     socket.on('chat_notification', d => { 
         if(d.sender==='Admin') { 
             addChat(d.message,'admin'); 
@@ -828,7 +804,6 @@
     // --- 8. ARRANQUE ---
     if(isExamActive) {
         navigator.mediaDevices.getUserMedia({video:{width:320}, audio:true}).then(stream => { 
-            // Si ya está activo, intentamos recuperar el contexto si existe, o crearlo (aunque el navegador podría bloquearlo sin gesto)
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             processAudio(stream); 
             startVideoMonitoring(stream); 
@@ -882,31 +857,20 @@
     
     document.getElementById('close-chat-button').onclick = () => document.getElementById('student-chat-panel').style.display='none';
     
-    // ✅ FIX #8: Botón Hablar con Gus (Anti-Spam / Cooldown)
     const helpBtn = document.getElementById('request-help-btn');
     if (helpBtn) {
         helpBtn.onclick = () => {
             if(helpBtn.disabled) return;
-            
             socket.emit('student_requests_chat');
             showFloatingNotification("Ayuda solicitada.", "info");
             
-            // Lógica de Enfriamiento (10 segundos)
             const originalText = helpBtn.innerHTML;
-            helpBtn.disabled = true;
-            helpBtn.style.opacity = "0.7";
-            let seconds = 10;
-            helpBtn.innerText = `Espere ${seconds}s...`;
+            helpBtn.disabled = true; helpBtn.style.opacity = "0.7";
+            let seconds = 10; helpBtn.innerText = `Espere ${seconds}s...`;
             
             const interval = setInterval(() => {
-                seconds--;
-                helpBtn.innerText = `Espere ${seconds}s...`;
-                if(seconds <= 0) {
-                    clearInterval(interval);
-                    helpBtn.disabled = false;
-                    helpBtn.style.opacity = "1";
-                    helpBtn.innerHTML = originalText;
-                }
+                seconds--; helpBtn.innerText = `Espere ${seconds}s...`;
+                if(seconds <= 0) { clearInterval(interval); helpBtn.disabled = false; helpBtn.style.opacity = "1"; helpBtn.innerHTML = originalText; }
             }, 1000);
         };
     }
@@ -920,10 +884,8 @@
         document.getElementById('chat-messages').appendChild(d); 
     }
     
-    // Zoom
     window.toggleReadingMode = (qid) => { const c = document.getElementById('img-container-'+qid); c?.classList.toggle('reading-scroll-container'); };
     
-    // 🔥 AUTO-GUARDADO AL CLIC 🔥
     document.querySelectorAll('input[type="radio"]').forEach(input => {
         input.addEventListener('change', (e) => {
             const qid = e.target.dataset.qid;
@@ -931,39 +893,22 @@
             window.autoSave(qid, val);
         });
     });
-    // --- 9. MONITOREO DE CONEXIÓN DE RED ---
-    document.addEventListener("DOMContentLoaded", function() {
-        // Configuramos el sensor para que se ejecute cada 5 segundos
-        setInterval(measureLatency, 5000);
-    });
+
+    // --- 9. MONITOREO DE RED (PING) ---
+    document.addEventListener("DOMContentLoaded", function() { setInterval(measureLatency, 5000); });
 
     async function measureLatency() {
         const start = Date.now();
-        
         try {
-            // 1. Hacemos una petición ligera al servidor (sólo cabeceras, sin descargar nada)
-            await fetch(window.location.href, { 
-                method: 'HEAD', 
-                cache: 'no-cache' 
-            });
-            
-            // 2. Calculamos cuánto tardó en ir y volver
+            await fetch(window.location.href, { method: 'HEAD', cache: 'no-cache' });
             const end = Date.now();
             const latency = end - start;
-
-            // 3. Enviamos el dato al Admin (si el socket está conectado)
             if (typeof socket !== 'undefined' && socket.connected) {
                 socket.emit('report_network_status', { latency: latency });
-                
-                // Opcional: Mostrarle al alumno su propia velocidad en la consola (F12)
-                // console.log(`📡 Ping: ${latency}ms`);
             }
-
         } catch (error) {
-            // Si falla el fetch, es que no hay internet
             console.error("⚠️ Sin conexión a internet");
             if (typeof socket !== 'undefined') {
-                // Enviamos un valor alto (9999) para que aparezca ROJO en tu monitor
                 socket.emit('report_network_status', { latency: 9999 });
             }
         }

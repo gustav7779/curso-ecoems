@@ -303,15 +303,21 @@ class User(db.Model, UserMixin):
     # Relaciones (No las borres)
     results = db.relationship("ExamResult", backref="user", lazy=True)
     violation_logs = db.relationship("ViolationLog", backref="user", lazy=True)
-
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
     start_datetime = db.Column(db.DateTime, nullable=True)
     end_datetime = db.Column(db.DateTime, nullable=True)
+    
     is_cancelled = db.Column(db.Boolean, default=False)
+    
+    # 🔥 AGREGA ESTA LÍNEA AQUÍ:
+    is_paused = db.Column(db.Boolean, default=False) 
+    
     cancellation_reason = db.Column(db.Text, nullable=True)
+    
+    # ... (el resto de tus relaciones déjalas igual) ...
     assigned_students = db.relationship(
         "User",
         secondary=exam_assignments,
@@ -322,7 +328,6 @@ class Exam(db.Model):
     questions = db.relationship("Question", backref="exam", cascade="all, delete-orphan")
     active_sessions = db.relationship("ActiveExamSession", backref="exam", cascade="all, delete-orphan")
     violation_logs = db.relationship("ViolationLog", backref="exam", lazy=True, cascade="all, delete-orphan")
-
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
@@ -499,51 +504,51 @@ def handle_student_message(data):
         
         app.logger.info(f"CHAT LIVE: Alumno {current_user.username} envió: {message_content}")
         
+
 @socketio.on('record_violation')
 def handle_violation(data):
     # data trae: {'violation_type': 'Celular', 'image': 'data:image/jpeg;base64...'}
     
+    if not current_user.is_authenticated:
+        return
+
     user_id = current_user.id
     violation_type = data.get('violation_type', 'Conducta sospechosa')
-    image_base64 = data.get('image') # El texto gigante
+    image_base64 = data.get('image') # El texto gigante (Base64)
     
-    filename = None
+    final_filename_or_url = None
 
-    # Lógica para convertir Texto Base64 -> Archivo JPG
+    # Lógica Cloudinary: Subir directo a la nube
     if image_base64:
         try:
-            # 1. Limpiar el encabezado del string (data:image/jpeg;base64,)
-            if ',' in image_base64:
-                header, encoded = image_base64.split(",", 1)
-            else:
-                encoded = image_base64
+            # Cloudinary es inteligente: detecta el formato "data:image..." automáticamente.
+            # No hace falta decodificar manualmente.
             
-            # 2. Convertir a bytes
-            image_data = base64.b64decode(encoded)
+            upload_result = cloudinary.uploader.upload(
+                image_base64,
+                folder="ecoems_evidencias", # Carpeta en tu Cloudinary
+                public_id=f"evidencia_{user_id}_{uuid.uuid4().hex[:8]}" # Nombre del archivo
+            )
             
-            # 3. Generar nombre único
-            filename = f"evidencia_{user_id}_{uuid.uuid4().hex[:8]}.jpg"
+            # Obtenemos el LINK seguro (https://...)
+            final_filename_or_url = upload_result.get('secure_url')
             
-            # 4. Ruta donde guardar (static/uploads/evidence)
-            # Asegúrate de crear la carpeta 'evidence' dentro de 'uploads' manualmente primero
-            save_path = os.path.join(app.root_path, 'static', 'uploads', 'evidence', filename)
-            
-            # 5. Guardar el archivo
-            with open(save_path, "wb") as f:
-                f.write(image_data)
-                
         except Exception as e:
-            print(f"Error guardando imagen: {e}")
+            print(f"❌ Error subiendo a Cloudinary: {e}")
 
-    # Guardar en Base de Datos (Solo el nombre del archivo)
+    # Guardar en Base de Datos
+    # AHORA guardamos el LINK COMPLETO, no solo el nombre
     log = ViolationLog(
         user_id=user_id,
-        exam_id=current_user.current_exam_id, # Asegúrate de tener este dato o pasarlo
+        exam_id=getattr(current_user, 'current_exam_id', None), 
         violation_type=violation_type,
-        image_filename=filename # <--- Aquí guardamos "evidencia_123.jpg"
+        image_filename=final_filename_or_url # <--- Aquí va la URL de Cloudinary
     )
     db.session.add(log)
     db.session.commit()
+    
+    # (Opcional) Avisar al admin en vivo que llegó una foto nueva
+    socketio.emit('new_evidence_alert', {'msg': 'Nueva infracción detectada'}, room='admin_pulse_room')
 @socketio.on("send_individual_ping")
 @login_required
 def handle_individual_ping(data):
@@ -1187,6 +1192,27 @@ def admin_dashboard():
         completados_hoy=completados_hoy,
         avg_score=avg_score,
     )
+# ==========================================
+# ⏸️ PAUSA GLOBAL (TIME FREEZE)
+# ==========================================
+@app.route('/admin/api/toggle_pause/<int:exam_id>', methods=['POST'])
+@login_required
+def toggle_exam_pause(exam_id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    exam = Exam.query.get_or_404(exam_id)
+    
+    # Cambiamos el estado (Toggle)
+    exam.is_paused = not exam.is_paused
+    db.session.commit()
+    
+    status = 'paused' if exam.is_paused else 'running'
+    
+    # 📢 AVISAR A TODOS LOS ALUMNOS
+    socketio.emit('exam_status_change', {'status': status, 'exam_id': exam_id})
+    
+    return jsonify({'new_status': status})
 @app.route('/api/chat/history/<int:user_id>')
 @login_required
 def get_chat_history(user_id):
@@ -2969,16 +2995,16 @@ def repair_scores(exam_id):
     except Exception as e:
         db.session.rollback()
         return f"❌ Error: {str(e)}"
-@app.route('/fix_db_evidence')
-def fix_db_evidence():
+# --- RUTA TEMPORAL PARA AGREGAR PAUSA ---
+@app.route('/fix_db_pause')
+def fix_db_pause():
     try:
-        # Intentamos agregar la columna a la tabla 'violation_log'
-        # Nota: Flask-SQLAlchemy suele llamar a la tabla 'violation_log' (minúsculas)
-        db.session.execute(text('ALTER TABLE violation_log ADD COLUMN image_filename VARCHAR(255)'))
+        # Comando SQL para agregar la columna
+        db.session.execute(text('ALTER TABLE exam ADD COLUMN is_paused BOOLEAN DEFAULT FALSE'))
         db.session.commit()
-        return "<h1>✅ ¡Listo! Columna 'image_filename' creada en ViolationLog.</h1>"
+        return "<h1>✅ Columna 'is_paused' creada con éxito.</h1>"
     except Exception as e:
-        return f"<h1>⚠️ Aviso (quizás ya existe):</h1> <p>{str(e)}</p>"
+        return f"<h1>⚠️ Detalle:</h1> <p>{str(e)}</p>"
 # --- RUTA DE HISTORIAL (Opcional, si quieres que el botón funcione como historial) ---
 @app.route("/student/history")
 @login_required

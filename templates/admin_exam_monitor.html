@@ -5,7 +5,7 @@
 {% block content %}
 
 {# ========================================================================== #}
-{# 🎨 SECCIÓN 1: ESTILOS CSS AVANZADOS (GLASSMORPHISM + NEON) 🎨 #}
+{# 🎨 SECCIÓN 1: ESTILOS CSS AVANZADOS (GLASSMORPHISM + NEON + FAB) 🎨 #}
 {# ========================================================================== #}
 <style>
     /* Variables de Diseño */
@@ -305,15 +305,42 @@
     }
     .time-chip:hover { border-color: var(--cmd-blue); color: var(--cmd-blue); }
 
-    /* FAB GLOBAL */
-    .fab-global {
-        position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px;
-        background: linear-gradient(135deg, var(--cmd-blue), var(--cmd-purple));
-        border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center;
-        font-size: 1.8rem; box-shadow: 0 10px 30px rgba(52, 152, 219, 0.5);
-        cursor: pointer; transition: transform 0.3s; z-index: 900; border: none;
+    /* --- FAB GROUP (CONTROLES FLOTANTES APILADOS) --- */
+    .fab-container {
+        position: fixed; bottom: 30px; right: 30px;
+        display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 1000;
+        animation: slideUpFab 0.5s ease-out;
     }
-    .fab-global:hover { transform: scale(1.1) rotate(-10deg); }
+
+    /* Botón Principal (Hablar) */
+    .fab-main {
+        width: 65px; height: 65px;
+        background: linear-gradient(135deg, #3498db, #8e44ad);
+        border-radius: 50%; color: white; border: none;
+        font-size: 1.8rem; box-shadow: 0 10px 25px rgba(52, 152, 219, 0.5);
+        cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .fab-main:hover { transform: scale(1.1) rotate(-10deg); }
+
+    /* Botón Secundario (Pausa) */
+    .fab-mini {
+        width: 50px; height: 50px;
+        border-radius: 50%; color: white; border: none;
+        font-size: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        cursor: pointer; transition: all 0.3s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    
+    /* Estado Normal (Listo para Pausar - Naranja) */
+    .fab-running { background: #e67e22; }
+    .fab-running:hover { background: #d35400; transform: scale(1.1); }
+
+    /* Estado Pausado (Listo para Play - Verde Pulsante) */
+    .fab-paused { background: #2ecc71; animation: pulse-green 2s infinite; }
+    
+    @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+    @keyframes slideUpFab { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 </style>
 
@@ -485,10 +512,21 @@
     </div>
 </div>
 
-<button onclick="enviarMensajeGlobal()" class="fab-global" title="Mensaje a TODOS">
-    <i class="fas fa-bullhorn"></i>
-</button>
+<!-- 🔥 FAB GROUP: BOTONES FLOTANTES (PAUSA + MENSAJE) 🔥 -->
+<div class="fab-container">
+    
+    <button id="btn-global-pause" onclick="toggleGlobalPause()" 
+            class="fab-mini {{ 'fab-paused' if exam.is_paused else 'fab-running' }}" 
+            title="{{ 'Reanudar Examen' if exam.is_paused else 'PAUSAR A TODOS' }}">
+        <i class="fas {{ 'fa-play' if exam.is_paused else 'fa-pause' }}"></i>
+    </button>
 
+    <button onclick="enviarMensajeGlobal()" class="fab-main" title="Mensaje a TODOS">
+        <i class="fas fa-bullhorn"></i>
+    </button>
+</div>
+
+<!-- Modal de Cancelación -->
 <div id="cancel-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center;">
     <div style="background: var(--panel-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 30px rgba(0,0,0,0.2);">
         <h3 style="color: var(--cmd-red); margin-top: 0; font-size: 1.5rem;">🛑 EXPULSAR ALUMNO</h3>
@@ -575,18 +613,6 @@
         }).then((res) => {
             if(res.isConfirmed && res.value) {
                 socket.emit('send_individual_ping', { user_id: userId, message: res.value });
-            }
-        });
-    }
-
-    function enviarMensajeGlobal() {
-        Swal.fire({
-            title: '📢 Mensaje a TODOS',
-            input: 'text', inputPlaceholder: 'Anuncio general...',
-            confirmButtonText: 'Transmitir', confirmButtonColor: '#8b5cf6'
-        }).then((res) => {
-            if(res.isConfirmed && res.value) {
-                socket.emit('send_global_broadcast', { message: res.value });
             }
         });
     }
@@ -798,6 +824,79 @@
             }
         }
     });
+
+    // --- 🔥 7. LÓGICA DE PAUSA GLOBAL (NUEVO) 🔥 ---
+    async function toggleGlobalPause() {
+        const btn = document.getElementById('btn-global-pause');
+        const isCurrentlyPaused = btn.classList.contains('fab-paused');
+        
+        const action = isCurrentlyPaused ? "REANUDAR" : "PAUSAR";
+        const color = isCurrentlyPaused ? '#2ecc71' : '#f39c12';
+        
+        const result = await Swal.fire({
+            title: `¿${action} EL EXAMEN?`,
+            text: isCurrentlyPaused 
+                ? "El tiempo volverá a correr para todos." 
+                : "Se bloquearán las pantallas de todos los alumnos.",
+            icon: isCurrentlyPaused ? 'question' : 'warning',
+            showCancelButton: true,
+            confirmButtonColor: color,
+            confirmButtonText: `Sí, ${action}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/admin/api/toggle_pause/${EXAM_ID}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+                
+                if (!response.ok) throw new Error("Error en el servidor");
+                const data = await response.json();
+                
+                if (data.new_status === 'paused') {
+                    btn.className = 'fab-mini fab-paused';
+                    btn.innerHTML = '<i class="fas fa-play"></i>';
+                    btn.title = "Reanudar Examen";
+                    socket.emit('admin_pause_exam', { exam_id: EXAM_ID, action: 'pause' });
+                    Swal.fire("¡Congelados!", "El examen está en pausa.", "success");
+                } else {
+                    btn.className = 'fab-mini fab-running';
+                    btn.innerHTML = '<i class="fas fa-pause"></i>';
+                    btn.title = "PAUSAR A TODOS";
+                    socket.emit('admin_pause_exam', { exam_id: EXAM_ID, action: 'resume' });
+                    Swal.fire("¡Adelante!", "El examen continúa.", "success");
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error", "No se pudo conectar.", "error");
+            }
+        }
+    }
+
+    // --- 🔥 8. LÓGICA DE MENSAJE GLOBAL (NUEVO) 🔥 ---
+    async function enviarMensajeGlobal() {
+        const { value: text } = await Swal.fire({
+            title: '📢 Mensaje a la Clase',
+            input: 'textarea',
+            inputLabel: 'Este mensaje aparecerá en la pantalla de TODOS los alumnos.',
+            inputPlaceholder: 'Ej: Quedan 10 minutos...',
+            showCancelButton: true,
+            confirmButtonColor: '#8e44ad',
+            confirmButtonText: 'Enviar <i class="fas fa-paper-plane"></i>',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (text) {
+            socket.emit('send_global_broadcast', { message: text });
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+            Toast.fire({ icon: 'success', title: 'Mensaje enviado a todos' });
+        }
+    }
 
 </script>
 

@@ -370,6 +370,40 @@
         /* Ajuste de Toast/Notificaciones para que no estorben */
         #student-toast-container { bottom: 10px; right: 10px; left: 10px; align-items: center; }
     }
+
+    /* ================================================= */
+    /* 🔥 3. ESTILOS GLOBALES DE SKELETON LOADING 🔥 */
+    /* ================================================= */
+    @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .skeleton {
+        background: #e2e8f0;
+        background-image: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    /* Dark Mode Global */
+    body.dark-mode .skeleton {
+        background: #1e293b;
+        background-image: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    }
+
+    /* Clases Utilitarias para tamaños */
+    .sk-text { height: 16px; margin-bottom: 8px; width: 100%; }
+    .sk-avatar { width: 40px; height: 40px; border-radius: 50%; }
+    .sk-badge { width: 80px; height: 20px; border-radius: 20px; }
+    .sk-btn { width: 36px; height: 36px; border-radius: 8px; }
+    .sk-card { width: 100%; height: 200px; border-radius: 12px; } /* Nuevo para tarjetas */
+
+    /* Lógica de Transición */
+    .real-content { opacity: 0; display: none; transition: opacity 0.5s ease-in-out; }
+    .skeleton-container { width: 100%; opacity: 1; transition: opacity 0.5s ease-out; }
     </style>
     
 </head>
@@ -546,8 +580,37 @@
                 });
             });
 
-        }); // <--- 🔥 ESTO ERA LO QUE FALTABA (Cierre del EventListener)
+        }); 
     </script>
     {% endif %}
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Busca si hay esqueletos en la página actual
+        const skeletons = document.querySelectorAll('.skeleton-container');
+        
+        if (skeletons.length > 0) {
+            // Si hay esqueletos, activa el efecto
+            setTimeout(() => {
+                skeletons.forEach(sk => {
+                    const contentId = sk.getAttribute('data-target'); // Buscamos a quién debe revelar
+                    const realContent = document.getElementById(contentId);
+                    
+                    if (realContent) {
+                        sk.style.opacity = '0'; // Desvanecer hueso
+                        setTimeout(() => {
+                            sk.style.display = 'none'; // Quitar hueso
+                            realContent.style.display = 'block'; // Poner carne
+                            requestAnimationFrame(() => {
+                                realContent.style.opacity = '1'; // Aparecer suave
+                            });
+                        }, 300);
+                    }
+                });
+            }, 600); // Tiempo de "carga falsa" para el efecto premium
+        }
+    });
+    </script>
+
 </body>
 </html>

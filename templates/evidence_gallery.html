@@ -26,11 +26,20 @@
         <div class="evidence-card" onclick="openZoom('{{ log.id }}')">
             
             <div class="img-wrapper">
-                <img src="{{ url_for('static', filename='uploads/evidence/' + log.image_filename) }}" 
-                     alt="Evidencia" 
-                     loading="lazy"
-                     class="evidence-img"
-                     onerror="this.src='https://via.placeholder.com/300x200?text=Sin+Imagen'">
+                
+                {# 🔥 LOGICA HÍBRIDA: CLOUDINARY + LOCAL 🔥 #}
+                {% if log.image_filename and 'http' in log.image_filename %}
+                    <img src="{{ log.image_filename }}" 
+                         alt="Evidencia Cloud" 
+                         loading="lazy"
+                         class="evidence-img">
+                {% else %}
+                    <img src="{{ url_for('static', filename='uploads/evidence/' + log.image_filename) if log.image_filename else 'https://via.placeholder.com/300x200?text=Sin+Imagen' }}" 
+                         alt="Evidencia Local" 
+                         loading="lazy"
+                         class="evidence-img"
+                         onerror="this.src='https://via.placeholder.com/300x200?text=Error+Carga'">
+                {% endif %}
                 
                 <div class="overlay-info">
                     <span class="timestamp"><i class="far fa-clock"></i> {{ log.timestamp.strftime('%H:%M') }}</span>
@@ -108,11 +117,10 @@
 
     .img-wrapper { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #000; }
     
-    /* Nota: Tu CSS original ya cubre la imagen dentro de .img-wrapper, 
-       así que la clase .evidence-img heredará estos estilos correctamente */
-    .img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+    /* Clase genérica para ambas imágenes */
+    .evidence-img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
     
-    .evidence-card:hover img { transform: scale(1.05); opacity: 0.8; }
+    .evidence-card:hover .evidence-img { transform: scale(1.05); opacity: 0.8; }
 
     .overlay-info {
         position: absolute; bottom: 0; left: 0; right: 0;
