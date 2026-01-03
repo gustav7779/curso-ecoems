@@ -249,7 +249,18 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
-socketio = SocketIO(app, async_mode="gevent", cors_allowed_origins="*")
+# 🦎 CONFIGURACIÓN CAMALEÓNICA (Windows vs Linux)
+if os.name == 'nt':
+    # Estamos en Windows (Localhost) -> Usamos modo compatible
+    print("💻 Modo Local (Windows) detectado: Usando 'threading'")
+    async_mode = 'threading'
+else:
+    # Estamos en Linux (Heroku/Producción) -> Usamos modo Turbo
+    print("🚀 Modo Nube (Linux) detectado: Usando 'gevent'")
+    async_mode = 'gevent'
+
+# Inicializamos SocketIO con el modo correcto según dónde estemos
+socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 
 babel = Babel(app)
 
@@ -3470,47 +3481,77 @@ def student_exams():
 
     return render_template("exams.html", exams=available_exams)
 
-
 @app.route("/exam/save_answer", methods=["POST"])
 @login_required
 @limiter.limit("100 per 10 minutes")
 def save_answer():
+    # 1. Validar que sea estudiante
     if current_user.role != "student":
         return jsonify({"success": False, "message": "Acceso denegado"}), 403
 
+    # 2. Obtener datos del JSON
     data = request.get_json()
     question_id = data.get("question_id")
-    response = data.get("response")
+    response_text = data.get("response")
+    time_spent = data.get("time_spent", 0) # <--- Nuevo: Recibimos segundos
 
-    if not question_id or response is None:
-        return jsonify({"success": False}), 400
+    # 3. Validaciones básicas
+    if not question_id or response_text is None:
+        return jsonify({"success": False, "message": "Faltan datos"}), 400
 
     question = Question.query.get(question_id)
     if not question:
-        return jsonify({"success": False}), 404
+        return jsonify({"success": False, "message": "Pregunta no encontrada"}), 404
 
+    # 4. Validar que el examen esté activo para este usuario
     active_session = ActiveExamSession.query.filter_by(
         user_id=current_user.id, exam_id=question.exam_id
     ).first()
+    
     if not active_session:
-        return jsonify({"success": False, "message": "Sesión inactiva."}), 403
+        return jsonify({"success": False, "message": "Sesión inactiva o examen terminado."}), 403
 
+    # 5. Buscar si ya respondió antes
     answer = Answer.query.filter_by(
         user_id=current_user.id, question_id=question_id
     ).first()
+
     if answer:
-        answer.response = response
+        # ACTUALIZAR RESPUESTA EXISTENTE
+        answer.response = response_text
+        answer.timestamp = datetime.utcnow()
+        
+        # 🔥 SUMAR TIEMPO (Lógica de acumulado)
+        if answer.time_spent is None:
+            answer.time_spent = 0
+        answer.time_spent += int(time_spent)
     else:
+        # CREAR NUEVA RESPUESTA
         answer = Answer(
-            response=response, user_id=current_user.id, question_id=question_id
+            user_id=current_user.id,
+            question_id=question_id,
+            response=response_text,
+            exam_id=question.exam_id,
+            time_spent=int(time_spent) # <--- Guardamos el tiempo inicial
         )
         db.session.add(answer)
 
+    # 6. Guardar cambios en DB
     db.session.commit()
-    return jsonify({"success": True})
 
+    # 7. 📟 BITSTREAM: Avisar a la Terminal del Admin (Hacker Console)
+    # Esto hace que aparezca el texto verde en tu monitor
+    try:
+        socketio.emit('activity_log', {
+            'type': 'answer',
+            'username': current_user.username,
+            'msg': f"Guardó P.{question_id} (R: {response_text}) [{time_spent}s]",
+            'timestamp': datetime.now().strftime('%H:%M:%S')
+        }, room='admin_pulse_room')
+    except Exception as e:
+        print(f"Error emitiendo socket: {e}")
 
-@app.route("/exam/<int:exam_id>/take", methods=["GET", "POST"])
+    return jsonify({"success": True})@app.route("/exam/<int:exam_id>/take", methods=["GET", "POST"])
 @login_required
 def take_exam(exam_id):
     if current_user.role != "student":

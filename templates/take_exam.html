@@ -232,6 +232,7 @@
     <script>
         const savedAnswers = {{ saved_answers_dict | tojson | safe }} || {};
         document.addEventListener('DOMContentLoaded', function() {
+            let currentQStartTime = Date.now(); // Hora de inicio de la pregunta actual
             let startTime = parseInt("{{ start_time_utc | default('0') }}");
             function updateWaitTimer() {
                 const now = Math.floor(Date.now() / 1000);
@@ -369,7 +370,7 @@
                                     <input type="radio" name="{{ q_name }}" value="{{ let }}" data-qid="{{ question.id }}" 
                                            style="display: none;" 
                                            {% if saved == let %}checked{% endif %}>
-                                   
+                                    
                                     <div class="option-circle">{{ let }}</div>
 
                                     <div style="flex-grow: 1;">
@@ -507,6 +508,7 @@
 
     <script>
     // --- VARIABLES Y CONFIG ---
+    let currentQStartTime = Date.now(); // Hora de inicio de la pregunta actual (Añadido)
     const EXAM_ID = parseInt("{{ exam.id }}");
     const USER_ID = parseInt("{{ current_user.id }}");
     const USERNAME = "{{ current_user.username }}";
@@ -801,12 +803,16 @@
     let currentQ = 0;
     const cards = document.querySelectorAll('.question-card');
     
-    window.nextQ = (idx) => { 
-        if(cards[currentQ]) cards[currentQ].style.display='none'; 
-        if(cards[idx]) cards[idx].style.display='block'; 
-        currentQ=idx; 
-        window.scrollTo(0,0); 
-    };
+   window.nextQ = (idx) => { 
+    // 1. Antes de cambiar, calcular tiempo en la pregunta ANTERIOR (si quisieras guardar al salir)
+    // Por ahora solo reiniciamos el reloj para la nueva
+    currentQStartTime = Date.now();
+
+    if(cards[currentQ]) cards[currentQ].style.display='none'; 
+    if(cards[idx]) cards[idx].style.display='block'; 
+    currentQ=idx; 
+    window.scrollTo(0,0); 
+};
 
     // ==========================================
     // 💾 MODO TÚNEL (OFFLINE PERSISTENCE)
@@ -857,9 +863,13 @@
 
         } catch(e) { console.error("Error localStorage", e); }
 
-        // B) Intentar enviar a la Nube
+        // Calcular segundos transcurridos
+        const now = Date.now();
+        const seconds = Math.round((now - currentQStartTime) / 1000);
+
+        // B) Intentar enviar a la Nube (MODIFICADO para enviar time_spent)
         if (navigator.onLine) {
-            sendAnswerToServer(qid, val);
+            sendAnswerToServer(qid, val, seconds); // <--- Agregamos seconds
         } else {
             updateSyncIndicator('offline');
             showFloatingNotification("Guardado en Modo Túnel (Sin Internet)", "warning");
@@ -867,12 +877,13 @@
     };
 
     // 3. Envío Real al Servidor
-    async function sendAnswerToServer(qid, val) {
+    async function sendAnswerToServer(qid, val, seconds = 0) { // <--- Recibe seconds
         try {
             const response = await fetch(SAVE_URL, {
                 method: 'POST', 
                 headers: {'Content-Type':'application/json','X-CSRF-Token':CSRF}, 
-                body: JSON.stringify({question_id:qid, response:val})
+                // Enviamos time_spent en el cuerpo
+                body: JSON.stringify({question_id:qid, response:val, time_spent: seconds}) 
             });
 
             if (response.ok) {
