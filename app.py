@@ -1377,7 +1377,7 @@ def before_request_hook():
 
 
 # --- CONFIGURACIÓN DE MANTENIMIENTO ---
-MAINTENANCE_MODE = os.environ.get("MAINTENANCE_MODE", "False") == "True"
+MAINTENANCE_MODE = False
 
 
 @app.before_request
