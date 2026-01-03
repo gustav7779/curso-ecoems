@@ -11,6 +11,7 @@ from flask import (
     make_response,
 )
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from flask_login import (
     LoginManager,
     login_user,
@@ -235,6 +236,7 @@ app.logger.info("Iniciando aplicación y configurando loggers...")
 # --- INICIALIZACIÓN DE EXTENSIONES ---
 # ======================================================================
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
