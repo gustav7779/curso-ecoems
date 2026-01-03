@@ -1,226 +1,505 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Token CSRF para seguridad en Flask -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <title>Curso ECOEMS - Inicio de Sesión</title>
+    <meta name="google-site-verification" content="BHRY97gDzNZNSXQ4FIRyEfmoLuCSQuE-mr6mXJSX4Ns" />
 
-    <!-- FontAwesome para los íconos -->
+    <title>ECOEMS CCSMX</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Tailwind CSS (Usando CDN para que funcione directo. En producción usa tu archivo compilado) -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Si tienes tu archivo local compilado, descomenta la siguiente línea y quita el script de arriba -->
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/output.css') }}"> -->
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://unpkg.com/typed.js@2.0.16/dist/typed.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        tech: ['Space Grotesk', 'sans-serif'],
+                    },
+                    animation: {
+                        'spin-slow': 'spin 10s linear infinite',
+                        'pan-image': 'panImage 20s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        panImage: {
+                            '0%': { transform: 'scale(1.1) translate(0,0)' },
+                            '100%': { transform: 'scale(1.2) translate(-10px, -10px)' }
+                        }
+                    },
+                    colors: {
+                        cyberBlue: '#00f3ff',
+                        cyberPurple: '#bc13fe',
+                        darkBase: '#050505',
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
-        /* Estilo específico para pasar la URL de Flask a CSS */
-        .header-bg-image {
+        /* CURSOR */
+        body { cursor: none; overflow-x: hidden; }
+        .cursor-dot, .cursor-outline {
+            position: fixed; top: 0; left: 0; transform: translate(-50%, -50%);
+            border-radius: 50%; z-index: 9999; pointer-events: none;
+        }
+        .cursor-dot { width: 8px; height: 8px; background-color: #00f3ff; box-shadow: 0 0 10px #00f3ff; }
+        .cursor-outline { width: 40px; height: 40px; border: 1px solid rgba(0, 243, 255, 0.5); transition: 0.1s; }
+
+        /* PRELOADER HACKER */
+        #preloader {
+            position: fixed; inset: 0; background: #000; z-index: 10000;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column; transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        .loader-bar-bg {
+            width: 300px; height: 4px; background: #1f2937; border-radius: 2px;
+            overflow: hidden; margin-bottom: 15px; position: relative;
+        }
+        .loader-bar-fill {
+            height: 100%; background: #00f3ff; width: 0%;
+            box-shadow: 0 0 15px #00f3ff; transition: width 0.1s;
+        }
+        .loader-text {
+            font-family: 'Space Grotesk', monospace; color: #00f3ff;
+            letter-spacing: 2px; font-size: 0.9rem; text-transform: uppercase;
+        }
+
+        /* BACKGROUND */
+        .hero-bg {
             background-image: url("{{ url_for('static', filename='casa.png') }}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background-size: cover; background-position: center;
+            animation: panImage 25s ease-in-out infinite alternate;
         }
-        
-        /* Fuente base similar a la original pero modernizada */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        .cyber-grid {
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
         }
+
+        /* TEXTO GLITCH */
+        .glitch-wrapper { position: relative; display: inline-block; }
+        .glitch-wrapper:hover::before, .glitch-wrapper:hover::after {
+            content: attr(data-text); position: absolute; inset: 0; background: #0f172a; opacity: 0.8;
+        }
+        .glitch-wrapper:hover::before { color: #00f3ff; z-index: -1; animation: glitch-1 0.4s infinite; }
+        .glitch-wrapper:hover::after { color: #bc13fe; z-index: -2; animation: glitch-2 0.4s infinite; }
+        @keyframes glitch-1 { 0% { clip-path: inset(20% 0 80% 0); transform: translate(-2px, 2px); } 100% { clip-path: inset(60% 0 10% 0); transform: translate(2px, -2px); } }
+        @keyframes glitch-2 { 0% { clip-path: inset(10% 0 60% 0); transform: translate(2px, -2px); } 100% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, 2px); } }
+
+        /* RGB BORDER */
+        .rgb-border { position: relative; background: #0f172a; border-radius: 1.5rem; z-index: 1; }
+        .rgb-border::before {
+            content: ""; position: absolute; inset: -3px; border-radius: 1.7rem;
+            background: linear-gradient(45deg, #00f3ff, #bc13fe, #00f3ff); z-index: -1; background-size: 200% 200%;
+            animation: g-move 3s linear infinite;
+        }
+        @keyframes g-move { 50% { background-position: 100% 50%; } }
+
+        /* SPOTLIGHT CARD */
+        .spotlight-card {
+            background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); position: relative; overflow: hidden;
+        }
+        .spotlight-card::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .spotlight-card:hover::before { opacity: 1; }
+
+        /* MARQUESINA (CINTILLO) */
+        .animate-marquee { display: inline-block; animation: marquee 20s linear infinite; padding-left: 100%; }
+        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
     </style>
 </head>
 
-<body class="bg-gradient-to-br from-[#3498db] to-[#2ecc71] min-h-screen flex flex-col text-white">
+<body class="bg-darkBase text-white font-sans selection:bg-cyberPurple selection:text-white">
 
-    <!-- --- ENCABEZADO --- -->
-    <header class="relative py-20 text-center overflow-hidden shadow-lg group">
-        <!-- Capa de fondo con la imagen 'casa.png' -->
-        <div class="absolute inset-0 z-0 header-bg-image opacity-30 brightness-110 transition-transform duration-700 group-hover:scale-105"></div>
-        
-        <!-- Contenido del header -->
-        <div class="relative z-10 drop-shadow-md px-4">
-            <h1 class="text-4xl md:text-6xl font-black tracking-tight mb-2 text-shadow-lg">
-                Curso de Preparación ECOEMS
+    {% if config and config.news_active %}
+    <div id="breaking-news-bar" class="relative bg-gradient-to-r from-red-900 to-black border-b border-red-500/30 text-white overflow-hidden py-2 z-50 transition-all duration-700 ease-in-out" data-loops="0">
+        <div class="container mx-auto flex items-center">
+            <div class="bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider mr-4 shadow-lg z-10 whitespace-nowrap animate-pulse">
+                ÚLTIMA HORA
+            </div>
+            <div class="relative flex overflow-x-hidden flex-1">
+                <div id="marquee-text" class="animate-marquee whitespace-nowrap py-1 font-mono text-sm text-red-200">
+                    {{ config.news_text | safe }}
+                </div>
+            </div>
+            <button onclick="closeNews()" class="ml-4 text-red-400 hover:text-white z-20"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="preloader">
+        <div class="loader-bar-bg">
+            <div class="loader-bar-fill" id="loader-fill"></div>
+        </div>
+        <div class="loader-text">
+            INICIANDO SISTEMA... <span id="loader-percent">0%</span>
+        </div>
+    </div>
+
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-outline" id="cursor-outline"></div>
+
+    <header class="relative w-full h-[85vh] min-h-[650px] flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 overflow-hidden"><div class="absolute inset-0 hero-bg"></div></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-darkBase/70 via-darkBase/80 to-darkBase z-10"></div>
+        <div id="particles-js" class="absolute inset-0 z-20 opacity-40"></div>
+        <div class="absolute inset-0 cyber-grid z-10 opacity-20 pointer-events-none"></div>
+
+        <div class="relative z-30 text-center px-4 w-full max-w-6xl mx-auto flex flex-col items-center">
+            <div class="mb-6" data-aos="zoom-in">
+                <div class="px-6 py-2 rounded-full border border-cyan-500/30 bg-cyan-900/20 backdrop-blur-md shadow-[0_0_15px_rgba(0,243,255,0.3)]">
+                    <span class="text-cyberBlue font-tech tracking-[0.2em] text-sm font-bold uppercase">
+                        <i class="fas fa-satellite-dish animate-pulse mr-2"></i> Plataforma V3.5 Activa
+                    </span>
+                </div>
+            </div>
+
+            <h1 class="font-tech text-6xl md:text-8xl font-bold mb-4 leading-tight tracking-tighter" data-aos="fade-up" data-aos-delay="100">
+                <div class="glitch-wrapper" data-text="PREPARACIÓN">PREPARACIÓN</div>
+                <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyberBlue via-white to-cyberPurple" id="typed-title"></span>
             </h1>
-            <p class="text-lg md:text-2xl font-light opacity-95 text-shadow-md">
-                Plataforma oficial para exámenes, calificaciones y anuncios 📘
+
+            <p class="text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto mb-10 font-light" data-aos="fade-up" data-aos-delay="200">
+                Accede al arsenal académico más avanzado.
+                <span class="text-white font-medium">Simuladores, Analítica IA y Resultados en Tiempo Real.</span>
             </p>
+
+            <div class="flex flex-col sm:flex-row gap-5" data-aos="fade-up" data-aos-delay="300">
+                <a href="#main-content" class="px-8 py-4 bg-white text-black font-bold rounded-lg hover:bg-cyberBlue hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                    INICIAR MISIÓN
+                </a>
+                <a href="#countdown-sec" class="px-8 py-4 border border-white/20 bg-white/5 backdrop-blur-sm rounded-lg hover:bg-white/10 hover:border-cyberPurple transition-all duration-300 text-slate-300 flex items-center gap-2">
+                    <i class="fas fa-calendar-alt text-cyberPurple"></i> Próximo Examen
+                </a>
+            </div>
+        </div>
+
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 animate-bounce text-slate-500">
+            <i class="fas fa-angles-down text-2xl"></i>
         </div>
     </header>
 
-    <!-- --- MENSAJES FLASH (FLOTANTES) --- -->
-    <div id="flash-container" class="fixed bottom-5 right-5 z-50 w-80 space-y-3 pointer-events-none">
+    <section id="countdown-sec" class="relative z-20 py-10 border-y border-white/5 bg-black/40 backdrop-blur-sm overflow-hidden">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div class="flex items-center gap-4 text-left">
+                <div class="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center border border-red-500/50">
+                    <i class="fas fa-bullhorn text-red-500 text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h3 class="text-white font-tech text-xl font-bold uppercase">PRÓXIMO EXAMEN</h3>
+                    <p class="text-slate-400 text-sm">El tiempo corre, cadete.</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 font-mono text-2xl md:text-3xl text-white">
+                <div class="text-center"><span class="bg-white/10 px-3 py-2 rounded" id="days">00</span><div class="text-[10px] text-slate-500 mt-1">DÍAS</div></div>
+                <div class="text-center"><span class="bg-white/10 px-3 py-2 rounded" id="hours">00</span><div class="text-[10px] text-slate-500 mt-1">HRS</div></div>
+                <div class="text-center"><span class="bg-white/10 px-3 py-2 rounded" id="mins">00</span><div class="text-[10px] text-slate-500 mt-1">MIN</div></div>
+                <div class="text-center"><span class="bg-white/10 px-3 py-2 rounded text-red-400" id="secs">00</span><div class="text-[10px] text-slate-500 mt-1">SEG</div></div>
+            </div>
+        </div>
+    </section>
+
+    <main id="main-content" class="relative z-20 py-24 bg-darkBase" onmousemove="handleMouseMove(event)">
+        <div class="absolute top-[20%] right-[-10%] w-[500px] h-[500px] bg-cyberPurple/20 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="absolute bottom-[20%] left-[-10%] w-[500px] h-[500px] bg-cyberBlue/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col lg:flex-row gap-16 items-start justify-center">
+
+                <div class="lg:w-7/12 space-y-8">
+                    <div class="mb-8" data-aos="fade-right">
+                        <h2 class="font-tech text-4xl font-bold text-white mb-2">PANEL DE CONTROL</h2>
+                        <div class="h-1 w-20 bg-cyberBlue rounded-full"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="spotlight-card p-6 rounded-2xl group cursor-none" data-aos="zoom-in">
+                            <div class="spotlight-content">
+                                <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-gamepad text-2xl text-blue-400"></i>
+                                </div>
+                                <h3 class="font-bold text-xl mb-2 group-hover:text-blue-400">Simulación Real</h3>
+                                <p class="text-slate-400 text-sm">Entorno idéntico al examen oficial. Sin pausas, sin ayuda.</p>
+                            </div>
+                        </div>
+                        <div class="spotlight-card p-6 rounded-2xl group cursor-none" data-aos="zoom-in" data-aos-delay="100">
+                            <div class="spotlight-content">
+                                <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-brain text-2xl text-purple-400"></i>
+                                </div>
+                                <h3 class="font-bold text-xl mb-2 group-hover:text-purple-400">Analítica IA</h3>
+                                <p class="text-slate-400 text-sm">Algoritmos que detectan tus debilidades y fortalezas.</p>
+                            </div>
+                        </div>
+                        <div class="spotlight-card p-6 rounded-2xl group cursor-none" data-aos="zoom-in" data-aos-delay="200">
+                            <div class="spotlight-content">
+                                <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-shield-halved text-2xl text-green-400"></i>
+                                </div>
+                                <h3 class="font-bold text-xl mb-2 group-hover:text-green-400">Anti-Cheat</h3>
+                                <p class="text-slate-400 text-sm">Sistema de vigilancia activa y detección de fraude.</p>
+                            </div>
+                        </div>
+                        <div class="spotlight-card p-6 rounded-2xl group cursor-none" data-aos="zoom-in" data-aos-delay="300">
+                            <div class="spotlight-content">
+                                <div class="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-trophy text-2xl text-yellow-400"></i>
+                                </div>
+                                <h3 class="font-bold text-xl mb-2 group-hover:text-yellow-400">Ranking</h3>
+                                <p class="text-slate-400 text-sm">Compite con otros alumnos por el primer lugar.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:w-5/12 sticky top-10" data-aos="fade-left" data-aos-delay="200">
+                    <div class="rgb-border p-[2px]">
+                        <div class="bg-[#0f172a] rounded-[1.4rem] p-8 md:p-10 relative overflow-hidden h-full">
+                            <div class="absolute inset-0 cyber-grid opacity-10 pointer-events-none"></div>
+
+                            <div class="text-center mb-8 relative z-10">
+                                <div class="inline-flex relative mb-4">
+                                    <div class="absolute inset-0 bg-blue-500 blur-xl opacity-20 animate-pulse"></div>
+                                    <i class="fas fa-fingerprint text-5xl text-white relative z-10"></i>
+                                </div>
+                                <h2 class="font-tech text-3xl font-bold text-white">ACCESO SEGURO</h2>
+                                <p class="text-slate-400 text-sm mt-1">Introduce tu usuario y contraseña.</p>
+                            </div>
+
+                            <form method="POST" action="{{ url_for('login') }}" class="space-y-6 relative z-10">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-cyberBlue uppercase tracking-widest">Usuario</label>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-white transition">
+                                            <i class="fas fa-user-astronaut"></i>
+                                        </div>
+                                        <input type="text" name="username" placeholder="Nombre de usuario" required autocomplete="username"
+                                            class="input-neon w-full pl-12 pr-4 py-3.5 rounded-lg bg-slate-900/50 text-white focus:outline-none border-2 border-slate-700 focus:border-cyberBlue focus:shadow-[0_0_15px_rgba(0,243,255,0.5)] transition-all">
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-cyberBlue uppercase tracking-widest">Contraseña</label>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-white transition">
+                                            <i class="fas fa-key"></i>
+                                        </div>
+                                        <input type="password" name="password" placeholder="••••••••••••" required 
+                                            class="input-neon w-full pl-12 pr-4 py-3.5 rounded-lg bg-slate-900/50 text-white focus:outline-none border-2 border-slate-700 focus:border-cyberBlue focus:shadow-[0_0_15px_rgba(0,243,255,0.5)] transition-all">
+                                    </div>
+                                </div>
+
+                                <button type="submit" 
+                                    class="w-full relative overflow-hidden bg-white text-black font-tech font-bold py-4 rounded-lg group hover:scale-[1.02] transition-transform duration-200">
+                                    <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                    <span class="relative flex items-center justify-center gap-2">
+                                        CONECTAR AL SISTEMA <i class="fas fa-arrow-right"></i>
+                                    </span>
+                                </button>
+                            </form>
+
+                            <div class="mt-6 text-center">
+                                <p class="text-[10px] text-slate-600 uppercase tracking-widest">
+                                    Encriptación End-to-End v3.5
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-black text-slate-400 py-16 border-t border-white/10 relative z-20 mt-auto">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="flex items-center gap-6 group cursor-none">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="h-24 w-auto grayscale group-hover:grayscale-0 transition duration-500 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                    <div class="text-left">
+                        <h4 class="text-white font-tech font-bold text-xl uppercase tracking-widest mb-2">Casa de Cultura</h4>
+                        <div class="text-sm text-slate-500 max-w-xs leading-relaxed">
+                            16800, Av. Miguel Hidalgo 58, San Mateo Xalpa,<br>Xochimilco, 16300 Ciudad de México, CDMX
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center md:text-right space-y-3">
+                    <div class="flex items-center justify-center md:justify-end gap-2 text-white">
+                        <span class="text-xs text-cyberBlue uppercase tracking-wider">Número del Profe:</span>
+                    </div>
+                    <div class="text-2xl font-bold text-white hover:text-cyberBlue transition cursor-none">+55 35 04 76 10</div>
+                    <div><a href="{{ url_for('privacy_notice') }}" target="_blank" class="text-sm hover:text-white transition underline decoration-dotted">Aviso de Privacidad</a></div>
+                </div>
+            </div>
+            <div class="text-center mt-12 pt-8 border-t border-white/5 text-xs text-slate-600 font-mono flex flex-col md:flex-row justify-between items-center gap-4">
+                <p>Copyright © ECOEMS CCSMX 2026. Todos los derechos reservados.</p>
+                <p class="flex items-center gap-2">Hecho con mucho amor <i class="fas fa-heart text-red-500 animate-pulse"></i> para la banda.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="cookie-banner" class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-slate-900/90 backdrop-blur-xl border border-cyberBlue/30 rounded-2xl p-5 z-[100] transform translate-y-[150%] transition-transform duration-700 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-[0_0_30px_rgba(0,243,255,0.2)]">
+        <div class="flex items-center gap-4 text-left">
+            <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-cyberBlue text-xl">
+                <i class="fas fa-cookie-bite"></i>
+            </div>
+            <div>
+                <h4 class="text-white font-bold text-sm mb-1">Protocolos de Seguridad</h4>
+                <p class="text-xs text-slate-400">
+                    Usamos cookies para asegurar el funcionamiento del sistema. Lee nuestro 
+                    <a href="{{ url_for('privacy_notice') }}" class="text-cyberBlue underline hover:text-white transition font-bold">Aviso de Privacidad</a>.
+                </p>
+            </div>
+        </div>
+        <button id="accept-cookies" class="px-6 py-2.5 bg-cyberBlue text-black font-bold rounded-lg hover:bg-white hover:scale-105 transition-all text-xs tracking-wider shadow-lg whitespace-nowrap">
+            ACEPTAR Y CONTINUAR
+        </button>
+    </div>
+
+    <div id="flash-container" class="fixed bottom-5 right-5 z-50 space-y-3 pointer-events-none">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="flash-message pointer-events-auto p-4 rounded-lg shadow-xl text-center font-bold transition-all duration-500 transform translate-y-0 opacity-100
-                        {% if category == 'success' %} bg-green-100 text-green-800 border-l-4 border-green-500
-                        {% elif category == 'danger' %} bg-red-100 text-red-800 border-l-4 border-red-500
-                        {% elif category == 'warning' %} bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500
-                        {% else %} bg-blue-100 text-blue-800 border-l-4 border-blue-500 {% endif %}">
-                        {{ message }}
+                    <div class="flash-message pointer-events-auto transform translate-y-10 opacity-0 transition-all duration-500 bg-slate-900/90 border-l-4 p-4 rounded shadow-2xl backdrop-blur flex items-center gap-3 min-w-[300px] {% if category == 'success' %} border-green-500 text-green-400 {% elif category == 'danger' %} border-red-500 text-red-400 {% else %} border-blue-500 text-blue-400 {% endif %}">
+                        <i class="fas fa-terminal"></i><span class="font-mono text-sm font-bold">{{ message }}</span>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
     </div>
 
-    <!-- --- CONTENIDO PRINCIPAL --- -->
-    <div class="flex-grow container mx-auto px-4 py-10 flex flex-col lg:flex-row gap-10 items-start justify-center">
-        
-        <!-- COLUMNA IZQUIERDA: INFORMACIÓN -->
-        <div class="lg:flex-[2] w-full bg-white dark:bg-gray-800/10 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-white/20">
-            <h2 class="text-3xl font-bold border-b-2 border-white/30 pb-4 mb-6">
-                Bienvenido al curso ECOEMS
-            </h2>
-            <p class="text-lg leading-relaxed mb-4 text-white/90">
-                Esta plataforma está diseñada para apoyarte en tu preparación al examen de ECOEMS. 
-                Aquí podrás acceder a:
-            </p>
-            <ul class="space-y-4 ml-2 mb-6 text-lg">
-                <li class="flex items-center">
-                    <i class="fas fa-laptop-code text-yellow-300 mr-3 text-xl"></i> Exámenes en línea (simulación estilo IPN/UNAM)
-                </li>
-                <li class="flex items-center">
-                    <i class="fas fa-star text-yellow-300 mr-3 text-xl"></i> Consulta de Calificaciones
-                </li>
-                <li class="flex items-center">
-                    <i class="fas fa-bullhorn text-yellow-300 mr-3 text-xl"></i> Anuncios y avisos importantes
-                </li>
-                <li class="flex items-center">
-                    <i class="fas fa-headset text-yellow-300 mr-3 text-xl"></i> Soporte en caso de problemas
-                </li>
-            </ul>
-            <div class="mt-8 bg-white dark:bg-gray-800/20 py-3 rounded-lg text-center backdrop-blur-sm">
-                <p class="text-xl font-bold text-white">
-                    ¡Prepárate y da tu mejor esfuerzo! 🚀
-                </p>
-            </div>
-        </div>
-
-        <!-- COLUMNA DERECHA: LOGIN -->
-        <div class="w-full lg:flex-1 max-w-md bg-white dark:bg-gray-800 text-gray-800 p-8 rounded-2xl shadow-2xl transform transition hover:scale-[1.01]">
-            <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 text-2xl mb-4 shadow-inner">
-                    <i class="fas fa-user-graduate"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800 border-b border-gray-200 pb-2">
-                    Iniciar sesión
-                </h2>
-            </div>
-
-            <form method="POST" action="{{ url_for('login') }}" class="space-y-5">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors group-focus-within:text-blue-600">
-                        <i class="fas fa-user text-gray-500"></i>
-                    </div>
-                    <input type="text" name="username" placeholder="Usuario o Nombre Completo" required autocomplete="username" spellcheck="false"
-                        class="w-full pl-10 px-4 py-3 rounded-lg border border-gray-300 !bg-white !text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm">
-                </div>
-
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors group-focus-within:text-blue-600">
-                        <i class="fas fa-lock text-gray-500"></i>
-                    </div>
-                    <input type="password" name="password" placeholder="Contraseña" required 
-                        class="w-full pl-10 px-4 py-3 rounded-lg border border-gray-300 !bg-white !text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition shadow-sm">
-                </div>
-
-                <button type="submit" 
-                    class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow-md transform transition active:scale-95 hover:-translate-y-0.5 focus:ring-4 focus:ring-blue-300">
-                    Entrar
-                </button>
-            </form>
-        </div>
-
-    </div>
-    
-    <!-- --- FOOTER --- -->
-    <footer class="bg-gray-900/90 text-gray-300 pt-10 pb-6 mt-auto border-t border-gray-700">
-        <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-            
-            <div class="flex flex-col md:flex-row items-center text-center md:text-left gap-8">
-                <!-- Logo -->
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo Institucional" 
-                    class="h-28 md:h-36 brightness-200 grayscale opacity-80 hover:opacity-100 transition-opacity">
-                
-                <!-- Dirección -->
-                <div class="text-sm md:text-base space-y-2">
-                    <strong class="text-white block text-lg tracking-wide border-b border-gray-600 pb-1 mb-2">CURSO DE LA CASA DE CULTURA DE SAN MATEO XALPA</strong>
-                    <p class="leading-relaxed">
-                        16800, Av. Miguel Hidalgo 58, San Mateo Xalpa,<br> 
-                        Xochimilco, 16300 Ciudad de México, CDMX
-                    </p>
-                    <p class="text-blue-400 font-bold flex items-center justify-center md:justify-start gap-2 pt-1">
-                        <i class="fas fa-phone-alt"></i> Teléfono del Profe: +55 35 04 76 10
-                    </p>
-                </div>
-            </div>
-
-            <!-- Enlaces -->
-            <div>
-                <a href="{{ url_for('privacy_notice') }}" target="_blank" class="text-blue-400 hover:text-blue-300 font-bold underline decoration-dotted hover:decoration-solid transition">
-                    Aviso de Privacidad
-                </a>
-            </div>
-        </div>
-
-        <div class="text-center mt-8 pt-4 border-t border-gray-700 text-xs text-gray-500">
-            © 2025 Curso ECOEMS de la CCSMX. Todos los derechos reservados.
-        </div>
-    </footer>
-    
-    <!-- --- BANNER DE COOKIES --- -->
-    <div id="cookie-notice" class="hidden fixed bottom-0 left-0 right-0 bg-gray-800/95 backdrop-blur text-white p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.3)] z-[9999] flex-col md:flex-row justify-between items-center gap-4 border-t border-blue-500">
-        <div class="flex items-start gap-3">
-            <i class="fas fa-cookie-bite text-2xl text-yellow-500 mt-1"></i>
-            <p class="text-sm text-center md:text-left leading-relaxed">
-                Usamos cookies propias y de sesión para el correcto funcionamiento de la autenticación. Al hacer clic en "Aceptar", confirmas que has leído y aceptas nuestro 
-                <a href="{{ url_for('privacy_notice') }}" target="_blank" class="text-blue-400 hover:text-blue-300 underline font-semibold">Aviso de Privacidad</a>.
-            </p>
-        </div>
-        <button id="accept-cookies" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded transition transform active:scale-95 shadow-lg whitespace-nowrap w-full md:w-auto">
-            Aceptar y Continuar
-        </button>
-    </div>
-
-    <!-- --- JAVASCRIPT --- -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. LÓGICA PARA OCULTAR MENSAJES FLASH
-            const flashMessages = document.querySelectorAll('#flash-container .flash-message');
-            flashMessages.forEach(function(message) {
-                setTimeout(function() {
-                    // Efecto de desvanecimiento
-                    message.style.opacity = '0';
-                    message.style.transform = 'translateY(10px)';
-                    // Eliminar del DOM después de la transición
-                    setTimeout(function() { message.remove(); }, 500);
-                }, 4000); // 4 segundos visible
-            });
+        // 1. AOS
+        AOS.init({ duration: 800, once: true, offset: 100 });
+
+        // 2. PRELOADER REALISTA
+        let progress = 0;
+        const loaderFill = document.getElementById('loader-fill');
+        const loaderPercent = document.getElementById('loader-percent');
+        const preloader = document.getElementById('preloader');
+
+        const interval = setInterval(() => {
+            progress += Math.floor(Math.random() * 5) + 2; 
+            if (progress > 100) progress = 100;
             
-            // 2. LÓGICA DEL BANNER DE COOKIES
-            const cookieBanner = document.getElementById('cookie-notice');
-            const acceptButton = document.getElementById('accept-cookies');
+            loaderFill.style.width = `${progress}%`;
+            loaderPercent.innerText = `${progress}%`;
 
-            // Verificar si NO se ha aceptado antes
-            if (localStorage.getItem('cookies_accepted') !== 'true') {
-                cookieBanner.classList.remove('hidden'); // Mostrar (quitando hidden)
-                cookieBanner.classList.add('flex');      // Usar flexbox
+            if (progress === 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    preloader.style.opacity = '0';
+                    preloader.style.visibility = 'hidden';
+                }, 500);
             }
+        }, 50);
 
-            // Al hacer clic en Aceptar
-            acceptButton.addEventListener('click', function() {
-                localStorage.setItem('cookies_accepted', 'true');
-                cookieBanner.classList.add('hidden');    // Ocultar
-                cookieBanner.classList.remove('flex');
-            });
+        // 3. CURSOR
+        const cursorDot = document.getElementById("cursor-dot");
+        const cursorOutline = document.getElementById("cursor-outline");
+        window.addEventListener("mousemove", function (e) {
+            const posX = e.clientX; const posY = e.clientY;
+            cursorDot.style.left = `${posX}px`; cursorDot.style.top = `${posY}px`;
+            cursorOutline.animate({ left: `${posX}px`, top: `${posY}px` }, { duration: 500, fill: "forwards" });
         });
+
+        // 4. SPOTLIGHT
+        function handleMouseMove(e) {
+            const cards = document.getElementsByClassName("spotlight-card");
+            for(const card of cards) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+                card.style.setProperty("--mouse-x", `${x}px`); card.style.setProperty("--mouse-y", `${y}px`);
+            }
+        }
+
+        // 5. PARTICLES
+        particlesJS('particles-js', {
+            "particles": { "number": { "value": 60 }, "color": { "value": "#ffffff" }, "opacity": { "value": 0.3, "random": true }, "size": { "value": 2, "random": true }, "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.2, "width": 1 }, "move": { "enable": true, "speed": 1.5 } }, "interactivity": { "detect_on": "window", "events": { "onhover": { "enable": true, "mode": "grab" } } }
+        });
+
+        // 6. TYPED
+        new Typed('#typed-title', {
+            strings: ['ECOEMS CCSMX.', 'TU FUTURO.', 'TU MISIÓN.'],
+            typeSpeed: 60, backSpeed: 40, loop: true, showCursor: true, cursorChar: '_',
+        });
+
+        // 7. FLASH & COOKIES
+        document.addEventListener('DOMContentLoaded', () => {
+            // Flash Messages
+            const msgs = document.querySelectorAll('.flash-message');
+            msgs.forEach((m, i) => {
+                setTimeout(() => { m.classList.remove('translate-y-10', 'opacity-0'); setTimeout(() => { m.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => m.remove(), 500); }, 5000); }, i * 200);
+            });
+
+            // Cookie Logic
+            const cookieBanner = document.getElementById('cookie-banner');
+            if (!localStorage.getItem('ecoems_cookies_accepted')) {
+                setTimeout(() => { cookieBanner.classList.remove('translate-y-[150%]'); }, 2500);
+            }
+            document.getElementById('accept-cookies').addEventListener('click', () => {
+                localStorage.setItem('ecoems_cookies_accepted', 'true');
+                cookieBanner.classList.add('translate-y-[150%]');
+            });
+
+            // 8. CINTILLO AUTO-CLOSE (2 VUELTAS)
+            const newsBar = document.getElementById('breaking-news-bar');
+            const newsText = document.getElementById('marquee-text');
+            if(newsBar && newsText) {
+                newsText.addEventListener('animationiteration', () => {
+                    let loops = parseInt(newsBar.getAttribute('data-loops'));
+                    loops++;
+                    newsBar.setAttribute('data-loops', loops);
+                    if (loops >= 2) closeNews();
+                });
+            }
+        });
+
+        // FUNCIÓN CERRAR NOTICIAS
+        function closeNews() {
+            const bar = document.getElementById('breaking-news-bar');
+            if(bar) {
+                bar.style.transform = "translateY(-100%)";
+                bar.style.opacity = "0";
+                setTimeout(() => bar.remove(), 700);
+            }
+        }
+
+        // 9. CONTADOR DINÁMICO (Lee config de DB)
+        const dbDate = "{{ config.next_exam_date if config and config.next_exam_date else '2026-01-30T00:00' }}";
+        const targetDate = new Date(dbDate).getTime();
+
+        const timer = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+            if (distance < 0) { clearInterval(timer); return; }
+            document.getElementById("days").innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            document.getElementById("hours").innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            document.getElementById("mins").innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            document.getElementById("secs").innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }, 1000);
     </script>
+    <style> @keyframes shimmer { 100% { transform: translateX(100%); } } </style>
 </body>
 </html>

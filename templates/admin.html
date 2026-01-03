@@ -6,6 +6,7 @@
 
 <div class="min-h-screen pb-12 font-sans text-left">
 
+    <!-- HEADER / HERO SECTION -->
     <div class="relative pb-24 pt-12 px-4 shadow-xl rounded-b-[3rem] overflow-hidden mb-[-4rem] z-0"
         style="background: var(--bg-header); border-bottom: 1px solid var(--borde-tarjeta);">
 
@@ -46,7 +47,55 @@
         </div>
     </div>
 
+    <!-- CONTENIDO PRINCIPAL -->
     <div class="container mx-auto max-w-6xl px-4 relative z-10">
+
+        <!-- 🎛️ FASE 3: CONTROL DE TRANSMISIÓN (Nuevo Bloque Integrado) -->
+        <div class="card !p-6 mb-8 border-l-4 shadow-lg" 
+             style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta); border-left-color: #a855f7;">
+            
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2" style="color: var(--color-texto);">
+                <i class="fas fa-satellite-dish" style="color: #a855f7;"></i> Control de Transmisión (Homepage)
+            </h3>
+            
+            <form action="{{ url_for('update_settings') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <!-- Input Fecha -->
+                <div class="p-4 rounded-lg border" style="background: var(--bg-tabla-hover); border-color: var(--borde-tarjeta);">
+                    <label class="block text-sm font-bold mb-2" style="color: var(--color-texto);">📅 Fecha Próximo Examen</label>
+                    <input type="datetime-local" name="exam_date" 
+                           class="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500" 
+                           style="background: var(--bg-app); color: var(--color-texto); border: 1px solid var(--borde-tarjeta);"
+                           required>
+                    <p class="text-xs mt-1" style="color: var(--color-texto-secundario);">El contador del inicio apuntará a esta fecha.</p>
+                </div>
+
+                <!-- Input Noticias -->
+                <div class="p-4 rounded-lg border" style="background: var(--bg-tabla-hover); border-color: var(--borde-tarjeta);">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-bold" style="color: var(--color-texto);">📰 Noticia "Breaking News"</label>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="news_active" id="newsSwitch" class="w-4 h-4 text-purple-600" checked>
+                            <label for="newsSwitch" class="text-xs" style="color: var(--color-texto-secundario);">Mostrar Cintillo</label>
+                        </div>
+                    </div>
+                    <textarea name="news_text" rows="2" 
+                              class="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500"
+                              style="background: var(--bg-app); color: var(--color-texto); border: 1px solid var(--borde-tarjeta);"
+                              placeholder="Ej: 🚨 ¡Atención! Mañana simulacro sorpresa..."></textarea>
+                    <p class="text-xs mt-1" style="color: var(--color-texto-secundario);">Puedes usar Emojis 🚨🔥🏆 para decorar.</p>
+                </div>
+
+                <div class="md:col-span-2 text-right">
+                    <button type="submit" class="btn font-bold py-2 px-6 rounded-lg shadow transition transform hover:scale-105"
+                            style="background: #a855f7; color: white;">
+                        💾 Guardar Cambios en Vivo
+                    </button>
+                </div>
+            </form>
+        </div>
+        <!-- FIN FASE 3 -->
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
@@ -108,7 +157,8 @@
                 </a>
             </div>
         </div>
-        <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
+
+        <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4 mb-8"
             style="border-left-color: #000;">
             <div>
                 <div class="flex justify-between items-start mb-4">
