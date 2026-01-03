@@ -379,7 +379,14 @@ class User(db.Model, UserMixin):
     # Relaciones (No las borres)
     results = db.relationship("ExamResult", backref="user", lazy=True)
     violation_logs = db.relationship("ViolationLog", backref="user", lazy=True)
-
+    
+# --- NUEVA TABLA DE CONFIGURACIÓN ---
+class SiteConfig(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    next_exam_date = db.Column(db.String(50), default="2026-01-30T09:00") # Guardamos como texto ISO
+    news_text = db.Column(db.Text, default="📢 ¡Bienvenido a ECOEMS! Prepárate para el éxito.")
+    news_active = db.Column(db.Boolean, default=True)
+    # Truco para que siempre haya solo una configuración (Singleton)
 
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1849,16 +1856,41 @@ def dashboard():
         latest_reports=latest_reports,
         Exam=Exam,
     )
+    
+from flask import send_from_directory
 
+@app.route('/robots.txt')
+def robots():
+    # Esto le dice a Google: "Puedes leer todo"
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "Sitemap: https://www.cursoecoems.org/sitemap.xml" 
+    ]
+    return Response("\n".join(lines), mimetype="text/plain")
 
 @app.route("/")
 def index():
+    # 1. CARGAR CONFIGURACIÓN (Para la fecha y noticias)
+    config = SiteConfig.query.first()
+    if not config:
+        # Si es la primera vez, creamos la configuración por defecto
+        config = SiteConfig(news_text="¡Bienvenido al sistema ECOEMS!", news_active=True)
+        db.session.add(config)
+        db.session.commit()
+
+    # 2. VERIFICAR SI EL USUARIO YA ESTÁ DENTRO
     if current_user.is_authenticated:
+        # Si es Admin, va a su panel
         if current_user.role == "admin":
-            return redirect(url_for("admin_panel"))
+            return redirect(url_for("admin_dashboard")) # Asegúrate que tu ruta se llame así
+        # Si es Estudiante, va a su dashboard
         else:
             return redirect(url_for("dashboard"))
-    return redirect(url_for("login"))
+
+    # 3. SI NO ESTÁ LOGUEADO, MOSTRAR LA PÁGINA DE INICIO (INDEX)
+    # Pasamos la variable 'config' para que el HTML pueda leer la fecha y noticias
+    return render_template("index.html", config=config)
 
 
 @app.route("/privacy")
@@ -2093,6 +2125,26 @@ def setup_2fa():
         username=user.username,
     )
 
+@app.route("/admin/update_settings", methods=["POST"])
+@login_required
+def update_settings():
+    if current_user.role != "admin":
+        return redirect(url_for('index'))
+    
+    config = SiteConfig.query.first()
+    if not config:
+        config = SiteConfig()
+        db.session.add(config)
+    
+    # Recibimos datos del formulario
+    config.next_exam_date = request.form.get("exam_date")
+    config.news_text = request.form.get("news_text")
+    # El checkbox envía 'on' si está marcado, o nada si no lo está
+    config.news_active = True if request.form.get("news_active") else False
+    
+    db.session.commit()
+    flash("✅ Configuración del sitio actualizada correctamente.", "success")
+    return redirect(url_for('admin_dashboard'))
 
 @app.route("/disable_2fa", methods=["POST"])
 @login_required

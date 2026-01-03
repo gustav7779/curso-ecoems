@@ -1,433 +1,626 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <link rel="shortcut icon" href="#">
-    <title>{% block title %}Curso ECOMS{% endblock %}</title>
+    <title>{% block title %}Curso ECOEMS{% endblock %}</title>
+    <meta name="description"
+        content="Curso de Preparación ECOEMS oficial de la Casa de Cultura San Mateo Xalpa. Simulador de exámenes UNAM e IPN, consulta de calificaciones y material de estudio.">
+    <meta name="keywords"
+        content="ECOEMS, Curso Comipems, Examen Simulador, UNAM, IPN, San Mateo Xalpa, Preparatoria, Bachillerato, Guía de estudio">
+    <meta name="author" content="ECOEMS CCSMX">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:title" content="Curso de Preparación ECOEMS | Simulador y Resultados">
+    <meta property="og:description"
+        content="Plataforma oficial para alumnos. Practica con exámenes reales y asegura tu lugar.">
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo.png', _external=True) }}">
+    <meta property="og:url" content="https://www.cursoecoems.org">
+    <meta property="og:type" content="website">
+    <meta name="google-site-verification" content="BHRY97gDzNZNSXQ4FIRyEfmoLuCSQuE-mr6mXJSX4Ns" />
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/css/output.css') }}">
-    
+
     <style>
-    /* ========================================= */
-    /* 1. SISTEMA DE VARIABLES (LA LÓGICA REAL) */
-    /* ========================================= */
-    
-    /* 🔥 MODO DÍA (ESTADO BASE / DEFAULT) 🔥 */
-    :root {
-        /* Fondo Principal: Gris azulado muy claro y limpio */
-        --bg-pagina: #f4f6fb;
-        
-        /* Textos: Oscuros para alto contraste */
-        --color-texto: #111827;        /* Gray-900 */
-        --color-texto-secundario: #6b7280; /* Gray-500 */
-        
-        /* HEADER (HERO): Gradiente suave y luminoso */
-        --bg-header: linear-gradient(135deg, #e0e7ff, #d1fae5); /* Indigo suave a Esmeralda suave */
-        --texto-header: #1e293b; /* Texto oscuro sobre fondo claro */
-        --borde-header: rgba(0,0,0,0.05);
+        /* ========================================= */
+        /* 1. SISTEMA DE VARIABLES (LA LÓGICA REAL) */
+        /* ========================================= */
 
-        /* NAV: Botones limpios */
-        --color-nav-link: #374151;
-        --bg-nav-link: rgba(255, 255, 255, 0.6);
-        --bg-nav-link-hover: #ffffff;
+        /* 🔥 MODO DÍA (ESTADO BASE / DEFAULT) 🔥 */
+        :root {
+            /* Fondo Principal: Gris azulado muy claro y limpio */
+            --bg-pagina: #f4f6fb;
 
-        /* TARJETAS: Blancas puras con sombra suave */
-        --bg-tarjeta: #ffffff;
-        --sombra-tarjeta: 0 10px 25px rgba(0,0,0,0.08); /* Sombra elegante */
-        --borde-tarjeta: #e5e7eb; /* Borde muy sutil */
+            /* Textos: Oscuros para alto contraste */
+            --color-texto: #111827;
+            /* Gray-900 */
+            --color-texto-secundario: #6b7280;
+            /* Gray-500 */
 
-        /* Inputs */
-        --bg-input: #ffffff;
-        --borde-input: #d1d5db;
-        
-        /* Tablas */
-        --bg-tabla-head: #f9fafb;      
-        --texto-tabla-head: #374151;
-        --bg-tabla-hover: #f3f4f6;
+            /* HEADER (HERO): Gradiente suave y luminoso */
+            --bg-header: linear-gradient(135deg, #e0e7ff, #d1fae5);
+            /* Indigo suave a Esmeralda suave */
+            --texto-header: #1e293b;
+            /* Texto oscuro sobre fondo claro */
+            --borde-header: rgba(0, 0, 0, 0.05);
 
-        /* Colores Acción */
-        --color-primario: #2563eb;     
-        --color-primario-hover: #1d4ed8;
-        
-        /* Footer */
-        --bg-footer: #1f2937;
-        --texto-footer: #9ca3af;
+            /* NAV: Botones limpios */
+            --color-nav-link: #374151;
+            --bg-nav-link: rgba(255, 255, 255, 0.6);
+            --bg-nav-link-hover: #ffffff;
 
-        --fuente-principal: 'Inter', system-ui, -apple-system, sans-serif;
-    }
+            /* TARJETAS: Blancas puras con sombra suave */
+            --bg-tarjeta: #ffffff;
+            --sombra-tarjeta: 0 10px 25px rgba(0, 0, 0, 0.08);
+            /* Sombra elegante */
+            --borde-tarjeta: #e5e7eb;
+            /* Borde muy sutil */
 
-    /* 🌑 MODO NOCTURNO (SOLO SOBRESCRIBE) 🌑 */
-    body.dark-mode {
-        /* Fondo: Azul muy profundo (casi negro pero con tono) */
-        --bg-pagina: #020617;          
-        
-        /* Textos: Claros */
-        --color-texto: #e5e7eb;        
-        --color-texto-secundario: #9ca3af;
+            /* Inputs */
+            --bg-input: #ffffff;
+            --borde-input: #d1d5db;
 
-        /* Header: Gradiente profundo y serio */
-        --bg-header: linear-gradient(135deg, #020617, #064e3b); /* Oscuro a Verde Bosque */
-        --texto-header: #f3f4f6;
-        --borde-header: #1e293b;
+            /* Tablas */
+            --bg-tabla-head: #f9fafb;
+            --texto-tabla-head: #374151;
+            --bg-tabla-hover: #f3f4f6;
 
-        /* Nav */
-        --color-nav-link: #e5e7eb;
-        --bg-nav-link: rgba(255, 255, 255, 0.05);
-        --bg-nav-link-hover: rgba(255, 255, 255, 0.15);
+            /* Colores Acción */
+            --color-primario: #2563eb;
+            --color-primario-hover: #1d4ed8;
 
-        /* Tarjetas: Slate oscuro sin sombra (flat design) */
-        --bg-tarjeta: #0f172a;         
-        --sombra-tarjeta: none; 
-        --borde-tarjeta: #1e293b;
+            /* Footer */
+            --bg-footer: #1f2937;
+            --texto-footer: #9ca3af;
 
-        /* Inputs */
-        --bg-input: #1e293b;
-        --borde-input: #374151;
-
-        /* Tablas */
-        --bg-tabla-head: #0f172a;
-        --texto-tabla-head: #d1d5db;
-        --bg-tabla-hover: #1e293b;
-        
-        /* Footer */
-        --bg-footer: #020617;
-    }
-
-    /* ========================================= */
-    /* 2. APLICACIÓN DE ESTILOS */
-    /* ========================================= */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-    
-    body {
-        font-family: var(--fuente-principal);
-        background-color: var(--bg-pagina); /* Aplica el #f4f6fb */
-        color: var(--color-texto);          /* Aplica el #111827 */
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        overflow-x: hidden;
-        transition: background-color 0.3s ease, color 0.3s ease;
-    }
-    
-    /* --- HEADER (HERO) --- */
-    header {
-        background: var(--bg-header); /* El gradiente bonito */
-        color: var(--texto-header);
-        padding: 18px 0; 
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-bottom: 1px solid var(--borde-header);
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        transition: background 0.3s, color 0.3s;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Sombra suave en el header */
-    }
-    
-    .header-content-wrapper {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 30px;
-        width: 100%;
-    }
-
-    header h1 {
-        margin: 0;
-        font-size: 1.8em;
-        font-weight: 800;
-        letter-spacing: -0.025em;
-    }
-
-    /* --- NAVEGACIÓN --- */
-    .main-nav a {
-        color: var(--color-nav-link);
-        text-decoration: none;
-        padding: 10px 18px;
-        border-radius: 8px;
-        margin-left: 10px;
-        transition: all 0.2s ease-in-out;
-        font-size: 0.95em;
-        font-weight: 600;
-        background: var(--bg-nav-link);
-        border: 1px solid transparent;
-    }
-
-    .main-nav a:hover {
-        background: var(--bg-nav-link-hover);
-        color: var(--color-primario);
-        transform: translateY(-1px);
-        border-color: var(--borde-tarjeta);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    
-    /* Botones especiales */
-    .main-nav a[href*="admin_panel"] { background: #0ea5e9 !important; color: white !important; }
-    .main-nav a[href*="logout"] { background: #ef4444 !important; color: white !important; }
-
-    .nav-role {
-        font-weight: 700;
-        color: var(--color-texto-secundario);
-        margin-right: 20px;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.85em;
-        background: rgba(0,0,0,0.05);
-    }
-    body.dark-mode .nav-role { background: rgba(255,255,255,0.1); color: #fbbf24; }
-    
-    /* --- CONTENIDO & TARJETAS --- */
-    main { padding: 20px 20px 40px 20px; flex: 1; }
-    
-    .container, 
-    .card, 
-    .panel, 
-    .white-box,
-    .glass-card,
-    .details-card {
-        background-color: var(--bg-tarjeta); /* Blanco en día */
-        color: var(--color-texto);
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: var(--sombra-tarjeta); /* Sombra solo en día */
-        border: 1px solid var(--borde-tarjeta); 
-        margin: 20px auto; 
-        max-width: 1200px;
-        transition: background-color 0.3s, box-shadow 0.3s, border-color 0.3s;
-    }
-
-    /* Textos secundarios */
-    .text-muted, small, .help-text {
-        color: var(--color-texto-secundario) !important;
-    }
-
-    /* --- FOOTER --- */
-    footer {
-        text-align: center;
-        padding: 20px;
-        background: var(--bg-footer); 
-        color: var(--texto-footer);
-        width: 100%;
-        font-size: 0.9em;
-        transition: background-color 0.3s;
-    }
-    
-    /* --- FLASH MESSAGES --- */
-    #flash-container {
-        position: fixed !important; bottom: 20px !important; right: 20px !important; 
-        z-index: 10000; width: 350px; display: flex; flex-direction: column-reverse; gap: 10px;
-    }
-    .flash-message {
-        padding: 15px 20px; border-radius: 10px; text-align: left; font-weight: 600;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
-        color: #1e293b; 
-        background: white;
-        border: 1px solid rgba(0,0,0,0.05);
-    }
-    .flash-success { border-left: 5px solid #22c55e; }
-    .flash-danger { border-left: 5px solid #ef4444; }
-    .flash-warning { border-left: 5px solid #eab308; }
-    
-    /* --- FORMS & LISTS --- */
-    .btn {
-        display: inline-block; padding: 12px 24px; 
-        background: var(--color-primario); color: white; border-radius: 8px;
-        text-decoration: none; transition: 0.3s, transform 0.2s; cursor: pointer; border: none; font-weight: 600;
-        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-    }
-    .btn:hover { background: var(--color-primario-hover); transform: translateY(-1px); }
-    
-    form input:not([type="submit"]), 
-    form textarea, 
-    .form-control { 
-        background-color: var(--bg-input);
-        color: var(--color-texto);
-        border: 1px solid var(--borde-input);
-        margin: 10px 0; padding: 12px; width: 80%; box-sizing: border-box; border-radius: 8px;
-        transition: border-color 0.3s, background-color 0.3s;
-    }
-    form input:focus, form textarea:focus { 
-        border-color: var(--color-primario); 
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); outline: none; 
-    }
-    
-    ul { list-style: none; padding: 0; }
-    ul li {
-        background: var(--bg-tarjeta); 
-        color: var(--color-texto);
-        margin: 10px 0; padding: 18px; border-radius: 10px;
-        box-shadow: var(--sombra-tarjeta); 
-        display: flex; justify-content: space-between;
-        align-items: center; flex-wrap: wrap; border-left: 4px solid var(--color-primario);
-        border: 1px solid var(--borde-tarjeta);
-    }
-
-    /* --- TABLAS --- */
-    table {
-        width: 100%; border-collapse: separate; border-spacing: 0;
-        background-color: var(--bg-tarjeta); color: var(--color-texto);
-        border-radius: 8px; overflow: hidden; border: 1px solid var(--borde-tarjeta);
-    }
-    th {
-        background-color: var(--bg-tabla-head); color: var(--texto-tabla-head);
-        padding: 15px; text-align: left; font-weight: 700;
-        border-bottom: 1px solid var(--borde-tarjeta);
-    }
-    td {
-        padding: 15px; border-bottom: 1px solid var(--borde-tarjeta);
-        background-color: var(--bg-tarjeta); color: var(--color-texto);
-    }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background-color: var(--bg-tabla-hover); }
-
-    /* --- TOGGLE BUTTON --- */
-    .theme-toggle-btn {
-        position: fixed; bottom: 20px; left: 20px; z-index: 9999;
-        background: #1e293b; color: #fcd34d; border: none;
-        width: 50px; height: 50px; border-radius: 50%;
-        cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
-        transition: transform 0.3s, background 0.3s;
-    }
-    .theme-toggle-btn:hover { transform: scale(1.1) rotate(15deg); }
-    
-    .icon-sun { display: none; }
-    body.dark-mode .theme-toggle-btn { background: #fcd34d; color: #1e293b; }
-    body.dark-mode .icon-sun { display: block; }
-    body.dark-mode .icon-moon { display: none; }
-
-    /* --- RESPONSIVE --- */
-   /* --- RESPONSIVE OPTIMIZADO (MÓVIL) --- */
-    @media (max-width: 768px) {
-        /* 1. Header más delgado */
-        header { 
-            flex-direction: column; 
-            align-items: center; 
-            padding: 10px 15px; /* Menos relleno arriba/abajo */
-        }
-        
-        .header-content-wrapper { 
-            padding: 0; 
-            width: 100%;
+            --fuente-principal: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        /* Título más pequeño y centrado */
-        header h1 {
-            font-size: 1.4em; 
-            text-align: center;
-            width: 100%;
-            margin-bottom: 8px;
+        /* 🌑 MODO NOCTURNO (SOLO SOBRESCRIBE) 🌑 */
+        body.dark-mode {
+            /* Fondo: Azul muy profundo (casi negro pero con tono) */
+            --bg-pagina: #020617;
+
+            /* Textos: Claros */
+            --color-texto: #e5e7eb;
+            --color-texto-secundario: #9ca3af;
+
+            /* Header: Gradiente profundo y serio */
+            --bg-header: linear-gradient(135deg, #020617, #064e3b);
+            /* Oscuro a Verde Bosque */
+            --texto-header: #f3f4f6;
+            --borde-header: #1e293b;
+
+            /* Nav */
+            --color-nav-link: #e5e7eb;
+            --bg-nav-link: rgba(255, 255, 255, 0.05);
+            --bg-nav-link-hover: rgba(255, 255, 255, 0.15);
+
+            /* Tarjetas: Slate oscuro sin sombra (flat design) */
+            --bg-tarjeta: #0f172a;
+            --sombra-tarjeta: none;
+            --borde-tarjeta: #1e293b;
+
+            /* Inputs */
+            --bg-input: #1e293b;
+            --borde-input: #374151;
+
+            /* Tablas */
+            --bg-tabla-head: #0f172a;
+            --texto-tabla-head: #d1d5db;
+            --bg-tabla-hover: #1e293b;
+
+            /* Footer */
+            --bg-footer: #020617;
         }
 
-        /* Ocultar el badge de "Rol: Student" en móvil para ahorrar espacio */
-        .nav-role {
-            display: none; 
+        /* ========================================= */
+        /* 2. APLICACIÓN DE ESTILOS */
+        /* ========================================= */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+        body {
+            font-family: var(--fuente-principal);
+            background-color: var(--bg-pagina);
+            /* Aplica el #f4f6fb */
+            color: var(--color-texto);
+            /* Aplica el #111827 */
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* 2. TRANSFORMACIÓN A GRID (La magia) */
-        .main-nav { 
-            margin-top: 5px; 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
-            gap: 8px; /* Espacio pequeño entre botones */
-            width: 100%; 
-        }
-
-        /* Estilo de los botones comprimidos */
-        .main-nav a { 
-            margin-left: 0; 
-            width: auto; 
-            text-align: center; 
-            padding: 8px 5px; /* Botones más delgados */
-            font-size: 0.9em; 
+        /* --- HEADER (HERO) --- */
+        header {
+            background: var(--bg-header);
+            /* El gradiente bonito */
+            color: var(--texto-header);
+            padding: 18px 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 6px;
+            border-bottom: 1px solid var(--borde-header);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background 0.3s, color 0.3s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            /* Sombra suave en el header */
         }
 
-        /* 3. El botón SALIR que ocupe todo el ancho al final */
-        .main-nav a[href*="logout"] {
-            grid-column: span 2; /* Se estira a lo largo */
-            margin-top: 2px;
-            background-color: #ef4444 !important;
+        .header-content-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 30px;
+            width: 100%;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        /* --- NAVEGACIÓN --- */
+        .main-nav a {
+            color: var(--color-nav-link);
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            margin-left: 10px;
+            transition: all 0.2s ease-in-out;
+            font-size: 0.95em;
+            font-weight: 600;
+            background: var(--bg-nav-link);
+            border: 1px solid transparent;
+        }
+
+        .main-nav a:hover {
+            background: var(--bg-nav-link-hover);
+            color: var(--color-primario);
+            transform: translateY(-1px);
+            border-color: var(--borde-tarjeta);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Botones especiales */
+        .main-nav a[href*="admin_panel"] {
+            background: #0ea5e9 !important;
             color: white !important;
         }
-        
-        /* Ajustes de contenido */
-        main { padding: 15px 10px; }
-        .container { padding: 15px; margin: 10px auto; }
-        
-        /* Ajuste de Toast/Notificaciones para que no estorben */
-        #student-toast-container { bottom: 10px; right: 10px; left: 10px; align-items: center; }
-    }
 
-    /* ================================================= */
-    /* 🔥 3. ESTILOS GLOBALES DE SKELETON LOADING 🔥 */
-    /* ================================================= */
-    @keyframes skeleton-loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
+        .main-nav a[href*="logout"] {
+            background: #ef4444 !important;
+            color: white !important;
+        }
 
-    .skeleton {
-        background: #e2e8f0;
-        background-image: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
-        background-size: 200% 100%;
-        animation: skeleton-loading 1.5s infinite;
-        border-radius: 6px;
-        display: inline-block;
-    }
+        .nav-role {
+            font-weight: 700;
+            color: var(--color-texto-secundario);
+            margin-right: 20px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            background: rgba(0, 0, 0, 0.05);
+        }
 
-    /* Dark Mode Global */
-    body.dark-mode .skeleton {
-        background: #1e293b;
-        background-image: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-    }
+        body.dark-mode .nav-role {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fbbf24;
+        }
 
-    /* Clases Utilitarias para tamaños */
-    .sk-text { height: 16px; margin-bottom: 8px; width: 100%; }
-    .sk-avatar { width: 40px; height: 40px; border-radius: 50%; }
-    .sk-badge { width: 80px; height: 20px; border-radius: 20px; }
-    .sk-btn { width: 36px; height: 36px; border-radius: 8px; }
-    .sk-card { width: 100%; height: 200px; border-radius: 12px; } /* Nuevo para tarjetas */
+        /* --- CONTENIDO & TARJETAS --- */
+        main {
+            padding: 20px 20px 40px 20px;
+            flex: 1;
+        }
 
-    /* Lógica de Transición */
-    .real-content { opacity: 0; display: none; transition: opacity 0.5s ease-in-out; }
-    .skeleton-container { width: 100%; opacity: 1; transition: opacity 0.5s ease-out; }
+        .container,
+        .card,
+        .panel,
+        .white-box,
+        .glass-card,
+        .details-card {
+            background-color: var(--bg-tarjeta);
+            /* Blanco en día */
+            color: var(--color-texto);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--sombra-tarjeta);
+            /* Sombra solo en día */
+            border: 1px solid var(--borde-tarjeta);
+            margin: 20px auto;
+            max-width: 1200px;
+            transition: background-color 0.3s, box-shadow 0.3s, border-color 0.3s;
+        }
+
+        /* Textos secundarios */
+        .text-muted,
+        small,
+        .help-text {
+            color: var(--color-texto-secundario) !important;
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: var(--bg-footer);
+            color: var(--texto-footer);
+            width: 100%;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+
+        /* --- FLASH MESSAGES --- */
+        #flash-container {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            z-index: 10000;
+            width: 350px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+        }
+
+        .flash-message {
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: left;
+            font-weight: 600;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            color: #1e293b;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .flash-success {
+            border-left: 5px solid #22c55e;
+        }
+
+        .flash-danger {
+            border-left: 5px solid #ef4444;
+        }
+
+        .flash-warning {
+            border-left: 5px solid #eab308;
+        }
+
+        /* --- FORMS & LISTS --- */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--color-primario);
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: 0.3s, transform 0.2s;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn:hover {
+            background: var(--color-primario-hover);
+            transform: translateY(-1px);
+        }
+
+        form input:not([type="submit"]),
+        form textarea,
+        .form-control {
+            background-color: var(--bg-input);
+            color: var(--color-texto);
+            border: 1px solid var(--borde-input);
+            margin: 10px 0;
+            padding: 12px;
+            width: 80%;
+            box-sizing: border-box;
+            border-radius: 8px;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+
+        form input:focus,
+        form textarea:focus {
+            border-color: var(--color-primario);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        ul li {
+            background: var(--bg-tarjeta);
+            color: var(--color-texto);
+            margin: 10px 0;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: var(--sombra-tarjeta);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border-left: 4px solid var(--color-primario);
+            border: 1px solid var(--borde-tarjeta);
+        }
+
+        /* --- TABLAS --- */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background-color: var(--bg-tarjeta);
+            color: var(--color-texto);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--borde-tarjeta);
+        }
+
+        th {
+            background-color: var(--bg-tabla-head);
+            color: var(--texto-tabla-head);
+            padding: 15px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 1px solid var(--borde-tarjeta);
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--borde-tarjeta);
+            background-color: var(--bg-tarjeta);
+            color: var(--color-texto);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: var(--bg-tabla-hover);
+        }
+
+        /* --- TOGGLE BUTTON --- */
+        .theme-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 9999;
+            background: #1e293b;
+            color: #fcd34d;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s, background 0.3s;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+        }
+
+        .icon-sun {
+            display: none;
+        }
+
+        body.dark-mode .theme-toggle-btn {
+            background: #fcd34d;
+            color: #1e293b;
+        }
+
+        body.dark-mode .icon-sun {
+            display: block;
+        }
+
+        body.dark-mode .icon-moon {
+            display: none;
+        }
+
+        /* --- RESPONSIVE --- */
+        /* --- RESPONSIVE OPTIMIZADO (MÓVIL) --- */
+        @media (max-width: 768px) {
+
+            /* 1. Header más delgado */
+            header {
+                flex-direction: column;
+                align-items: center;
+                padding: 10px 15px;
+                /* Menos relleno arriba/abajo */
+            }
+
+            .header-content-wrapper {
+                padding: 0;
+                width: 100%;
+            }
+
+            /* Título más pequeño y centrado */
+            header h1 {
+                font-size: 1.4em;
+                text-align: center;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+
+            /* Ocultar el badge de "Rol: Student" en móvil para ahorrar espacio */
+            .nav-role {
+                display: none;
+            }
+
+            /* 2. TRANSFORMACIÓN A GRID (La magia) */
+            .main-nav {
+                margin-top: 5px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                /* Dos columnas iguales */
+                gap: 8px;
+                /* Espacio pequeño entre botones */
+                width: 100%;
+            }
+
+            /* Estilo de los botones comprimidos */
+            .main-nav a {
+                margin-left: 0;
+                width: auto;
+                text-align: center;
+                padding: 8px 5px;
+                /* Botones más delgados */
+                font-size: 0.9em;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 6px;
+            }
+
+            /* 3. El botón SALIR que ocupe todo el ancho al final */
+            .main-nav a[href*="logout"] {
+                grid-column: span 2;
+                /* Se estira a lo largo */
+                margin-top: 2px;
+                background-color: #ef4444 !important;
+                color: white !important;
+            }
+
+            /* Ajustes de contenido */
+            main {
+                padding: 15px 10px;
+            }
+
+            .container {
+                padding: 15px;
+                margin: 10px auto;
+            }
+
+            /* Ajuste de Toast/Notificaciones para que no estorben */
+            #student-toast-container {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                align-items: center;
+            }
+        }
+
+        /* ================================================= */
+        /* 🔥 3. ESTILOS GLOBALES DE SKELETON LOADING 🔥 */
+        /* ================================================= */
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton {
+            background: #e2e8f0;
+            background-image: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        /* Dark Mode Global */
+        body.dark-mode .skeleton {
+            background: #1e293b;
+            background-image: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+        }
+
+        /* Clases Utilitarias para tamaños */
+        .sk-text {
+            height: 16px;
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        .sk-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .sk-badge {
+            width: 80px;
+            height: 20px;
+            border-radius: 20px;
+        }
+
+        .sk-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+        }
+
+        .sk-card {
+            width: 100%;
+            height: 200px;
+            border-radius: 12px;
+        }
+
+        /* Nuevo para tarjetas */
+
+        /* Lógica de Transición */
+        .real-content {
+            opacity: 0;
+            display: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .skeleton-container {
+            width: 100%;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
     </style>
-    
+
 </head>
+
 <body>
-    
+
     <header>
         <div class="header-content-wrapper">
             <h1>Curso ECOEMS</h1>
             {% if current_user.is_authenticated %}
             <nav class="main-nav">
                 <span class="nav-role">Rol: {{ current_user.role | capitalize }}</span>
-                
+
                 {% if current_user.role == 'student' %}
                 <a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Inicio</a>
                 <a href="{{ url_for('student_exams') }}"><i class="fas fa-file-alt"></i> Exámenes</a>
                 <a href="{{ url_for('view_announcements') }}"><i class="fas fa-bullhorn"></i> Anuncios</a>
                 <a href="{{ url_for('student_reports') }}"><i class="fas fa-clipboard-list"></i> Reportes</a>
-                
+
                 {% elif current_user.role in ['admin', 'ayudante'] %}
                 <a href="{{ url_for('admin_panel') }}"><i class="fas fa-cogs"></i> Panel</a>
                 <a href="{{ url_for('admin_reports') }}"><i class="fas fa-exclamation-circle"></i> Reportes</a>
-                
+
                 {% endif %}
-                
+
                 <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Salir</a>
             </nav>
             {% endif %}
@@ -436,13 +629,13 @@
 
     <div id="flash-container">
         {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="flash-message flash-{{ category }}">
-                {{ message }}
-              </div>
-            {% endfor %}
-          {% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
     </div>
 
@@ -460,20 +653,20 @@
     </button>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // 1. Mensajes Flash
             let flashMessages = document.querySelectorAll('#flash-container .flash-message');
-            flashMessages.forEach(function(message) {
-                setTimeout(function() {
+            flashMessages.forEach(function (message) {
+                setTimeout(function () {
                     message.style.opacity = '0';
-                    setTimeout(function() { message.remove(); }, 500);
+                    setTimeout(function () { message.remove(); }, 500);
                 }, 10000);
             });
 
             // 2. Lógica Modo Oscuro
             const toggleBtn = document.getElementById('theme-toggle');
             const body = document.body;
-            
+
             // Cargar preferencia
             if (localStorage.getItem('darkMode') === 'enabled') {
                 body.classList.add('dark-mode');
@@ -495,19 +688,21 @@
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 
     {% if current_user.is_authenticated and current_user.role in ['admin', 'ayudante'] %}
-    <div id="global-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 10px;"></div>
+    <div id="global-toast-container"
+        style="position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 10px;">
+    </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const globalSocket = io.connect(window.location.origin);
-            globalSocket.on('connect', function() { globalSocket.emit('admin_join_pulse'); });
-            globalSocket.on('admin_notification_alert', function(data) { showGlobalToast(data); });
+            globalSocket.on('connect', function () { globalSocket.emit('admin_join_pulse'); });
+            globalSocket.on('admin_notification_alert', function (data) { showGlobalToast(data); });
             function showGlobalToast(data) {
                 const container = document.getElementById('global-toast-container');
                 const toast = document.createElement('div');
                 toast.style.cssText = "background-color:white; border-left:5px solid #f39c12; padding:15px 20px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); display:flex; flex-direction:column; min-width:300px; animation:slideIn 0.5s ease-out;";
                 toast.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><strong style="font-size:1.1em; color:#333;">${data.title}</strong><small style="color:#999;">Ahora</small></div><p style="margin:0 0 10px 0; color:#555;">${data.message}</p><a href="/admin/chat/${data.user_id}" target="_blank" style="text-align:center; background:#3498db; color:white; text-decoration:none; padding:8px; border-radius:5px; font-weight:bold;">💬 Abrir Chat</a>`;
                 container.appendChild(toast);
-                try { const audio = new Audio('https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_100KB_MP3.mp3'); audio.volume = 0.5; audio.play().catch(e => console.log("Audio autoplay bloqueado")); } catch(e){}
+                try { const audio = new Audio('https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_100KB_MP3.mp3'); audio.volume = 0.5; audio.play().catch(e => console.log("Audio autoplay bloqueado")); } catch (e) { }
                 setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 15000);
             }
         });
@@ -517,23 +712,23 @@
     </script>
     {% endif %}
 
-   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-{# --- LÓGICA DE MENSAJES PARA EL ALUMNO --- #}
+    {# --- LÓGICA DE MENSAJES PARA EL ALUMNO --- #}
     {% if current_user.is_authenticated and current_user.role == 'student' %}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             var socket;
             // 1. Conexión segura
-            if (typeof io !== 'undefined') { 
-                socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port); 
-            } else { 
-                console.error("Socket.IO no cargado."); return; 
+            if (typeof io !== 'undefined') {
+                socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+            } else {
+                console.error("Socket.IO no cargado."); return;
             }
-            
+
             // 2. Escuchar notificación
-            socket.on('student_notification', function(data) {
+            socket.on('student_notification', function (data) {
                 // Verificar si SweetAlert cargó
                 if (typeof Swal === 'undefined') {
                     alert("Mensaje de Gus: " + data.message); // Fallback feo pero funcional
@@ -543,7 +738,7 @@
                 Swal.fire({
                     // Título con HTML
                     title: '<span class="flex items-center justify-center gap-3 text-blue-400"><i class="fas fa-broadcast-tower animate-pulse"></i> Mensaje de Gus</span>',
-                    
+
                     // Cuerpo con HTML
                     html: `
                         <div style="font-size: 1.15em; line-height: 1.6; color: #e2e8f0; font-weight: 500; padding: 10px 0;">
@@ -573,7 +768,7 @@
                     backdrop: `rgba(0,0,0,0.85)`,
                     allowOutsideClick: false,
                     allowEscapeKey: false,
-                    
+
                     // Animaciones
                     showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' }
@@ -585,32 +780,33 @@
     {% endif %}
 
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Busca si hay esqueletos en la página actual
-        const skeletons = document.querySelectorAll('.skeleton-container');
-        
-        if (skeletons.length > 0) {
-            // Si hay esqueletos, activa el efecto
-            setTimeout(() => {
-                skeletons.forEach(sk => {
-                    const contentId = sk.getAttribute('data-target'); // Buscamos a quién debe revelar
-                    const realContent = document.getElementById(contentId);
-                    
-                    if (realContent) {
-                        sk.style.opacity = '0'; // Desvanecer hueso
-                        setTimeout(() => {
-                            sk.style.display = 'none'; // Quitar hueso
-                            realContent.style.display = 'block'; // Poner carne
-                            requestAnimationFrame(() => {
-                                realContent.style.opacity = '1'; // Aparecer suave
-                            });
-                        }, 300);
-                    }
-                });
-            }, 600); // Tiempo de "carga falsa" para el efecto premium
-        }
-    });
+        document.addEventListener("DOMContentLoaded", function () {
+            // Busca si hay esqueletos en la página actual
+            const skeletons = document.querySelectorAll('.skeleton-container');
+
+            if (skeletons.length > 0) {
+                // Si hay esqueletos, activa el efecto
+                setTimeout(() => {
+                    skeletons.forEach(sk => {
+                        const contentId = sk.getAttribute('data-target'); // Buscamos a quién debe revelar
+                        const realContent = document.getElementById(contentId);
+
+                        if (realContent) {
+                            sk.style.opacity = '0'; // Desvanecer hueso
+                            setTimeout(() => {
+                                sk.style.display = 'none'; // Quitar hueso
+                                realContent.style.display = 'block'; // Poner carne
+                                requestAnimationFrame(() => {
+                                    realContent.style.opacity = '1'; // Aparecer suave
+                                });
+                            }, 300);
+                        }
+                    });
+                }, 600); // Tiempo de "carga falsa" para el efecto premium
+            }
+        });
     </script>
 
 </body>
+
 </html>
