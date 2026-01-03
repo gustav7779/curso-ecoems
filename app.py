@@ -247,7 +247,7 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
-socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode="gevent", cors_allowed_origins="*")
 
 babel = Babel(app)
 
