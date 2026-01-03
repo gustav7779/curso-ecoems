@@ -62,7 +62,7 @@ app = Flask(__name__)
 # ======================================================================
 
 # 1. Obtenemos la URL que te dio Heroku
-database_url = os.environ.get('DATABASE_URL')
+database_url = os.environ.get("DATABASE_URL")
 
 # 2. Corrección para Heroku: SQLAlchemy necesita 'postgresql://' en vez de 'postgres://'
 if database_url and database_url.startswith("postgres://"):
@@ -70,20 +70,20 @@ if database_url and database_url.startswith("postgres://"):
 
 # 3. Fallback: Si no hay URL (estás en local), usa SQLite
 if not database_url:
-    database_url = 'sqlite:///curso_ecoms.db'
+    database_url = "sqlite:///curso_ecoms.db"
 
 # --- CONFIGURACIÓN DE CLOUDINARY (Imágenes Inmortales) ---
 cloudinary.config(
-    cloud_name = "djisdkjkf",
-    api_key = "718931262622593",
-    api_secret = "tXTLBgTP9estWoakSSRMQp0tHLc", # 🔥 TU SECRETO REAL
-    secure = True
+    cloud_name="djisdkjkf",
+    api_key="718931262622593",
+    api_secret="tXTLBgTP9estWoakSSRMQp0tHLc",  # 🔥 TU SECRETO REAL
+    secure=True,
 )
 
-print(f"🔌 CONECTANDO A: {database_url}") # Esto nos servirá para depurar si falla
+print(f"🔌 CONECTANDO A: {database_url}")  # Esto nos servirá para depurar si falla
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-app.config['SECRET_KEY'] = 'clave_secreta_emergencia_2025'
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SECRET_KEY"] = "clave_secreta_emergencia_2025"
 # Aumentamos el límite a 100 MB para soportar la grabación de video/sesión
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -97,38 +97,46 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # --- FUNCIONES AUXILIARES (HELPERS) ---
 # ======================================================================
 
+
 def normalizar_texto(texto):
     if not texto:
         return ""
-    
+
     # 1. Convertir a minúsculas
     texto = texto.lower()
-    
+
     # 2. Quitar acentos (Separa la letra de la tilde y elimina la tilde)
-    texto = ''.join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
-    
+    texto = "".join(
+        c
+        for c in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(c) != "Mn"
+    )
+
     # 3. Quitar TODOS los espacios (junto, separado, etc)
     texto = texto.replace(" ", "")
-    
+
     return texto
+
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def save_image_helper(file_obj, prefix="img"):
     """Sube una imagen a Cloudinary y retorna la URL segura."""
-    if not file_obj or file_obj.filename == '':
+    if not file_obj or file_obj.filename == "":
         return None
-    
+
     try:
         # Intentamos subir a Cloudinary
         upload_result = cloudinary.uploader.upload(file_obj)
         # Si funciona, devolvemos el link de internet (https://...)
-        return upload_result['secure_url'] 
+        return upload_result["secure_url"]
     except Exception as e:
         # Si falla, imprimimos el error y devolvemos None
-        print(f"Error subiendo a Cloudinary: {e}") 
+        print(f"Error subiendo a Cloudinary: {e}")
         return None
+
 
 def generar_orden_comipems(exam_id):
     """
@@ -136,31 +144,32 @@ def generar_orden_comipems(exam_id):
     pero agrupadas por Materia (Subject), estilo examen real.
     """
     questions = Question.query.filter_by(exam_id=exam_id).all()
-    
+
     if not questions:
         return []
 
     # Agrupar por materia
     materias = {}
     for q in questions:
-        nombre_materia = getattr(q, 'subject', 'General') or 'General'
-        
+        nombre_materia = getattr(q, "subject", "General") or "General"
+
         if nombre_materia not in materias:
             materias[nombre_materia] = []
         materias[nombre_materia].append(q.id)
-    
+
     # Revolver el orden de las materias
     nombres_materias = list(materias.keys())
     random.shuffle(nombres_materias)
-    
+
     # Crear la lista final plana
     orden_final = []
     for nombre in nombres_materias:
         ids_preguntas = materias[nombre]
-        random.shuffle(ids_preguntas) # Revolver las preguntas DENTRO de la materia
+        random.shuffle(ids_preguntas)  # Revolver las preguntas DENTRO de la materia
         orden_final.extend(ids_preguntas)
-        
+
     return orden_final
+
 
 def send_dummy_notification(to_number, body_message):
     app.logger.warning(
@@ -168,11 +177,14 @@ def send_dummy_notification(to_number, body_message):
     )
     return False
 
+
 # ======================================================================
 # --- CONFIGURACIÓN DE COOKIES Y SEGURIDAD ---
 # ======================================================================
 
-is_production = "DATABASE_URL" in os.environ and "postgres" in os.environ.get("DATABASE_URL", "")
+is_production = "DATABASE_URL" in os.environ and "postgres" in os.environ.get(
+    "DATABASE_URL", ""
+)
 
 if is_production:
     print("🔒 MODO PRODUCCIÓN DETECTADO: Cookies Seguras ACTIVADAS")
@@ -199,7 +211,9 @@ app_log_handler = RotatingFileHandler(
 )
 app_log_handler.setLevel(logging.INFO)
 app_log_handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(levelname)s: %(message)s [en %(pathname)s:%(lineno)d]")
+    logging.Formatter(
+        "%(asctime)s - %(levelname)s: %(message)s [en %(pathname)s:%(lineno)d]"
+    )
 )
 security_log_handler = RotatingFileHandler(
     "security.log", maxBytes=5000000, backupCount=3, encoding="utf-8"
@@ -237,17 +251,21 @@ socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 babel = Babel(app)
 
+
 def get_locale_selector():
     if request and hasattr(request, "accept_languages"):
         return request.accept_languages.best_match(["es", "en"])
     return "es"
 
+
 def get_timezone_selector():
     return "America/Mexico_City"
+
 
 app.config["BABEL_DEFAULT_LOCALE"] = "es"
 app.config["BABEL_DEFAULT_TIMEZONE"] = "America/Mexico_City"
 app.jinja_env.globals.update(format_datetime=format_datetime)
+
 
 @app.template_filter("cdmx_time")
 def cdmx_time_filter(value, format="%d/%m/%Y %I:%M %p"):
@@ -263,16 +281,60 @@ def cdmx_time_filter(value, format="%d/%m/%Y %I:%M %p"):
     except Exception as e:
         return str(value)
 
+
 # ======================================================================
 # --- LISTAS BLANCAS (SEGURIDAD) ---
 # ======================================================================
-ALLOWED_TAGS = ["b", "strong", "i", "em", "u", "br", "p", "div", "span", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "pre", "a", "img", "table", "thead", "tbody", "tr", "th", "td", "hr"]
+ALLOWED_TAGS = [
+    "b",
+    "strong",
+    "i",
+    "em",
+    "u",
+    "br",
+    "p",
+    "div",
+    "span",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "pre",
+    "a",
+    "img",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "hr",
+]
 ALLOWED_ATTRIBUTES = {
     "*": ["style", "class"],
     "a": ["href", "title", "target"],
     "img": ["src", "alt", "width", "height", "style"],
 }
-ALLOWED_STYLES = ["color", "background-color", "font-family", "font-weight", "font-size", "text-align", "text-decoration", "width", "height", "margin", "padding", "border"]
+ALLOWED_STYLES = [
+    "color",
+    "background-color",
+    "font-family",
+    "font-weight",
+    "font-size",
+    "text-align",
+    "text-decoration",
+    "width",
+    "height",
+    "margin",
+    "padding",
+    "border",
+]
 ALLOWED_MIMETYPES = ["image/jpeg", "image/png", "image/gif"]
 
 # ======================================================================
@@ -285,12 +347,13 @@ exam_assignments = db.Table(
     db.Column("exam_id", db.Integer, db.ForeignKey("exam.id"), primary_key=True),
 )
 
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(50), nullable=False, default="student")
-    
+
     # --- 🔥 AQUÍ AGREGAMOS EL BOLSILLO SECRETO 🔥 ---
     visible_password = db.Column(db.String(150), nullable=True)
     # -----------------------------------------------
@@ -299,24 +362,26 @@ class User(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, default=True)
     phone_number = db.Column(db.String(20), nullable=True)
     current_session_token = db.Column(db.String(100), nullable=True, unique=True)
-    
+
     # Relaciones (No las borres)
     results = db.relationship("ExamResult", backref="user", lazy=True)
     violation_logs = db.relationship("ViolationLog", backref="user", lazy=True)
+
+
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
     start_datetime = db.Column(db.DateTime, nullable=True)
     end_datetime = db.Column(db.DateTime, nullable=True)
-    
+
     is_cancelled = db.Column(db.Boolean, default=False)
-    
+
     # 🔥 AGREGA ESTA LÍNEA AQUÍ:
-    is_paused = db.Column(db.Boolean, default=False) 
-    
+    is_paused = db.Column(db.Boolean, default=False)
+
     cancellation_reason = db.Column(db.Text, nullable=True)
-    
+
     # ... (el resto de tus relaciones déjalas igual) ...
     assigned_students = db.relationship(
         "User",
@@ -325,9 +390,17 @@ class Exam(db.Model):
         backref=db.backref("assigned_exams", lazy=True),
     )
     answers_released = db.Column(db.Boolean, default=False, nullable=False)
-    questions = db.relationship("Question", backref="exam", cascade="all, delete-orphan")
-    active_sessions = db.relationship("ActiveExamSession", backref="exam", cascade="all, delete-orphan")
-    violation_logs = db.relationship("ViolationLog", backref="exam", lazy=True, cascade="all, delete-orphan")
+    questions = db.relationship(
+        "Question", backref="exam", cascade="all, delete-orphan"
+    )
+    active_sessions = db.relationship(
+        "ActiveExamSession", backref="exam", cascade="all, delete-orphan"
+    )
+    violation_logs = db.relationship(
+        "ViolationLog", backref="exam", lazy=True, cascade="all, delete-orphan"
+    )
+
+
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
@@ -336,7 +409,7 @@ class Question(db.Model):
     option_c = db.Column(db.String(255), nullable=True)
     option_d = db.Column(db.String(255), nullable=True)
     correct_option = db.Column(db.String(10), nullable=True)
-    image_filename = db.Column(db.String(255), nullable=True) # Imagen Principal
+    image_filename = db.Column(db.String(255), nullable=True)  # Imagen Principal
     image_a = db.Column(db.String(255), nullable=True)
     image_b = db.Column(db.String(255), nullable=True)
     image_c = db.Column(db.String(255), nullable=True)
@@ -349,6 +422,7 @@ class Question(db.Model):
     difficulty_score = db.Column(db.Float, default=0.5, nullable=False)
     manual_difficulty = db.Column(db.String(20), default="Medium", nullable=False)
 
+
 class Answer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     response = db.Column(db.Text, nullable=False)
@@ -356,6 +430,7 @@ class Answer(db.Model):
     question_id = db.Column(db.Integer, db.ForeignKey("question.id"), nullable=False)
     grade = db.Column(db.Float, nullable=True)
     feedback = db.Column(db.Text, nullable=True)
+
 
 class ExamResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -380,6 +455,7 @@ class ExamResult(db.Model):
             "session_recording": self.session_recording,
         }
 
+
 class Announcement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
@@ -388,6 +464,7 @@ class Announcement(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     publisher = db.relationship("User", backref="announcements")
     is_active = db.Column(db.Boolean, default=True)
+
 
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -401,12 +478,18 @@ class Report(db.Model):
     admin_response = db.Column(db.Text, nullable=True)
     date_resolved = db.Column(db.DateTime, nullable=True)
 
+
 class AnnouncementReadStatus(db.Model):
     __tablename__ = "announcement_read_status"
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
-    announcement_id = db.Column(db.Integer, db.ForeignKey("announcement.id", ondelete="CASCADE"), primary_key=True)
+    announcement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("announcement.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
     user = db.relationship("User", backref="read_announcements")
     announcement = db.relationship("Announcement", backref="read_by")
+
 
 class ActiveExamSession(db.Model):
     __tablename__ = "active_exam_session"
@@ -416,6 +499,7 @@ class ActiveExamSession(db.Model):
     time_added_sec = db.Column(db.Integer, default=0)
     violation_count = db.Column(db.Integer, default=0)
     user = db.relationship("User", backref=db.backref("active_session", uselist=False))
+
 
 class ViolationLog(db.Model):
     __tablename__ = "violation_log"
@@ -427,6 +511,7 @@ class ViolationLog(db.Model):
     details = db.Column(db.Text, nullable=True)
     image_filename = db.Column(db.String(255), nullable=True)
 
+
 # ======================================================================
 # --- MANEJADORES DE SOCKETIO ---
 # ======================================================================
@@ -434,7 +519,8 @@ class ViolationLog(db.Model):
 # 🚦 SEMÁFORO DE RED (PING REAL)
 # ==========================================
 
-@socketio.on('report_network_status')
+
+@socketio.on("report_network_status")
 def handle_network_report(data):
     """
     Recibe la velocidad del alumno y la reenvía a la Torre de Control.
@@ -442,25 +528,32 @@ def handle_network_report(data):
     """
     if not current_user.is_authenticated:
         return
-    
+
     # Solo reenviamos si hay un administrador escuchando
     # Esto actualiza el puntito verde/rojo en tu tabla
-    socketio.emit('client_ping_update', {
-        'user_id': current_user.id,
-        'latency': data.get('latency', 0)
-    }, room='admin_pulse_room') # 'admin_pulse_room' es donde vive tu monitor
-    
+    socketio.emit(
+        "client_ping_update",
+        {"user_id": current_user.id, "latency": data.get("latency", 0)},
+        room="admin_pulse_room",
+    )  # 'admin_pulse_room' es donde vive tu monitor
+
+
 @socketio.on("connect")
 def handle_connect():
     app.logger.info("Socket CONNECTED. Attempting to get user context.")
     if current_user.is_authenticated:
         join_room(str(current_user.id))
-        
+
         if current_user.role in ["admin", "ayudante"]:
             join_room("admin_pulse_room")
-            app.logger.info(f"Admin/Ayudante {current_user.username} unido a admin_pulse_room.")
-            
-        app.logger.info(f"Socket conectado y unido al room de usuario: User {current_user.username} (ID: {current_user.id})")
+            app.logger.info(
+                f"Admin/Ayudante {current_user.username} unido a admin_pulse_room."
+            )
+
+        app.logger.info(
+            f"Socket conectado y unido al room de usuario: User {current_user.username} (ID: {current_user.id})"
+        )
+
 
 @socketio.on("send_message_from_student")
 def handle_student_message(data):
@@ -473,14 +566,14 @@ def handle_student_message(data):
         # --- 🔥 1. GUARDAR EN BASE DE DATOS 🔥 ---
         # Buscamos al primer admin disponible (o lo dejamos genérico si tienes un user Admin fijo)
         # Para este ejemplo, asumiremos que el recipient es el Admin Principal (ID 1 o buscado)
-        admin_user = User.query.filter_by(role='admin').first() 
-        admin_id = admin_user.id if admin_user else 1 # Fallback
+        admin_user = User.query.filter_by(role="admin").first()
+        admin_id = admin_user.id if admin_user else 1  # Fallback
 
         new_msg = ChatMessage(
             sender_id=current_user.id,
             recipient_id=admin_id,
             message=message_content,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
         db.session.add(new_msg)
         db.session.commit()
@@ -489,33 +582,70 @@ def handle_student_message(data):
         # ... (Tu código de emisión de SocketIO sigue igual aquí abajo) ...
         # Solo asegúrate de enviar el timestamp formateado si quieres
         timestamp_str = datetime.now().strftime("%H:%M:%S")
-        
+
         message_data = {
             "sender": current_user.username,
             "message": message_content,
             "timestamp": timestamp_str,
-            "is_student": True, 
-            "user_id": current_user.id
+            "is_student": True,
+            "user_id": current_user.id,
         }
-        
-        # Envíos...
-        emit("chat_notification", message_data, room=str(current_user.id), namespace="/")
-        emit("chat_notification", message_data, room="admin_pulse_room", namespace="/")
-        
-        app.logger.info(f"CHAT LIVE: Alumno {current_user.username} envió: {message_content}")
-        
 
-@socketio.on('record_violation')
+        # Envíos...
+        emit(
+            "chat_notification", message_data, room=str(current_user.id), namespace="/"
+        )
+        emit("chat_notification", message_data, room="admin_pulse_room", namespace="/")
+
+        app.logger.info(
+            f"CHAT LIVE: Alumno {current_user.username} envió: {message_content}"
+        )
+
+
+# ==========================================
+# 📹 VIDEO WALL (CCTV MATRIX)
+# ==========================================
+
+
+# 1. El Admin entra a la Sala de Seguridad
+@socketio.on("join_cctv_room")
+def handle_join_cctv():
+    if current_user.is_authenticated and current_user.role == "admin":
+        join_room("cctv_admin_room")
+        # Ordenamos a TODOS los alumnos que empiecen a transmitir
+        emit("cctv_command", {"action": "start"}, broadcast=True)
+        print(f"👮‍♂️ Admin {current_user.username} entró al CCTV.")
+
+
+# 2. El Admin sale (Ahorro de energía)
+@socketio.on("leave_cctv_room")
+def handle_leave_cctv():
+    if current_user.is_authenticated and current_user.role == "admin":
+        leave_room("cctv_admin_room")
+        # Ordenamos a TODOS que dejen de transmitir
+        emit("cctv_command", {"action": "stop"}, broadcast=True)
+        print(f"👮‍♂️ Admin salió del CCTV.")
+
+
+# 3. El Alumno envía un fotograma (frame)
+@socketio.on("cctv_stream_frame")
+def handle_cctv_frame(data):
+    # data trae: {'image': 'base64...', 'user_id': 123, 'username': 'Juan'}
+    # ⚠️ NO GUARDAMOS NADA EN DB. Solo rebotamos la señal al Admin.
+    emit("cctv_live_feed", data, to="cctv_admin_room")
+
+
+@socketio.on("record_violation")
 def handle_violation(data):
     # data trae: {'violation_type': 'Celular', 'image': 'data:image/jpeg;base64...'}
-    
+
     if not current_user.is_authenticated:
         return
 
     user_id = current_user.id
-    violation_type = data.get('violation_type', 'Conducta sospechosa')
-    image_base64 = data.get('image') # El texto gigante (Base64)
-    
+    violation_type = data.get("violation_type", "Conducta sospechosa")
+    image_base64 = data.get("image")  # El texto gigante (Base64)
+
     final_filename_or_url = None
 
     # Lógica Cloudinary: Subir directo a la nube
@@ -523,16 +653,16 @@ def handle_violation(data):
         try:
             # Cloudinary es inteligente: detecta el formato "data:image..." automáticamente.
             # No hace falta decodificar manualmente.
-            
+
             upload_result = cloudinary.uploader.upload(
                 image_base64,
-                folder="ecoems_evidencias", # Carpeta en tu Cloudinary
-                public_id=f"evidencia_{user_id}_{uuid.uuid4().hex[:8]}" # Nombre del archivo
+                folder="ecoems_evidencias",  # Carpeta en tu Cloudinary
+                public_id=f"evidencia_{user_id}_{uuid.uuid4().hex[:8]}",  # Nombre del archivo
             )
-            
+
             # Obtenemos el LINK seguro (https://...)
-            final_filename_or_url = upload_result.get('secure_url')
-            
+            final_filename_or_url = upload_result.get("secure_url")
+
         except Exception as e:
             print(f"❌ Error subiendo a Cloudinary: {e}")
 
@@ -540,15 +670,38 @@ def handle_violation(data):
     # AHORA guardamos el LINK COMPLETO, no solo el nombre
     log = ViolationLog(
         user_id=user_id,
-        exam_id=getattr(current_user, 'current_exam_id', None), 
+        exam_id=getattr(current_user, "current_exam_id", None),
         violation_type=violation_type,
-        image_filename=final_filename_or_url # <--- Aquí va la URL de Cloudinary
+        image_filename=final_filename_or_url,  # <--- Aquí va la URL de Cloudinary
     )
     db.session.add(log)
     db.session.commit()
-    
+
     # (Opcional) Avisar al admin en vivo que llegó una foto nueva
-    socketio.emit('new_evidence_alert', {'msg': 'Nueva infracción detectada'}, room='admin_pulse_room')
+    socketio.emit(
+        "new_evidence_alert",
+        {"msg": "Nueva infracción detectada"},
+        room="admin_pulse_room",
+    )
+
+
+# ==========================================
+# 🎤 SONAR DE AUDIO (VOLUMEN EN VIVO)
+# ==========================================
+@socketio.on("report_audio_level")
+def handle_audio_level(data):
+    # data trae: {'level': 45} (Un número del 0 al 100 representando el volumen)
+    if not current_user.is_authenticated:
+        return
+
+    # Rebotamos el nivel a la Torre de Control
+    socketio.emit(
+        "client_audio_update",
+        {"user_id": current_user.id, "level": data.get("level", 0)},
+        room="admin_pulse_room",
+    )
+
+
 @socketio.on("send_individual_ping")
 @login_required
 def handle_individual_ping(data):
@@ -556,7 +709,9 @@ def handle_individual_ping(data):
         return
 
     target_user_id = data.get("user_id")
-    message = data.get("message", "👋 El administrador te ha enviado una alerta de atención.")
+    message = data.get(
+        "message", "👋 El administrador te ha enviado una alerta de atención."
+    )
 
     if target_user_id:
         socketio.emit(
@@ -569,12 +724,14 @@ def handle_individual_ping(data):
             room=str(target_user_id),
         )
 
+
 @socketio.on("send_screen_flash")
 @login_required
 def handle_screen_flash(data):
     if current_user.role != "admin":
         return
     socketio.emit("trigger_flash_effect", {}, room=str(data.get("user_id")))
+
 
 @socketio.on("send_global_broadcast")
 @login_required
@@ -593,11 +750,15 @@ def handle_global_broadcast(data):
             },
         )
 
+
 @socketio.on("disconnect")
 def handle_disconnect():
     if current_user.is_authenticated:
         leave_room(str(current_user.id))
-        app.logger.info(f"Socket desconectado: User {current_user.username} (ID: {current_user.id})")
+        app.logger.info(
+            f"Socket desconectado: User {current_user.username} (ID: {current_user.id})"
+        )
+
 
 @socketio.on("join_room")
 def on_join(data):
@@ -606,9 +767,16 @@ def on_join(data):
 
     target_user_id = str(data.get("user_id"))
     join_room(target_user_id)
-    app.logger.info(f"ADMIN CHAT: Admin {current_user.username} joined room {target_user_id}.")
+    app.logger.info(
+        f"ADMIN CHAT: Admin {current_user.username} joined room {target_user_id}."
+    )
 
-    emit("status_update", {"msg": f"Conectado a la sala del alumno ID {target_user_id}."}, room=str(current_user.id))
+    emit(
+        "status_update",
+        {"msg": f"Conectado a la sala del alumno ID {target_user_id}."},
+        room=str(current_user.id),
+    )
+
 
 @socketio.on("send_message_to_student")
 def handle_admin_message(data):
@@ -624,7 +792,7 @@ def handle_admin_message(data):
             sender_id=current_user.id,
             recipient_id=int(target_user_id),
             message=message_content,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
         db.session.add(new_msg)
         db.session.commit()
@@ -636,14 +804,17 @@ def handle_admin_message(data):
                 "sender": "Admin",
                 "message": message_content,
                 "timestamp": datetime.now().strftime("%H:%M:%S"),
-                "is_student": False 
+                "is_student": False,
             },
             room=str(target_user_id),
             namespace="/",
         )
-        
+
         # 3. LOG EN TERMINAL (El "chismoso" útil para ti)
-        app.logger.info(f"CHAT: Admin {current_user.username} sent to ID {target_user_id}: {message_content[:30]}...")
+        app.logger.info(
+            f"CHAT: Admin {current_user.username} sent to ID {target_user_id}: {message_content[:30]}..."
+        )
+
 
 @socketio.on("join_report_room")
 def on_join_report_room(data):
@@ -655,10 +826,14 @@ def on_join_report_room(data):
         join_room(room)
         app.logger.info(f"User {current_user.username} joined room {room}")
 
+
 @socketio.on("send_admin_report_message")
 def handle_admin_report_message(data):
     with app.app_context():
-        if not current_user.is_authenticated or current_user.role not in ["admin", "ayudante"]:
+        if not current_user.is_authenticated or current_user.role not in [
+            "admin",
+            "ayudante",
+        ]:
             return
 
         report_id = data.get("report_id")
@@ -719,6 +894,7 @@ def handle_admin_report_message(data):
             db.session.rollback()
             app.logger.error(f"Error chat admin: {e}")
 
+
 @socketio.on("send_student_report_message")
 def handle_student_report_message(data):
     with app.app_context():
@@ -771,28 +947,37 @@ def handle_student_report_message(data):
             db.session.rollback()
             app.logger.error(f"Error chat alumno: {e}")
 
+
 @socketio.on("admin_join_pulse")
 def on_admin_join_pulse():
     if current_user.is_authenticated and current_user.role in ["admin", "ayudante"]:
         join_room("admin_pulse_room")
-        app.logger.info(f"Admin {current_user.username} forzó la unión a admin_pulse_room.")
+        app.logger.info(
+            f"Admin {current_user.username} forzó la unión a admin_pulse_room."
+        )
 
-@socketio.on('admin_broadcast_message')
+
+@socketio.on("admin_broadcast_message")
 def handle_broadcast(data):
-    if not current_user.is_authenticated or current_user.role != 'admin':
+    if not current_user.is_authenticated or current_user.role != "admin":
         return
-    
-    mensaje = data.get('message', '')
+
+    mensaje = data.get("message", "")
     if not mensaje:
         return
 
     print(f"📢 BROADCAST ENVIADO: {mensaje}")
-    emit('student_notification', {
-        'title': '📢 MENSAJE DEL PROFE',
-        'message': mensaje,
-        'type': 'urgent',
-        'link': '#'
-    }, broadcast=True)
+    emit(
+        "student_notification",
+        {
+            "title": "📢 MENSAJE DEL PROFE",
+            "message": mensaje,
+            "type": "urgent",
+            "link": "#",
+        },
+        broadcast=True,
+    )
+
 
 @socketio.on("request_system_probe")
 @login_required
@@ -801,9 +986,11 @@ def handle_probe_request(data):
         return
     socketio.emit("execute_system_probe", {}, room=str(data.get("user_id")))
 
+
 @socketio.on("send_probe_report")
 def handle_probe_report(data):
     socketio.emit("display_probe_result", data, room="admin_pulse_room")
+
 
 @socketio.on("trigger_remote_rescue")
 @login_required
@@ -821,6 +1008,7 @@ def handle_rescue(data):
         room=str(user_id),
     )
 
+
 @socketio.on("toggle_console_spy")
 @login_required
 def handle_console_spy(data):
@@ -828,11 +1016,15 @@ def handle_console_spy(data):
         return
     action = data.get("action")
     user_id = data.get("user_id")
-    socketio.emit("set_console_interceptor", {"active": (action == "on")}, room=str(user_id))
+    socketio.emit(
+        "set_console_interceptor", {"active": (action == "on")}, room=str(user_id)
+    )
+
 
 @socketio.on("stream_console_log")
 def handle_log_stream(data):
     socketio.emit("new_console_entry", data, room="admin_pulse_room")
+
 
 @socketio.on("inject_remote_code")
 @login_required
@@ -843,6 +1035,7 @@ def handle_code_injection(data):
     user_id = data.get("user_id")
     if code and user_id:
         socketio.emit("execute_injected_code", {"script": code}, room=str(user_id))
+
 
 @socketio.on("student_requests_chat")
 def handle_student_help_request():
@@ -859,6 +1052,7 @@ def handle_student_help_request():
         room="admin_pulse_room",
     )
     app.logger.info(f"HELP: Student {current_user.username} requested chat support.")
+
 
 @socketio.on("proctoring_update")
 def handle_proctoring_update(data):
@@ -878,9 +1072,11 @@ def handle_proctoring_update(data):
             existing_data = json.loads(existing_data_json)
         else:
             existing_data = {"time_data": {}, "click_data": []}
-            
-        if "time_data" not in existing_data: existing_data["time_data"] = {}
-        if "click_data" not in existing_data: existing_data["click_data"] = []
+
+        if "time_data" not in existing_data:
+            existing_data["time_data"] = {}
+        if "click_data" not in existing_data:
+            existing_data["click_data"] = []
 
         for qid, time_spent in time_data.items():
             existing_data["time_data"][qid] = (
@@ -895,9 +1091,12 @@ def handle_proctoring_update(data):
         app.logger.error(f"[PROCTORING ERROR] {current_user.username}: {e}")
 
     if is_final:
-        app.logger.info(f"[PROCTORING] Envío final completado para {current_user.username} (Exam {exam_id}).")
+        app.logger.info(
+            f"[PROCTORING] Envío final completado para {current_user.username} (Exam {exam_id})."
+        )
     else:
         app.logger.info(f"[PROCTORING] Data guardada para {current_user.username}.")
+
 
 @socketio.on("close_student_chat_remote")
 def handle_close_chat(data):
@@ -906,8 +1105,16 @@ def handle_close_chat(data):
     target_room = str(data.get("target_user_id"))
     admin_username = data.get("admin_username", "Admin")
     if target_room:
-        emit("close_chat_signal", {"msg": f"El soporte ha finalizado por {admin_username}."}, room=target_room, namespace="/")
-        app.logger.info(f"CHAT: Admin {current_user.username} closed chat session for User ID {target_room}.")
+        emit(
+            "close_chat_signal",
+            {"msg": f"El soporte ha finalizado por {admin_username}."},
+            room=target_room,
+            namespace="/",
+        )
+        app.logger.info(
+            f"CHAT: Admin {current_user.username} closed chat session for User ID {target_room}."
+        )
+
 
 @socketio.on("admin_repair_command")
 def handle_repair_command(data):
@@ -918,19 +1125,25 @@ def handle_repair_command(data):
     command = data.get("command")
     payload = data.get("payload")
 
-    app.logger.info(f"REPAIR: Admin {current_user.username} sent command '{command}' to User {target_user_id}")
+    app.logger.info(
+        f"REPAIR: Admin {current_user.username} sent command '{command}' to User {target_user_id}"
+    )
 
     if command == "unlock":
         try:
             target_user_int = int(target_user_id)
-            blocked_result = ExamResult.query.filter_by(user_id=target_user_int, score=-1.0).first()
+            blocked_result = ExamResult.query.filter_by(
+                user_id=target_user_int, score=-1.0
+            ).first()
             exam_id = None
             if blocked_result:
                 exam_id = blocked_result.exam_id
                 db.session.delete(blocked_result)
 
             if exam_id:
-                existing_session = ActiveExamSession.query.filter_by(user_id=target_user_int, exam_id=exam_id).first()
+                existing_session = ActiveExamSession.query.filter_by(
+                    user_id=target_user_int, exam_id=exam_id
+                ).first()
                 if not existing_session:
                     revived_session = ActiveExamSession(
                         user_id=target_user_int,
@@ -941,13 +1154,21 @@ def handle_repair_command(data):
                     db.session.add(revived_session)
 
             db.session.commit()
-            app.logger.info(f"REPAIR: Sesión del usuario {target_user_id} restaurada en DB.")
+            app.logger.info(
+                f"REPAIR: Sesión del usuario {target_user_id} restaurada en DB."
+            )
 
         except Exception as e:
             app.logger.error(f"Error al desbloquear usuario {target_user_id}: {e}")
             db.session.rollback()
 
-    emit("execute_repair", {"command": command, "payload": payload}, room=target_user_id, namespace="/")
+    emit(
+        "execute_repair",
+        {"command": command, "payload": payload},
+        room=target_user_id,
+        namespace="/",
+    )
+
 
 @socketio.on("exam_violation")
 def handle_exam_violation(data):
@@ -967,20 +1188,35 @@ def handle_exam_violation(data):
         mexico_tz = pytz.timezone("America/Mexico_City")
         mexico_time = current_time_utc.astimezone(mexico_tz)
 
-        active_session = ActiveExamSession.query.filter_by(user_id=user_id, exam_id=exam_id).first()
+        active_session = ActiveExamSession.query.filter_by(
+            user_id=user_id, exam_id=exam_id
+        ).first()
         if not active_session:
             return
 
         MAX_WARNINGS = 3
-        CRITICAL_VIOLATIONS = ["WINDOW_BLUR", "TAB_CHANGE", "HERRAMIENTAS_DEV", "COPIAR_PEGAR", "INTENTO_IMPRESION", "CLIC_DERECHO"]
+        CRITICAL_VIOLATIONS = [
+            "WINDOW_BLUR",
+            "TAB_CHANGE",
+            "HERRAMIENTAS_DEV",
+            "COPIAR_PEGAR",
+            "INTENTO_IMPRESION",
+            "CLIC_DERECHO",
+        ]
 
         if violation_type in CRITICAL_VIOLATIONS:
             active_session.violation_count += 1
 
         if active_session.violation_count >= MAX_WARNINGS:
-            automatic_reason = "Límite de advertencias alcanzado (Cambio de pestaña/ventana)."
-            details_to_save = screenshot_data if screenshot_data else f"Bloqueo automático. Motivo: {automatic_reason}"
-            
+            automatic_reason = (
+                "Límite de advertencias alcanzado (Cambio de pestaña/ventana)."
+            )
+            details_to_save = (
+                screenshot_data
+                if screenshot_data
+                else f"Bloqueo automático. Motivo: {automatic_reason}"
+            )
+
             new_log = ViolationLog(
                 user_id=user_id,
                 exam_id=exam_id,
@@ -990,7 +1226,9 @@ def handle_exam_violation(data):
             )
             db.session.add(new_log)
 
-            existing_result = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
+            existing_result = ExamResult.query.filter_by(
+                user_id=user_id, exam_id=exam_id
+            ).first()
             if existing_result:
                 existing_result.score = -1.0
                 existing_result.submission_type = "auto_cancel"
@@ -1010,7 +1248,11 @@ def handle_exam_violation(data):
 
             app.logger.critical(f"🚫 EXAMEN CANCELADO: User {current_user.username}")
 
-            socketio.emit("exam_cancelled_alert", {"exam_id": exam_id, "reason": automatic_reason}, room=request.sid)
+            socketio.emit(
+                "exam_cancelled_alert",
+                {"exam_id": exam_id, "reason": automatic_reason},
+                room=request.sid,
+            )
             socketio.emit(
                 "admin_violation_alert",
                 {
@@ -1036,7 +1278,7 @@ def handle_exam_violation(data):
             timestamp=current_time_utc,
         )
         db.session.add(new_log)
-        db.session.add(active_session) 
+        db.session.add(active_session)
         db.session.commit()
 
         socketio.emit(
@@ -1056,15 +1298,18 @@ def handle_exam_violation(data):
         db.session.rollback()
         app.logger.error(f"Error DB violación: {e}")
 
+
 # ======================================================================
 # --- HOOKS DE SEGURIDAD ---
 # ======================================================================
+
 
 @app.after_request
 def set_secure_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     return response
+
 
 @app.before_request
 def before_request_hook():
@@ -1081,28 +1326,39 @@ def before_request_hook():
         if last_activity:
             if isinstance(last_activity, str):
                 try:
-                    last_activity = datetime.strptime(last_activity, "%Y-%m-%d %H:%M:%S.%f")
+                    last_activity = datetime.strptime(
+                        last_activity, "%Y-%m-%d %H:%M:%S.%f"
+                    )
                 except ValueError:
                     try:
-                        last_activity = datetime.strptime(last_activity.split(".")[0], "%Y-%m-%d %H:%M:%S")
+                        last_activity = datetime.strptime(
+                            last_activity.split(".")[0], "%Y-%m-%d %H:%M:%S"
+                        )
                     except ValueError:
                         last_activity = datetime.utcnow() - session_lifetime * 2
 
             if (datetime.utcnow() - last_activity) > session_lifetime:
                 logout_user()
-                flash("Tu sesión ha expirado por inactividad. Vuelve a iniciar sesión.", "warning")
+                flash(
+                    "Tu sesión ha expirado por inactividad. Vuelve a iniciar sesión.",
+                    "warning",
+                )
                 return redirect(url_for("login"))
 
         if request.endpoint and request.endpoint not in ["logout"]:
             if session.get("session_token") != current_user.current_session_token:
                 logout_user()
-                flash("Se ha iniciado sesión con tu cuenta en otra ubicación.", "warning")
+                flash(
+                    "Se ha iniciado sesión con tu cuenta en otra ubicación.", "warning"
+                )
                 return redirect(url_for("login"))
 
         session["last_activity"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
 
+
 # --- CONFIGURACIÓN DE MANTENIMIENTO ---
-MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE', 'False') == 'True'
+MAINTENANCE_MODE = os.environ.get("MAINTENANCE_MODE", "False") == "True"
+
 
 @app.before_request
 def check_maintenance():
@@ -1111,28 +1367,31 @@ def check_maintenance():
         return
 
     # Si la petición es para archivos estáticos (CSS, JS, Imágenes), dejamos pasar
-    if request.endpoint and 'static' in request.endpoint:
+    if request.endpoint and "static" in request.endpoint:
         return
 
     # Si intenta entrar al Login o cerrar sesión, dejamos pasar (para que tú puedas entrar)
-    if request.endpoint in ['login', 'logout']:
+    if request.endpoint in ["login", "logout"]:
         return
 
     # --- AQUÍ ESTÁ EL TRUCO BRO ---
     # Si el usuario es ADMIN, lo dejamos pasar a todo
-    if current_user.is_authenticated and current_user.role == 'admin':
+    if current_user.is_authenticated and current_user.role == "admin":
         return
 
     # Si es Alumno, o no está logueado, y trata de ver cualquier otra cosa -> MANTENIMIENTO
-    return render_template('maintenance.html'), 503
+    return render_template("maintenance.html"), 503
+
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
 # ======================================================================
 # --- RUTAS DE ACCESO ---
 # ======================================================================
+
 
 @app.route("/logout")
 @login_required
@@ -1140,6 +1399,7 @@ def logout():
     logout_user()
     flash("Has cerrado sesión exitosamente.", "success")
     return redirect(url_for("index"))
+
 
 @app.route("/admin")
 @login_required
@@ -1149,11 +1409,15 @@ def admin_panel():
         return redirect(url_for("dashboard"))
 
     if session.pop("just_logged_in", False):
-        flash(f"Inicio de sesión exitoso. Bienvenido, {current_user.username}.", "success")
+        flash(
+            f"Inicio de sesión exitoso. Bienvenido, {current_user.username}.", "success"
+        )
 
     exams = Exam.query.all()
-    announcements_list = Announcement.query.order_by(Announcement.date_published.desc()).all()
-    active_exams_summary = [] 
+    announcements_list = Announcement.query.order_by(
+        Announcement.date_published.desc()
+    ).all()
+    active_exams_summary = []
 
     return render_template(
         "admin.html",
@@ -1161,6 +1425,7 @@ def admin_panel():
         announcements_list=announcements_list,
         active_exams_summary=active_exams_summary,
     )
+
 
 @app.route("/admin/dashboard")
 @login_required
@@ -1172,7 +1437,9 @@ def admin_dashboard():
     total_students = User.query.filter_by(role="student").count()
 
     mexico_tz = pytz.timezone("America/Mexico_City")
-    today_start_mexico = mexico_tz.localize(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0))
+    today_start_mexico = mexico_tz.localize(
+        datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    )
     today_end_mexico = today_start_mexico + dt.timedelta(days=1)
     today_start_utc = today_start_mexico.astimezone(pytz.utc)
     today_end_utc = today_end_mexico.astimezone(pytz.utc)
@@ -1183,7 +1450,11 @@ def admin_dashboard():
         ExamResult.score >= 0,
     ).count()
 
-    avg_score_query = db.session.query(func.avg(ExamResult.score)).filter(ExamResult.score >= 0).scalar()
+    avg_score_query = (
+        db.session.query(func.avg(ExamResult.score))
+        .filter(ExamResult.score >= 0)
+        .scalar()
+    )
     avg_score = round(avg_score_query, 1) if avg_score_query else 0.0
 
     return render_template(
@@ -1192,51 +1463,68 @@ def admin_dashboard():
         completados_hoy=completados_hoy,
         avg_score=avg_score,
     )
+
+
 # ==========================================
 # ⏸️ PAUSA GLOBAL (TIME FREEZE)
 # ==========================================
-@app.route('/admin/api/toggle_pause/<int:exam_id>', methods=['POST'])
+@app.route("/admin/api/toggle_pause/<int:exam_id>", methods=["POST"])
 @login_required
 def toggle_exam_pause(exam_id):
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
+    if current_user.role != "admin":
+        return jsonify({"error": "Unauthorized"}), 403
+
     exam = Exam.query.get_or_404(exam_id)
-    
+
     # Cambiamos el estado (Toggle)
     exam.is_paused = not exam.is_paused
     db.session.commit()
-    
-    status = 'paused' if exam.is_paused else 'running'
-    
+
+    status = "paused" if exam.is_paused else "running"
+
     # 📢 AVISAR A TODOS LOS ALUMNOS
-    socketio.emit('exam_status_change', {'status': status, 'exam_id': exam_id})
-    
-    return jsonify({'new_status': status})
-@app.route('/api/chat/history/<int:user_id>')
+    socketio.emit("exam_status_change", {"status": status, "exam_id": exam_id})
+
+    return jsonify({"new_status": status})
+
+
+@app.route("/api/chat/history/<int:user_id>")
 @login_required
 def get_chat_history(user_id):
     # Seguridad: Solo admin o el propio alumno pueden ver esto
-    if current_user.role != 'admin' and current_user.id != user_id:
-        return jsonify({'error': 'Unauthorized'}), 403
+    if current_user.role != "admin" and current_user.id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
 
     # Buscar mensajes donde (Sender es User Y Recipient es Admin) O (Sender es Admin Y Recipient es User)
     # Esto trae toda la conversación cruzada
-    messages = ChatMessage.query.filter(
-        or_(
-            (ChatMessage.sender_id == user_id) & (User.role == 'admin'), # Mensajes del alumno
-            (ChatMessage.recipient_id == user_id) # Mensajes PARA el alumno (del admin)
+    messages = (
+        ChatMessage.query.filter(
+            or_(
+                (ChatMessage.sender_id == user_id)
+                & (User.role == "admin"),  # Mensajes del alumno
+                (
+                    ChatMessage.recipient_id == user_id
+                ),  # Mensajes PARA el alumno (del admin)
+            )
         )
-    ).join(User, ChatMessage.sender_id == User.id).order_by(ChatMessage.timestamp.asc()).all()
-    
+        .join(User, ChatMessage.sender_id == User.id)
+        .order_by(ChatMessage.timestamp.asc())
+        .all()
+    )
+
     # PERO, tu lógica es más simple: Admin vs Alumno específico.
     # Usemos una lógica más directa para tu caso:
-    messages = db.session.query(ChatMessage).filter(
-        or_(
-            (ChatMessage.sender_id == user_id),    # Lo que envió el alumno
-            (ChatMessage.recipient_id == user_id)  # Lo que le enviaron al alumno
+    messages = (
+        db.session.query(ChatMessage)
+        .filter(
+            or_(
+                (ChatMessage.sender_id == user_id),  # Lo que envió el alumno
+                (ChatMessage.recipient_id == user_id),  # Lo que le enviaron al alumno
+            )
         )
-    ).order_by(ChatMessage.timestamp.asc()).all()
+        .order_by(ChatMessage.timestamp.asc())
+        .all()
+    )
 
     history = []
     utc_tz = pytz.utc
@@ -1247,16 +1535,23 @@ def get_chat_history(user_id):
         local_time = msg.timestamp
         if local_time.tzinfo is None:
             local_time = utc_tz.localize(local_time).astimezone(mexico_tz)
-        
-        history.append({
-            'sender': 'Admin' if msg.sender_id == current_user.id and current_user.role == 'admin' else 'Alumno', # Ajustar lógica visual
-            'sender_id': msg.sender_id,
-            'message': msg.message,
-            'timestamp': local_time.strftime("%H:%M"),
-            'is_me': (msg.sender_id == current_user.id)
-        })
+
+        history.append(
+            {
+                "sender": (
+                    "Admin"
+                    if msg.sender_id == current_user.id and current_user.role == "admin"
+                    else "Alumno"
+                ),  # Ajustar lógica visual
+                "sender_id": msg.sender_id,
+                "message": msg.message,
+                "timestamp": local_time.strftime("%H:%M"),
+                "is_me": (msg.sender_id == current_user.id),
+            }
+        )
 
     return jsonify(history)
+
 
 @app.route("/admin/api/chart_data")
 @login_required
@@ -1265,7 +1560,9 @@ def chart_data():
         return jsonify({"error": "Acceso denegado"}), 403
 
     materias_reprobadas_query = (
-        db.session.query(Question.subject, func.count(Answer.id).label("incorrect_count"))
+        db.session.query(
+            Question.subject, func.count(Answer.id).label("incorrect_count")
+        )
         .join(Answer, Answer.question_id == Question.id)
         .filter(Answer.grade == 0.0, Question.subject != None)
         .group_by(Question.subject)
@@ -1279,18 +1576,20 @@ def chart_data():
 
     return jsonify(labels=chart_labels, data=chart_data)
 
+
 # --- GENERADOR DE CREDENCIALES PDF ---
-@app.route('/admin/print_credentials')
+@app.route("/admin/print_credentials")
 @login_required
 def print_credentials():
-    if current_user.role != 'admin':
+    if current_user.role != "admin":
         flash("Acceso denegado.", "danger")
-        return redirect(url_for('dashboard'))
-    
+        return redirect(url_for("dashboard"))
+
     # Buscamos solo a los alumnos activos
-    students = User.query.filter_by(role='student', is_active=True).all()
-    
-    return render_template('credentials_print.html', students=students)
+    students = User.query.filter_by(role="student", is_active=True).all()
+
+    return render_template("credentials_print.html", students=students)
+
 
 @app.route("/admin/api/exam_performance/<int:exam_id>")
 @login_required
@@ -1301,7 +1600,11 @@ def api_exam_performance(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     questions_data = Question.query.filter_by(exam_id=exam_id).all()
 
-    total_analyzed = Question.query.filter_by(exam_id=exam_id).filter(Question.times_answered > 0).count()
+    total_analyzed = (
+        Question.query.filter_by(exam_id=exam_id)
+        .filter(Question.times_answered > 0)
+        .count()
+    )
 
     if total_analyzed == 0:
         difficulty_counts = (
@@ -1310,36 +1613,60 @@ def api_exam_performance(exam_id):
             .group_by(Question.manual_difficulty)
             .all()
         )
-        return jsonify({
-            "exam_title": exam.title,
-            "total_questions": len(questions_data),
-            "total_analyzed": 0,
-            "predicted_score": 0,
-            "is_fallback": True,
-            "difficulty_distribution": [{"subject": d[0], "count": d[1]} for d in difficulty_counts],
-        })
+        return jsonify(
+            {
+                "exam_title": exam.title,
+                "total_questions": len(questions_data),
+                "total_analyzed": 0,
+                "predicted_score": 0,
+                "is_fallback": True,
+                "difficulty_distribution": [
+                    {"subject": d[0], "count": d[1]} for d in difficulty_counts
+                ],
+            }
+        )
 
-    questions_with_data = Question.query.filter_by(exam_id=exam_id).filter(Question.times_answered > 0).all()
+    questions_with_data = (
+        Question.query.filter_by(exam_id=exam_id)
+        .filter(Question.times_answered > 0)
+        .all()
+    )
     total_difficulty = 0
     red_flag_questions = []
 
     for q in questions_with_data:
         total_difficulty += q.difficulty_score
         if q.difficulty_score < 0.3:
-            red_flag_questions.append({"id": q.id, "text": q.text, "score": round(q.difficulty_score * 100, 1)})
+            red_flag_questions.append(
+                {
+                    "id": q.id,
+                    "text": q.text,
+                    "score": round(q.difficulty_score * 100, 1),
+                }
+            )
 
     avg_difficulty = (total_difficulty / len(questions_with_data)) * 100
     predicted_score = round(avg_difficulty, 1)
 
-    return jsonify({
-        "exam_title": exam.title,
-        "total_questions": len(questions_data),
-        "total_analyzed": len(questions_with_data),
-        "predicted_score": predicted_score,
-        "average_difficulty_percent": predicted_score,
-        "red_flag_questions": red_flag_questions,
-        "difficulty_distribution": [{"id": q.id, "subject": q.subject, "difficulty": round(q.difficulty_score * 100, 1)} for q in questions_with_data],
-    })
+    return jsonify(
+        {
+            "exam_title": exam.title,
+            "total_questions": len(questions_data),
+            "total_analyzed": len(questions_with_data),
+            "predicted_score": predicted_score,
+            "average_difficulty_percent": predicted_score,
+            "red_flag_questions": red_flag_questions,
+            "difficulty_distribution": [
+                {
+                    "id": q.id,
+                    "subject": q.subject,
+                    "difficulty": round(q.difficulty_score * 100, 1),
+                }
+                for q in questions_with_data
+            ],
+        }
+    )
+
 
 @app.route("/admin/reset_attempt/<int:exam_id>/<int:user_id>", methods=["POST"])
 @login_required
@@ -1348,17 +1675,23 @@ def reset_attempt_by_user(exam_id, user_id):
         return jsonify({"success": False, "message": "No autorizado"}), 403
 
     try:
-        exam_question_ids = db.session.query(Question.id).filter_by(exam_id=exam_id).all()
+        exam_question_ids = (
+            db.session.query(Question.id).filter_by(exam_id=exam_id).all()
+        )
         exam_question_ids = [q[0] for q in exam_question_ids]
 
         if exam_question_ids:
-            db.session.query(Answer).filter(Answer.user_id == user_id, Answer.question_id.in_(exam_question_ids)).delete(synchronize_session=False)
+            db.session.query(Answer).filter(
+                Answer.user_id == user_id, Answer.question_id.in_(exam_question_ids)
+            ).delete(synchronize_session=False)
 
         result = ExamResult.query.filter_by(exam_id=exam_id, user_id=user_id).first()
         if result:
             db.session.delete(result)
-        
-        active_session = ActiveExamSession.query.filter_by(exam_id=exam_id, user_id=user_id).first()
+
+        active_session = ActiveExamSession.query.filter_by(
+            exam_id=exam_id, user_id=user_id
+        ).first()
         if active_session:
             db.session.delete(active_session)
 
@@ -1377,37 +1710,45 @@ def reset_attempt_by_user(exam_id, user_id):
         app.logger.error(f"Error reset: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
-@app.route('/admin/api/unlock_student', methods=['POST'])
+
+@app.route("/admin/api/unlock_student", methods=["POST"])
 @login_required
 def unlock_student_exam():
-    if current_user.role != 'admin':
-        return jsonify({'error': 'No autorizado'}), 403
+    if current_user.role != "admin":
+        return jsonify({"error": "No autorizado"}), 403
 
     try:
         data = request.json
-        user_id = int(data.get('user_id'))
-        exam_id = int(data.get('exam_id'))
+        user_id = int(data.get("user_id"))
+        exam_id = int(data.get("exam_id"))
 
         result = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
         if result:
-            result.submission_type = None 
-            result.score = -2.0 
-            
-        db.session.query(ViolationLog).filter_by(user_id=user_id, exam_id=exam_id).delete()
+            result.submission_type = None
+            result.score = -2.0
 
-        active_session = ActiveExamSession.query.filter_by(user_id=user_id, exam_id=exam_id).first()
+        db.session.query(ViolationLog).filter_by(
+            user_id=user_id, exam_id=exam_id
+        ).delete()
+
+        active_session = ActiveExamSession.query.filter_by(
+            user_id=user_id, exam_id=exam_id
+        ).first()
         if active_session:
             db.session.delete(active_session)
 
         db.session.commit()
-        socketio.emit('execute_repair', {'command': 'unlock'}, room=str(user_id))
+        socketio.emit("execute_repair", {"command": "unlock"}, room=str(user_id))
 
-        return jsonify({'success': True, 'msg': 'Alumno desbloqueado. Respuestas conservadas.'})
+        return jsonify(
+            {"success": True, "msg": "Alumno desbloqueado. Respuestas conservadas."}
+        )
 
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error al desbloquear: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({"success": False, "message": str(e)}), 500
+
 
 @app.route("/admin/exam_simulator/<int:exam_id>")
 @login_required
@@ -1418,6 +1759,7 @@ def exam_simulator_view(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     return render_template("exam_simulator.html", exam=exam)
 
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -1426,13 +1768,19 @@ def dashboard():
         return redirect(url_for("admin_panel"))
 
     if session.pop("just_logged_in", False):
-        flash(f"Inicio de sesión exitoso. Bienvenido, {current_user.username}.", "success")
+        flash(
+            f"Inicio de sesión exitoso. Bienvenido, {current_user.username}.", "success"
+        )
 
     total_announcements = Announcement.query.filter_by(is_active=True).count()
     read_count = AnnouncementReadStatus.query.filter_by(user_id=current_user.id).count()
     unread_count = max(0, total_announcements - read_count)
 
-    last_result = ExamResult.query.filter_by(user_id=current_user.id).order_by(ExamResult.date_taken.desc()).first()
+    last_result = (
+        ExamResult.query.filter_by(user_id=current_user.id)
+        .order_by(ExamResult.date_taken.desc())
+        .first()
+    )
     last_exam_questions_count = 0
     if last_result:
         exam = db.session.get(Exam, last_result.exam_id)
@@ -1448,7 +1796,11 @@ def dashboard():
             func.count(Answer.id).label("total_answered"),
         )
         .join(Question, Answer.question_id == Question.id)
-        .filter(Answer.user_id == current_user.id, Question.subject != None, Answer.grade != None)
+        .filter(
+            Answer.user_id == current_user.id,
+            Question.subject != None,
+            Answer.grade != None,
+        )
         .group_by(Question.subject)
         .order_by(func.avg(Answer.grade).asc())
         .limit(3)
@@ -1458,14 +1810,21 @@ def dashboard():
     weak_subjects = []
     for subject, avg_score, correct_count, total_answered in materias_query:
         if total_answered > 0:
-            weak_subjects.append({
-                "subject": subject,
-                "avg_score": float(avg_score or 0) * 100,
-                "correct_count": correct_count,
-                "total_answered": total_answered,
-            })
+            weak_subjects.append(
+                {
+                    "subject": subject,
+                    "avg_score": float(avg_score or 0) * 100,
+                    "correct_count": correct_count,
+                    "total_answered": total_answered,
+                }
+            )
 
-    latest_reports = Report.query.filter_by(user_id=current_user.id).order_by(Report.date_submitted.desc()).limit(3).all()
+    latest_reports = (
+        Report.query.filter_by(user_id=current_user.id)
+        .order_by(Report.date_submitted.desc())
+        .limit(3)
+        .all()
+    )
 
     return render_template(
         "dashboard.html",
@@ -1478,6 +1837,7 @@ def dashboard():
         Exam=Exam,
     )
 
+
 @app.route("/")
 def index():
     if current_user.is_authenticated:
@@ -1487,9 +1847,11 @@ def index():
             return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
 
+
 @app.route("/privacy")
 def privacy_notice():
     return render_template("privacy.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("20 per minute")
@@ -1551,7 +1913,10 @@ def login():
 
         socketio.emit(
             "new_activity",
-            {"msg": f"El alumno 🔑 {user.username} ha iniciado sesión.", "type": "info"},
+            {
+                "msg": f"El alumno 🔑 {user.username} ha iniciado sesión.",
+                "type": "info",
+            },
             room="admin_pulse_room",
         )
 
@@ -1561,6 +1926,7 @@ def login():
             return redirect(url_for("dashboard"))
 
     return render_template("index.html")
+
 
 @app.route("/verify_2fa", methods=["GET", "POST"])
 @limiter.limit("20 per minute")
@@ -1583,9 +1949,11 @@ def verify_2fa():
             session.pop("temp_user_id", None)
             login_user(user)
             session.permanent = True
-            session["last_activity"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
+            session["last_activity"] = datetime.utcnow().strftime(
+                "%Y-%m-%d %H:%M:%S.%f"
+            )
             session["just_logged_in"] = True
-            
+
             token = str(uuid.uuid4())
             user.current_session_token = token
             db.session.commit()
@@ -1599,6 +1967,64 @@ def verify_2fa():
             flash("Código de verificación 2FA incorrecto.", "danger")
 
     return render_template("verify_2fa.html")
+
+
+# ==========================================
+# 🕵️‍♂️ REPORTE FORENSE (POST-MORTEM)
+# ==========================================
+@app.route("/admin/exam/<int:exam_id>/forensic")
+@login_required
+def forensic_report(exam_id):
+    if current_user.role != "admin":
+        return redirect(url_for("dashboard"))
+
+    exam = Exam.query.get_or_404(exam_id)
+
+    # 1. Obtener todos los logs de este examen
+    logs = ViolationLog.query.filter_by(exam_id=exam_id).all()
+
+    # 2. Agrupar por Alumno (Diccionario de sospechosos)
+    suspects = {}
+
+    # Configuración de Puntos (Ajusta la severidad aquí)
+    POINTS = {
+        "AI_PROHIBITED_OBJECT_PHONE": 50,
+        "AI_PERSON_DETECTED": 40,
+        "EXAM_CANCELED_AUTO_BLOCK": 100,
+        "TAB_CHANGE": 15,
+        "WINDOW_BLUR": 10,
+        "AI_FACE_NOT_VISIBLE": 10,
+        "AI_VOICE_DETECTED": 5,
+    }
+
+    for log in logs:
+        uid = log.user_id
+        if uid not in suspects:
+            # Inicializar ficha del sospechoso
+            student = User.query.get(uid)
+            suspects[uid] = {
+                "user": student,
+                "total_score": 0,
+                "details": {},  # Contador: {'Celular': 2, 'Ruido': 5}
+                "timeline": [],  # Para ver el orden de los hechos
+            }
+
+        # Sumar puntos
+        points = POINTS.get(log.violation_type, 5)  # 5 puntos por defecto
+        suspects[uid]["total_score"] += points
+
+        # Contar incidencias
+        v_type = log.violation_type
+        suspects[uid]["details"][v_type] = suspects[uid]["details"].get(v_type, 0) + 1
+        suspects[uid]["timeline"].append(log)
+
+    # 3. Convertir a lista y ORDENAR por Riesgo (El más tramposo primero)
+    sorted_suspects = sorted(
+        suspects.values(), key=lambda x: x["total_score"], reverse=True
+    )
+
+    return render_template("forensic_report.html", exam=exam, suspects=sorted_suspects)
+
 
 @app.route("/setup_2fa", methods=["GET", "POST"])
 @login_required
@@ -1633,10 +2059,12 @@ def setup_2fa():
 
     if "new_2fa_secret" not in session:
         session["new_2fa_secret"] = pyotp.random_base32()
-    
+
     new_secret = session["new_2fa_secret"]
     service_name = "ECOMS_Admin"
-    uri = pyotp.totp.TOTP(new_secret).provisioning_uri(name=user.username, issuer_name=service_name)
+    uri = pyotp.totp.TOTP(new_secret).provisioning_uri(
+        name=user.username, issuer_name=service_name
+    )
 
     img = qrcode.make(uri)
     buf = BytesIO()
@@ -1644,7 +2072,14 @@ def setup_2fa():
     buf.seek(0)
     qr_base64 = base64.b64encode(buf.read()).decode("utf-8")
 
-    return render_template("setup_2fa.html", qr_base64=qr_base64, secret=new_secret, uri=uri, username=user.username)
+    return render_template(
+        "setup_2fa.html",
+        qr_base64=qr_base64,
+        secret=new_secret,
+        uri=uri,
+        username=user.username,
+    )
+
 
 @app.route("/disable_2fa", methods=["POST"])
 @login_required
@@ -1658,6 +2093,7 @@ def disable_2fa():
     flash("✅ 2FA desactivado.", "success")
     return redirect(url_for("admin_panel"))
 
+
 @app.route("/admin/chat/<int:user_id>")
 @login_required
 def admin_chat(user_id):
@@ -1665,6 +2101,7 @@ def admin_chat(user_id):
         return redirect(url_for("dashboard"))
     target_user = User.query.get_or_404(user_id)
     return render_template("admin_chat.html", target_user=target_user)
+
 
 @app.route("/admin/exams/monitor/<int:exam_id>")
 @login_required
@@ -1686,7 +2123,9 @@ def admin_exam_monitor_detail(exam_id):
     for student in all_students:
         user_id = student.id
         is_active_session = active_sessions_map.get(user_id)
-        is_finished = ExamResult.query.filter_by(user_id=user_id, exam_id=exam_id).first()
+        is_finished = ExamResult.query.filter_by(
+            user_id=user_id, exam_id=exam_id
+        ).first()
 
         status = "No Ha Iniciado"
         violation_count = 0
@@ -1700,22 +2139,34 @@ def admin_exam_monitor_detail(exam_id):
             else:
                 status = "Examen Terminado"
 
-        last_violation_log = ViolationLog.query.filter_by(user_id=user_id, exam_id=exam_id).order_by(ViolationLog.timestamp.desc()).first()
+        last_violation_log = (
+            ViolationLog.query.filter_by(user_id=user_id, exam_id=exam_id)
+            .order_by(ViolationLog.timestamp.desc())
+            .first()
+        )
 
         if last_violation_log and last_violation_log.timestamp:
             aware_utc_time = utc_tz.localize(last_violation_log.timestamp)
             last_violation_log.timestamp = aware_utc_time.astimezone(mexico_tz)
 
-        monitoring_data.append({
-            "user_id": user_id,
-            "username": student.username,
-            "status": status,
-            "violation_count": violation_count,
-            "is_active": is_active_session is not None,
-            "last_violation": last_violation_log,
-        })
+        monitoring_data.append(
+            {
+                "user_id": user_id,
+                "username": student.username,
+                "status": status,
+                "violation_count": violation_count,
+                "is_active": is_active_session is not None,
+                "last_violation": last_violation_log,
+            }
+        )
 
-    return render_template("admin_exam_monitor.html", exam=exam, monitoring_data=monitoring_data, student=current_user)
+    return render_template(
+        "admin_exam_monitor.html",
+        exam=exam,
+        monitoring_data=monitoring_data,
+        student=current_user,
+    )
+
 
 @app.route("/admin/adjust_exam_time", methods=["POST"])
 @login_required
@@ -1735,12 +2186,23 @@ def admin_adjust_exam_time():
         session_db.time_added_sec += time_to_adjust_sec
         db.session.commit()
 
-        socketio.emit("time_update", {"extra_time_sec": session_db.time_added_sec}, room=str(student_id))
-        return jsonify({"success": True, "message": "Tiempo ajustado.", "new_total_extra_sec": session_db.time_added_sec})
+        socketio.emit(
+            "time_update",
+            {"extra_time_sec": session_db.time_added_sec},
+            room=str(student_id),
+        )
+        return jsonify(
+            {
+                "success": True,
+                "message": "Tiempo ajustado.",
+                "new_total_extra_sec": session_db.time_added_sec,
+            }
+        )
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 @app.route("/admin/cancel_exam", methods=["POST"])
 @login_required
@@ -1759,23 +2221,38 @@ def admin_cancel_exam():
 
         exam.cancellation_reason = f"Cancelación para {student.username}: {reason}"
 
-        existing_result = ExamResult.query.filter_by(user_id=student_id, exam_id=exam_id).first()
+        existing_result = ExamResult.query.filter_by(
+            user_id=student_id, exam_id=exam_id
+        ).first()
         if not existing_result:
-            cancelled_result = ExamResult(user_id=student_id, exam_id=exam_id, score=-1.0, date_taken=datetime.utcnow(), submission_type="manual_cancel")
+            cancelled_result = ExamResult(
+                user_id=student_id,
+                exam_id=exam_id,
+                score=-1.0,
+                date_taken=datetime.utcnow(),
+                submission_type="manual_cancel",
+            )
             db.session.add(cancelled_result)
 
-        active_session = ActiveExamSession.query.filter_by(user_id=student_id, exam_id=exam_id).first()
+        active_session = ActiveExamSession.query.filter_by(
+            user_id=student_id, exam_id=exam_id
+        ).first()
         if active_session:
             db.session.delete(active_session)
 
         db.session.commit()
-        socketio.emit("exam_cancelled_alert", {"exam_id": exam_id, "reason": reason}, room=str(student_id))
+        socketio.emit(
+            "exam_cancelled_alert",
+            {"exam_id": exam_id, "reason": reason},
+            room=str(student_id),
+        )
 
         return jsonify({"success": True, "message": "Examen CANCELADO."})
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 @app.route("/admin/monitor/logs/<int:exam_id>/<int:user_id>")
 @login_required
@@ -1785,7 +2262,11 @@ def view_violation_logs(exam_id, user_id):
 
     student = User.query.get_or_404(user_id)
     exam = Exam.query.get_or_404(exam_id)
-    logs = ViolationLog.query.filter_by(user_id=user_id, exam_id=exam_id).order_by(ViolationLog.timestamp.desc()).all()
+    logs = (
+        ViolationLog.query.filter_by(user_id=user_id, exam_id=exam_id)
+        .order_by(ViolationLog.timestamp.desc())
+        .all()
+    )
 
     utc_tz = pytz.utc
     mexico_tz = pytz.timezone("America/Mexico_City")
@@ -1794,7 +2275,10 @@ def view_violation_logs(exam_id, user_id):
             aware_utc_time = utc_tz.localize(log.timestamp)
             log.timestamp = aware_utc_time.astimezone(mexico_tz)
 
-    return render_template("admin_violation_logs.html", student=student, exam=exam, logs=logs)
+    return render_template(
+        "admin_violation_logs.html", student=student, exam=exam, logs=logs
+    )
+
 
 @app.route("/admin/announcements/new", methods=["GET", "POST"])
 @login_required
@@ -1805,7 +2289,9 @@ def new_announcement():
     if request.method == "POST":
         title = request.form["title"]
         unsafe_content = request.form["content"]
-        content = bleach.clean(unsafe_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, strip=True)
+        content = bleach.clean(
+            unsafe_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, strip=True
+        )
 
         if len(title.strip()) == 0:
             flash("El título no puede estar vacío.", "danger")
@@ -1825,31 +2311,40 @@ def new_announcement():
             if student.phone_number:
                 send_dummy_notification(student.phone_number, f"Nuevo Anuncio: {title}")
 
-        socketio.emit("new_activity", {"msg": f"📢 Nuevo anuncio: {title}", "type": "info"}, room="admin_pulse_room")
+        socketio.emit(
+            "new_activity",
+            {"msg": f"📢 Nuevo anuncio: {title}", "type": "info"},
+            room="admin_pulse_room",
+        )
         flash("Anuncio creado correctamente", "success")
         return redirect(url_for("admin_panel"))
 
     return render_template("new_announcement.html")
+
+
 # ==========================================
 # 📸 GALERÍA DE EVIDENCIAS (MURO DE LA VERGÜENZA)
 # ==========================================
-@app.route('/admin/evidence_gallery')
+@app.route("/admin/evidence_gallery")
 @login_required
 def evidence_gallery():
-    if current_user.role != 'admin':
+    if current_user.role != "admin":
         flash("Acceso restringido.", "danger")
-        return redirect(url_for('dashboard'))
-    
+        return redirect(url_for("dashboard"))
+
     # 1. Obtenemos las últimas 50 evidencias que tengan FOTO
     # Asumimos que tu modelo ViolationLog tiene un campo 'image_filename' o 'proof_data'
     # Ajusta 'ViolationLog.image_filename' al nombre real de tu columna de imagen
-    evidence_logs = ViolationLog.query\
-        .filter(ViolationLog.image_filename != None)\
-        .order_by(ViolationLog.timestamp.desc())\
-        .limit(60)\
+    evidence_logs = (
+        ViolationLog.query.filter(ViolationLog.image_filename != None)
+        .order_by(ViolationLog.timestamp.desc())
+        .limit(60)
         .all()
-    
-    return render_template('evidence_gallery.html', logs=evidence_logs)
+    )
+
+    return render_template("evidence_gallery.html", logs=evidence_logs)
+
+
 @app.route("/admin/announcements/edit/<int:announcement_id>", methods=["GET", "POST"])
 @login_required
 def edit_announcement(announcement_id):
@@ -1861,10 +2356,17 @@ def edit_announcement(announcement_id):
     if request.method == "POST":
         title = request.form["title"]
         unsafe_content = request.form["content"]
-        content = bleach.clean(unsafe_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, styles=ALLOWED_STYLES)
+        content = bleach.clean(
+            unsafe_content,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            styles=ALLOWED_STYLES,
+        )
 
         if len(title.strip()) == 0:
-            return redirect(url_for("edit_announcement", announcement_id=announcement_id))
+            return redirect(
+                url_for("edit_announcement", announcement_id=announcement_id)
+            )
 
         announcement.title = title
         announcement.content = content
@@ -1874,6 +2376,7 @@ def edit_announcement(announcement_id):
         return redirect(url_for("admin_panel"))
 
     return render_template("edit_announcement.html", announcement=announcement)
+
 
 @app.route("/admin/announcements/delete/<int:announcement_id>", methods=["POST"])
 @login_required
@@ -1892,6 +2395,7 @@ def delete_announcement(announcement_id):
 
     return redirect(url_for("admin_panel"))
 
+
 @app.route("/admin/exams/edit/<int:exam_id>", methods=["GET", "POST"])
 @login_required
 def edit_exam(exam_id):
@@ -1899,7 +2403,11 @@ def edit_exam(exam_id):
         return redirect(url_for("dashboard"))
 
     exam = Exam.query.get_or_404(exam_id)
-    students = User.query.filter(User.role.notin_(["admin", "ayudante"])).order_by(User.username).all()
+    students = (
+        User.query.filter(User.role.notin_(["admin", "ayudante"]))
+        .order_by(User.username)
+        .all()
+    )
 
     if request.method == "POST":
         title = request.form["title"]
@@ -1910,8 +2418,10 @@ def edit_exam(exam_id):
         start_dt = None
         end_dt = None
         try:
-            if start_date_str: start_dt = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M")
-            if end_date_str: end_dt = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M")
+            if start_date_str:
+                start_dt = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M")
+            if end_date_str:
+                end_dt = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M")
         except ValueError:
             flash("Formato de fecha inválido.", "danger")
             return redirect(url_for("edit_exam", exam_id=exam_id))
@@ -1923,7 +2433,9 @@ def edit_exam(exam_id):
 
         selected_student_ids = request.form.getlist("assigned_students")
         if selected_student_ids:
-            students_to_assign = User.query.filter(User.id.in_(selected_student_ids)).all()
+            students_to_assign = User.query.filter(
+                User.id.in_(selected_student_ids)
+            ).all()
             exam.assigned_students = students_to_assign
         else:
             exam.assigned_students = []
@@ -1947,7 +2459,7 @@ def edit_exam(exam_id):
         start_date_str=format_datetime_local(exam.start_datetime),
         end_date_str=format_datetime_local(exam.end_datetime),
     )
-    
+
 
 @app.route("/admin/exams/new", methods=["GET", "POST"])
 @login_required
@@ -1955,7 +2467,11 @@ def new_exam():
     if current_user.role not in ["admin", "ayudante"]:
         return redirect(url_for("dashboard"))
 
-    students = User.query.filter(User.role.notin_(["admin", "ayudante"])).order_by(User.username).all()
+    students = (
+        User.query.filter(User.role.notin_(["admin", "ayudante"]))
+        .order_by(User.username)
+        .all()
+    )
 
     if request.method == "POST":
         title = request.form["title"]
@@ -1966,8 +2482,10 @@ def new_exam():
         start_dt = None
         end_dt = None
         try:
-            if start_date_str: start_dt = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M")
-            if end_date_str: end_dt = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M")
+            if start_date_str:
+                start_dt = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M")
+            if end_date_str:
+                end_dt = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M")
         except ValueError:
             flash("Fecha inválida.", "danger")
             return redirect(url_for("new_exam"))
@@ -1976,10 +2494,17 @@ def new_exam():
             flash("Título requerido.", "danger")
             return redirect(url_for("new_exam"))
 
-        exam = Exam(title=title, description=description, start_datetime=start_dt, end_datetime=end_dt)
+        exam = Exam(
+            title=title,
+            description=description,
+            start_datetime=start_dt,
+            end_datetime=end_dt,
+        )
         selected_student_ids = request.form.getlist("assigned_students")
         if selected_student_ids:
-            students_to_assign = User.query.filter(User.id.in_(selected_student_ids)).all()
+            students_to_assign = User.query.filter(
+                User.id.in_(selected_student_ids)
+            ).all()
             exam.assigned_students = students_to_assign
         else:
             exam.assigned_students = []
@@ -1990,6 +2515,8 @@ def new_exam():
         return redirect(url_for("admin_panel"))
 
     return render_template("new_exam.html", students=students)
+
+
 @app.route("/admin/exams/duplicate/<int:exam_id>", methods=["POST"])
 @login_required
 def duplicate_exam(exam_id):
@@ -1997,21 +2524,21 @@ def duplicate_exam(exam_id):
         return redirect(url_for("dashboard"))
 
     original_exam = Exam.query.get_or_404(exam_id)
-    
+
     try:
         # 1. Crear la Copia del Examen
         new_exam = Exam(
-            title=f"Copia de {original_exam.title}", # Título más limpio
+            title=f"Copia de {original_exam.title}",  # Título más limpio
             description=original_exam.description,
             start_datetime=original_exam.start_datetime,
             end_datetime=original_exam.end_datetime,
-            duration_minutes=original_exam.duration_minutes, # 🔥 IMPORTANTE: Copiar duración
-            is_active=False, # Nace apagado para que lo edites tranquilo
+            duration_minutes=original_exam.duration_minutes,  # 🔥 IMPORTANTE: Copiar duración
+            is_active=False,  # Nace apagado para que lo edites tranquilo
             # is_cancelled=False, # (Si tu modelo lo tiene, descomenta)
             # password=original_exam.password # (Si usas contraseña, cópiala o déjala vacía)
         )
         db.session.add(new_exam)
-        db.session.flush() # Generamos el ID nuevo antes de seguir
+        db.session.flush()  # Generamos el ID nuevo antes de seguir
 
         # 2. Clonar Preguntas (Limpiando estadísticas)
         for question in original_exam.questions:
@@ -2025,27 +2552,29 @@ def duplicate_exam(exam_id):
                 correct_option=question.correct_option,
                 image_filename=question.image_filename,
                 subject=question.subject,
-                
                 # 🔥 REINICIO DE ESTADÍSTICAS (Esto debe empezar en cero)
                 times_answered=0,
                 correct_answers=0,
-                
                 # Mantener dificultad calculada si quieres, o resetearla a 0.5
-                difficulty_score=question.difficulty_score, 
-                manual_difficulty=question.manual_difficulty
+                difficulty_score=question.difficulty_score,
+                manual_difficulty=question.manual_difficulty,
             )
             db.session.add(new_question)
 
         db.session.commit()
         flash(f"✅ Examen duplicado: '{new_exam.title}'", "success")
-        
+
         # 3. Redirigir directo a EDITAR la copia
         return redirect(url_for("edit_exam", exam_id=new_exam.id))
 
     except Exception as e:
         db.session.rollback()
         flash(f"Error al duplicar: {e}", "danger")
-        return redirect(url_for("admin_panel"))@app.route("/admin/exam/<int:exam_id>/questions", methods=["GET", "POST"])
+        return redirect(url_for("admin_panel")) @ app.route(
+            "/admin/exam/<int:exam_id>/questions", methods=["GET", "POST"]
+        )
+
+
 @app.route("/admin/exam/<int:exam_id>/add_question", methods=["GET", "POST"])
 @login_required
 def add_question(exam_id):
@@ -2065,14 +2594,16 @@ def add_question(exam_id):
             correct_option = request.form.get("correct_option")
             manual_difficulty = request.form.get("manual_difficulty", "Medium")
 
-            main_image_filename = save_image_helper(request.files.get("image_file"), "q_main")
+            main_image_filename = save_image_helper(
+                request.files.get("image_file"), "q_main"
+            )
             img_a = save_image_helper(request.files.get("image_a"), "opt_a")
             img_b = save_image_helper(request.files.get("image_b"), "opt_b")
             img_c = save_image_helper(request.files.get("image_c"), "opt_c")
             img_d = save_image_helper(request.files.get("image_d"), "opt_d")
 
             new_question = Question(
-                exam_id=exam.id, 
+                exam_id=exam.id,
                 subject=subject,
                 text=text,
                 option_a=option_a,
@@ -2098,8 +2629,13 @@ def add_question(exam_id):
             flash(f"Error al guardar: {str(e)}", "danger")
             return redirect(url_for("add_question", exam_id=exam.id))
 
-    questions = Question.query.filter_by(exam_id=exam_id).order_by(Question.id.asc()).all()
-    return render_template("add_question.html", exam=exam, questions=questions, question=None)
+    questions = (
+        Question.query.filter_by(exam_id=exam_id).order_by(Question.id.asc()).all()
+    )
+    return render_template(
+        "add_question.html", exam=exam, questions=questions, question=None
+    )
+
 
 @app.route("/admin/exam/<int:exam_id>/import", methods=["POST"])
 @login_required
@@ -2118,7 +2654,7 @@ def import_csv(exam_id):
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
         try:
-            next(csv_input) # Skip header
+            next(csv_input)  # Skip header
         except StopIteration:
             return redirect(url_for("add_question", exam_id=exam_id))
 
@@ -2148,6 +2684,7 @@ def import_csv(exam_id):
 
     return redirect(url_for("add_question", exam_id=exam_id))
 
+
 @app.route("/admin/question/edit/<int:question_id>", methods=["GET", "POST"])
 @login_required
 def edit_question(question_id):
@@ -2169,29 +2706,34 @@ def edit_question(question_id):
             question.manual_difficulty = request.form.get("manual_difficulty")
 
             file_a = request.files.get("image_a")
-            if file_a and file_a.filename != '':
+            if file_a and file_a.filename != "":
                 new_url_a = save_image_helper(file_a, "opt_a_edit")
-                if new_url_a: question.image_a = new_url_a
-            
+                if new_url_a:
+                    question.image_a = new_url_a
+
             file_b = request.files.get("image_b")
-            if file_b and file_b.filename != '':
+            if file_b and file_b.filename != "":
                 new_url_b = save_image_helper(file_b, "opt_b_edit")
-                if new_url_b: question.image_b = new_url_b
-            
+                if new_url_b:
+                    question.image_b = new_url_b
+
             file_c = request.files.get("image_c")
-            if file_c and file_c.filename != '':
+            if file_c and file_c.filename != "":
                 new_url_c = save_image_helper(file_c, "opt_c_edit")
-                if new_url_c: question.image_c = new_url_c
+                if new_url_c:
+                    question.image_c = new_url_c
 
             file_d = request.files.get("image_d")
-            if file_d and file_d.filename != '':
+            if file_d and file_d.filename != "":
                 new_url_d = save_image_helper(file_d, "opt_d_edit")
-                if new_url_d: question.image_d = new_url_d
+                if new_url_d:
+                    question.image_d = new_url_d
 
             file_main = request.files.get("image_file")
-            if file_main and file_main.filename != '':
+            if file_main and file_main.filename != "":
                 new_url = save_image_helper(file_main, "q_edit")
-                if new_url: question.image_filename = new_url
+                if new_url:
+                    question.image_filename = new_url
 
             db.session.commit()
             flash("✅ Pregunta actualizada.", "success")
@@ -2203,27 +2745,40 @@ def edit_question(question_id):
 
     return render_template("edit_question.html", question=question, exam=exam)
 
+
 @app.route("/admin/exam/<int:exam_id>/download_failure_stats")
 @login_required
 def download_failure_stats(exam_id):
-    if current_user.role != 'admin':
-        return redirect(url_for('dashboard'))
+    if current_user.role != "admin":
+        return redirect(url_for("dashboard"))
 
     stats = {
-        'Habilidad verbal': 0, 'Habilidad matemática': 0, 'Español': 0,
-        'Matemáticas': 0, 'Biología': 0, 'Física': 0, 'Química': 0,
-        'Historia': 0, 'Geografía': 0, 'Formación Cívica y Ética': 0
+        "Habilidad verbal": 0,
+        "Habilidad matemática": 0,
+        "Español": 0,
+        "Matemáticas": 0,
+        "Biología": 0,
+        "Física": 0,
+        "Química": 0,
+        "Historia": 0,
+        "Geografía": 0,
+        "Formación Cívica y Ética": 0,
     }
 
     results = ExamResult.query.filter_by(exam_id=exam_id).all()
     questions = Question.query.filter_by(exam_id=exam_id).all()
-    
+
     qid_to_subject = {q.id: q.subject for q in questions}
     qid_to_correct = {q.id: q.correct_option for q in questions}
 
     for result in results:
         user_id = result.user_id
-        student_answers = Answer.query.filter_by(user_id=user_id).join(Question).filter(Question.exam_id == exam_id).all()
+        student_answers = (
+            Answer.query.filter_by(user_id=user_id)
+            .join(Question)
+            .filter(Question.exam_id == exam_id)
+            .all()
+        )
         aciertos_alumno = {key: 0 for key in stats.keys()}
 
         for ans in student_answers:
@@ -2235,26 +2790,33 @@ def download_failure_stats(exam_id):
 
         for materia, aciertos in aciertos_alumno.items():
             es_reprobado = False
-            if materia in ['Habilidad verbal', 'Habilidad matemática']:
-                if aciertos <= 7: es_reprobado = True
+            if materia in ["Habilidad verbal", "Habilidad matemática"]:
+                if aciertos <= 7:
+                    es_reprobado = True
             else:
-                if aciertos <= 6: es_reprobado = True
-            
+                if aciertos <= 6:
+                    es_reprobado = True
+
             if es_reprobado:
                 stats[materia] += 1
 
     output_stream = io.StringIO()
     cw = csv.writer(output_stream)
-    cw.writerow(['Materia', 'Total Alumnos Reprobados', 'Criterio de Reprobación'])
-    
+    cw.writerow(["Materia", "Total Alumnos Reprobados", "Criterio de Reprobación"])
+
     for materia, total_reprobados in stats.items():
-        criterio = "7 aciertos o menos" if "Habilidad" in materia else "6 aciertos o menos"
+        criterio = (
+            "7 aciertos o menos" if "Habilidad" in materia else "6 aciertos o menos"
+        )
         cw.writerow([materia, total_reprobados, criterio])
 
     response = make_response(output_stream.getvalue())
-    response.headers["Content-Disposition"] = f"attachment; filename=Reprobacion_materia_{exam_id}.csv"
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename=Reprobacion_materia_{exam_id}.csv"
+    )
     response.headers["Content-type"] = "text/csv"
     return response
+
 
 @app.route("/admin/questions/move/<int:question_id>/<direction>")
 @login_required
@@ -2266,19 +2828,33 @@ def move_question(question_id, direction):
     current_order = question.order_index
 
     if direction == "up":
-        swap_target = Question.query.filter(
-            Question.exam_id == question.exam_id, Question.order_index < current_order
-        ).order_by(Question.order_index.desc()).first()
+        swap_target = (
+            Question.query.filter(
+                Question.exam_id == question.exam_id,
+                Question.order_index < current_order,
+            )
+            .order_by(Question.order_index.desc())
+            .first()
+        )
     else:
-        swap_target = Question.query.filter(
-            Question.exam_id == question.exam_id, Question.order_index > current_order
-        ).order_by(Question.order_index.asc()).first()
+        swap_target = (
+            Question.query.filter(
+                Question.exam_id == question.exam_id,
+                Question.order_index > current_order,
+            )
+            .order_by(Question.order_index.asc())
+            .first()
+        )
 
     if swap_target:
-        question.order_index, swap_target.order_index = swap_target.order_index, question.order_index
+        question.order_index, swap_target.order_index = (
+            swap_target.order_index,
+            question.order_index,
+        )
         db.session.commit()
 
     return redirect(url_for("add_question", exam_id=question.exam_id))
+
 
 @app.route("/admin/question/delete/<int:question_id>", methods=["POST"])
 @login_required
@@ -2294,6 +2870,7 @@ def delete_question(question_id):
     flash("Pregunta eliminada.", "info")
     return redirect(url_for("add_question", exam_id=exam_id))
 
+
 @app.route("/admin/exams/delete/<int:exam_id>", methods=["POST"])
 @login_required
 def delete_exam(exam_id):
@@ -2306,9 +2883,13 @@ def delete_exam(exam_id):
         db.session.query(ExamResult).filter_by(exam_id=exam_id).delete()
         db.session.query(ActiveExamSession).filter_by(exam_id=exam_id).delete()
         db.session.query(ViolationLog).filter_by(exam_id=exam_id).delete()
-        question_ids = [q.id for q in db.session.query(Question.id).filter_by(exam_id=exam_id).all()]
+        question_ids = [
+            q.id for q in db.session.query(Question.id).filter_by(exam_id=exam_id).all()
+        ]
         if question_ids:
-            db.session.query(Answer).filter(Answer.question_id.in_(question_ids)).delete(synchronize_session=False)
+            db.session.query(Answer).filter(
+                Answer.question_id.in_(question_ids)
+            ).delete(synchronize_session=False)
 
         db.session.delete(exam_to_delete)
         db.session.commit()
@@ -2320,6 +2901,7 @@ def delete_exam(exam_id):
 
     return redirect(url_for("admin_panel"))
 
+
 @app.route("/admin/export/results")
 @login_required
 def export_results():
@@ -2327,7 +2909,9 @@ def export_results():
         return redirect(url_for("dashboard"))
 
     all_results = (
-        db.session.query(User.username, Exam.title, ExamResult.score, ExamResult.date_taken)
+        db.session.query(
+            User.username, Exam.title, ExamResult.score, ExamResult.date_taken
+        )
         .join(Exam, ExamResult.exam_id == Exam.id)
         .join(User, ExamResult.user_id == User.id)
         .order_by(ExamResult.date_taken.desc())
@@ -2336,7 +2920,7 @@ def export_results():
 
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
-    writer.writerow(['Alumno', 'Examen', 'Puntuacion Final', 'Fecha de Presentacion'])
+    writer.writerow(["Alumno", "Examen", "Puntuacion Final", "Fecha de Presentacion"])
 
     for username, title, score, date_taken in all_results:
         final_score = score if score is not None else 0
@@ -2344,11 +2928,14 @@ def export_results():
         writer.writerow([username, title, final_score, date_str])
 
     response = Response(
-        output.getvalue().encode('utf-8-sig'),
+        output.getvalue().encode("utf-8-sig"),
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=Reporte_Calificaciones_ECOMS.csv"},
+        headers={
+            "Content-Disposition": "attachment;filename=Reporte_Calificaciones_ECOMS.csv"
+        },
     )
     return response
+
 
 @app.route("/admin/exams/<int:exam_id>/answers")
 @login_required
@@ -2359,7 +2946,13 @@ def view_answers(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     try:
         results = (
-            db.session.query(User.username, ExamResult.score, ExamResult.date_taken, User.id.label("user_id"), ExamResult.submission_type)
+            db.session.query(
+                User.username,
+                ExamResult.score,
+                ExamResult.date_taken,
+                User.id.label("user_id"),
+                ExamResult.submission_type,
+            )
             .join(ExamResult, User.id == ExamResult.user_id)
             .filter(ExamResult.exam_id == exam_id)
             .order_by(ExamResult.date_taken.desc())
@@ -2369,6 +2962,7 @@ def view_answers(exam_id):
         results = []
 
     return render_template("review_results.html", exam=exam, results=results)
+
 
 @app.route("/admin/exams/<int:exam_id>/review/<int:user_id>")
 @login_required
@@ -2393,13 +2987,23 @@ def review_student_exam(exam_id, user_id):
 
     review_data_query = (
         db.session.query(Question, Answer)
-        .outerjoin(Answer, (Answer.question_id == Question.id) & (Answer.user_id == user_id))
+        .outerjoin(
+            Answer, (Answer.question_id == Question.id) & (Answer.user_id == user_id)
+        )
         .filter(Question.exam_id == exam_id)
         .order_by(Question.id)
         .all()
     )
 
-    return render_template("review_detail.html", exam=exam, student=student, review_data=review_data_query, result=result, proctoring_viz_data=proctoring_viz_data)
+    return render_template(
+        "review_detail.html",
+        exam=exam,
+        student=student,
+        review_data=review_data_query,
+        result=result,
+        proctoring_viz_data=proctoring_viz_data,
+    )
+
 
 @app.route("/admin/exams/release_answers/<int:exam_id>", methods=["POST"])
 @login_required
@@ -2416,14 +3020,16 @@ def release_answers(exam_id):
         flash("Las respuestas ya estaban liberadas.", "info")
 
     return redirect(url_for("view_answers", exam_id=exam_id))
+
+
 # --- RUTA PARA IMPERSONAR (LOGIN AS) ---
-@app.route('/admin/impersonate/<int:user_id>')
+@app.route("/admin/impersonate/<int:user_id>")
 @login_required
 def impersonate_user(user_id):
     # 1. Seguridad: Solo el admin puede hacer esto
-    if current_user.role != 'admin':
+    if current_user.role != "admin":
         flash("🚫 Acceso denegado. No eres administrador.", "danger")
-        return redirect(url_for('dashboard'))
+        return redirect(url_for("dashboard"))
 
     # 2. Buscar al usuario víctima
     user_to_impersonate = User.query.get_or_404(user_id)
@@ -2431,15 +3037,19 @@ def impersonate_user(user_id):
     # 3. Evitar que un admin se impersone a sí mismo (sería tonto, pero pasa)
     if user_to_impersonate.id == current_user.id:
         flash("No puedes auto-impersonarte.", "warning")
-        return redirect(url_for('admin_users')) # O tu panel de usuarios
+        return redirect(url_for("admin_users"))  # O tu panel de usuarios
 
     # 4. LA MAGIA: Logout Admin -> Login Alumno
-    logout_user() # Cerramos tu sesión
-    login_user(user_to_impersonate) # Abrimos la del alumno SIN pedir password
+    logout_user()  # Cerramos tu sesión
+    login_user(user_to_impersonate)  # Abrimos la del alumno SIN pedir password
 
     # 5. Redirigir al Dashboard del alumno
-    flash(f"🕵️‍♂️ Modo Espía Activado: Ahora eres '{user_to_impersonate.username}'", "info")
-    return redirect(url_for('dashboard'))
+    flash(
+        f"🕵️‍♂️ Modo Espía Activado: Ahora eres '{user_to_impersonate.username}'", "info"
+    )
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/admin/users", methods=["GET", "POST"])
 @login_required
 def manage_users():
@@ -2468,18 +3078,17 @@ def manage_users():
             return redirect(url_for("manage_users"))
 
         hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
-        
+
         new_user = User(
             username=username,
-            password=hashed_password, # Contraseña encriptada (para Login)
+            password=hashed_password,  # Contraseña encriptada (para Login)
             role=role,
             is_active=True,
             phone_number=phone_number if phone_number else None,
-            
             # 🔥 AQUÍ ESTÁ EL CAMBIO CLAVE 🔥
-            visible_password=password  # Contraseña normal (para Impresión)
+            visible_password=password,  # Contraseña normal (para Impresión)
         )
-        
+
         db.session.add(new_user)
         try:
             db.session.commit()
@@ -2493,7 +3102,11 @@ def manage_users():
 
         return redirect(url_for("manage_users"))
 
-    return render_template("manage_users.html", users=users, show_inactive=show_inactive)
+    return render_template(
+        "manage_users.html", users=users, show_inactive=show_inactive
+    )
+
+
 @app.route("/admin/users/toggle_status/<int:user_id>", methods=["POST"])
 @login_required
 def toggle_user_status(user_id):
@@ -2507,9 +3120,13 @@ def toggle_user_status(user_id):
         new_status = not user_to_toggle.is_active
         user_to_toggle.is_active = new_status
         db.session.commit()
-        flash(f"Usuario {user_to_toggle.username} {'activado' if new_status else 'desactivado'}.", "success")
+        flash(
+            f"Usuario {user_to_toggle.username} {'activado' if new_status else 'desactivado'}.",
+            "success",
+        )
 
     return redirect(url_for("manage_users"))
+
 
 @app.route("/admin/users/delete/<int:user_id>", methods=["POST"])
 @login_required
@@ -2540,13 +3157,19 @@ def delete_user(user_id):
 
     return redirect(url_for("manage_users"))
 
+
 @app.route("/admin/reports")
 @login_required
 def admin_reports():
     if current_user.role not in ["admin", "ayudante"]:
         return redirect(url_for("dashboard"))
-    reports = Report.query.join(User, Report.user_id == User.id).order_by(Report.date_submitted.desc()).all()
+    reports = (
+        Report.query.join(User, Report.user_id == User.id)
+        .order_by(Report.date_submitted.desc())
+        .all()
+    )
     return render_template("admin_reports.html", reports=reports)
+
 
 @app.route("/admin/reports/<int:report_id>", methods=["GET", "POST"])
 @login_required
@@ -2555,6 +3178,7 @@ def view_report_detail(report_id):
         return redirect(url_for("dashboard"))
     report = Report.query.get_or_404(report_id)
     return render_template("report_detail.html", report=report)
+
 
 @app.route("/admin/reports/respond/<int:report_id>", methods=["POST"])
 @login_required
@@ -2576,9 +3200,10 @@ def send_report_response(report_id):
         report.status = "Abierto"
     report.date_resolved = datetime.utcnow()
     db.session.commit()
-    
+
     flash("Respuesta enviada.", "success")
     return redirect(url_for("view_report_detail", report_id=report_id))
+
 
 @app.route("/admin/reports/close/<int:report_id>", methods=["POST"])
 @login_required
@@ -2591,10 +3216,16 @@ def close_report(report_id):
         report.status = "Cerrado"
         report.date_resolved = datetime.utcnow()
         db.session.commit()
-        socketio.emit("report_closed", {"report_id": report_id}, room=f"report_{report_id}", namespace="/")
+        socketio.emit(
+            "report_closed",
+            {"report_id": report_id},
+            room=f"report_{report_id}",
+            namespace="/",
+        )
         flash("Reporte cerrado.", "success")
 
     return redirect(url_for("admin_reports"))
+
 
 @app.route("/admin/reports/reopen/<int:report_id>", methods=["POST"])
 @login_required
@@ -2611,14 +3242,21 @@ def reopen_report(report_id):
 
     return redirect(url_for("view_report_detail", report_id=report_id))
 
+
 @app.route("/admin/announcements/status")
 @login_required
 def admin_announcement_read_status():
     if current_user.role != "admin":
         return redirect(url_for("dashboard"))
 
-    announcements = Announcement.query.order_by(Announcement.date_published.desc()).all()
-    all_students = User.query.filter_by(role="student", is_active=True).order_by(User.username).all()
+    announcements = Announcement.query.order_by(
+        Announcement.date_published.desc()
+    ).all()
+    all_students = (
+        User.query.filter_by(role="student", is_active=True)
+        .order_by(User.username)
+        .all()
+    )
     read_statuses = AnnouncementReadStatus.query.all()
     read_map = {}
     for status in read_statuses:
@@ -2626,7 +3264,13 @@ def admin_announcement_read_status():
             read_map[status.announcement_id] = set()
         read_map[status.announcement_id].add(status.user_id)
 
-    return render_template("admin_announcement_status.html", announcements=announcements, all_students=all_students, read_map=read_map)
+    return render_template(
+        "admin_announcement_status.html",
+        announcements=announcements,
+        all_students=all_students,
+        read_map=read_map,
+    )
+
 
 @app.route("/update_phone_number", methods=["POST"])
 @login_required
@@ -2646,6 +3290,15 @@ def update_phone_number():
     current_user.phone_number = phone_number
     db.session.commit()
     return jsonify({"success": True, "message": "Guardado."})
+
+
+@app.route("/admin/cctv_matrix")
+@login_required
+def cctv_matrix():
+    if current_user.role != "admin":
+        return redirect(url_for("dashboard"))
+    return render_template("cctv_matrix.html")
+
 
 @app.route("/reports/new", methods=["GET", "POST"])
 @login_required
@@ -2693,11 +3346,19 @@ def new_report():
         db.session.add(report)
         db.session.commit()
 
-        socketio.emit("new_activity", {"msg": f"🚨 REPORTE NUEVO: {current_user.username} - {title}", "type": "danger"}, room="admin_pulse_room")
+        socketio.emit(
+            "new_activity",
+            {
+                "msg": f"🚨 REPORTE NUEVO: {current_user.username} - {title}",
+                "type": "danger",
+            },
+            room="admin_pulse_room",
+        )
         flash("Reporte enviado.", "success")
         return redirect(url_for("dashboard"))
 
     return render_template("new_report.html", user=current_user)
+
 
 @app.route("/student/reports")
 @login_required
@@ -2705,12 +3366,19 @@ def student_reports():
     if current_user.role != "student":
         return redirect(url_for("admin_panel"))
 
-    reports = Report.query.filter_by(user_id=current_user.id).order_by(Report.date_submitted.desc()).all()
+    reports = (
+        Report.query.filter_by(user_id=current_user.id)
+        .order_by(Report.date_submitted.desc())
+        .all()
+    )
     for report in reports:
         if report.admin_response and report.date_resolved:
-            session[f'report_seen_{report.id}_{report.date_resolved.strftime("%Y%m%d%H%M")}'] = True
+            session[
+                f'report_seen_{report.id}_{report.date_resolved.strftime("%Y%m%d%H%M")}'
+            ] = True
 
     return render_template("student_reports.html", reports=reports)
+
 
 @app.route("/reports/reply/<int:report_id>", methods=["POST"])
 @login_required
@@ -2740,29 +3408,47 @@ def reply_to_report(report_id):
     flash("Respuesta enviada.", "success")
     return redirect(url_for("student_reports"))
 
+
 @app.route("/announcements")
 @login_required
 def view_announcements():
     session.pop("just_logged_in", None)
-    all_announcements = Announcement.query.filter_by(is_active=True).join(User, Announcement.admin_id == User.id).order_by(Announcement.date_published.desc()).all()
-    read_statuses = AnnouncementReadStatus.query.filter_by(user_id=current_user.id).all()
+    all_announcements = (
+        Announcement.query.filter_by(is_active=True)
+        .join(User, Announcement.admin_id == User.id)
+        .order_by(Announcement.date_published.desc())
+        .all()
+    )
+    read_statuses = AnnouncementReadStatus.query.filter_by(
+        user_id=current_user.id
+    ).all()
     read_ids = {status.announcement_id for status in read_statuses}
 
     announcements_with_status = []
     for ann in all_announcements:
-        announcements_with_status.append({"announcement": ann, "is_new": ann.id not in read_ids})
+        announcements_with_status.append(
+            {"announcement": ann, "is_new": ann.id not in read_ids}
+        )
 
-    return render_template("view_announcements.html", announcements=announcements_with_status)
+    return render_template(
+        "view_announcements.html", announcements=announcements_with_status
+    )
+
 
 @app.route("/announcements/mark_read/<int:announcement_id>")
 @login_required
 def mark_announcement_read(announcement_id):
-    status = AnnouncementReadStatus.query.filter_by(user_id=current_user.id, announcement_id=announcement_id).first()
+    status = AnnouncementReadStatus.query.filter_by(
+        user_id=current_user.id, announcement_id=announcement_id
+    ).first()
     if not status:
-        new_status = AnnouncementReadStatus(user_id=current_user.id, announcement_id=announcement_id)
+        new_status = AnnouncementReadStatus(
+            user_id=current_user.id, announcement_id=announcement_id
+        )
         db.session.add(new_status)
         db.session.commit()
     return "", 204
+
 
 @app.route("/exams")
 @login_required
@@ -2770,10 +3456,18 @@ def student_exams():
     if current_user.role != "student":
         return redirect(url_for("admin_panel"))
 
-    completed_exam_ids = [r.exam_id for r in ExamResult.query.filter(ExamResult.user_id == current_user.id, ExamResult.score >= 0.0).all()]
-    available_exams = Exam.query.filter(Exam.assigned_students.any(id=current_user.id), ~Exam.id.in_(completed_exam_ids)).all()
+    completed_exam_ids = [
+        r.exam_id
+        for r in ExamResult.query.filter(
+            ExamResult.user_id == current_user.id, ExamResult.score >= 0.0
+        ).all()
+    ]
+    available_exams = Exam.query.filter(
+        Exam.assigned_students.any(id=current_user.id), ~Exam.id.in_(completed_exam_ids)
+    ).all()
 
     return render_template("exams.html", exams=available_exams)
+
 
 @app.route("/exam/save_answer", methods=["POST"])
 @login_required
@@ -2790,20 +3484,29 @@ def save_answer():
         return jsonify({"success": False}), 400
 
     question = Question.query.get(question_id)
-    if not question: return jsonify({"success": False}), 404
+    if not question:
+        return jsonify({"success": False}), 404
 
-    active_session = ActiveExamSession.query.filter_by(user_id=current_user.id, exam_id=question.exam_id).first()
-    if not active_session: return jsonify({"success": False, "message": "Sesión inactiva."}), 403
+    active_session = ActiveExamSession.query.filter_by(
+        user_id=current_user.id, exam_id=question.exam_id
+    ).first()
+    if not active_session:
+        return jsonify({"success": False, "message": "Sesión inactiva."}), 403
 
-    answer = Answer.query.filter_by(user_id=current_user.id, question_id=question_id).first()
+    answer = Answer.query.filter_by(
+        user_id=current_user.id, question_id=question_id
+    ).first()
     if answer:
         answer.response = response
     else:
-        answer = Answer(response=response, user_id=current_user.id, question_id=question_id)
+        answer = Answer(
+            response=response, user_id=current_user.id, question_id=question_id
+        )
         db.session.add(answer)
 
     db.session.commit()
     return jsonify({"success": True})
+
 
 @app.route("/exam/<int:exam_id>/take", methods=["GET", "POST"])
 @login_required
@@ -2816,28 +3519,46 @@ def take_exam(exam_id):
 
     is_locked = False
     seconds_until_start = 0
-    final_result = ExamResult.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
-    final_result = ExamResult.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
-    
+    final_result = ExamResult.query.filter_by(
+        user_id=current_user.id, exam_id=exam_id
+    ).first()
+    final_result = ExamResult.query.filter_by(
+        user_id=current_user.id, exam_id=exam_id
+    ).first()
+
     if final_result:
         # Solo bloqueamos si el score es de un examen ya enviado (>=0) o cancelado (-1)
         # Si el score es -2.0, significa que es su sesión actual, ¡déjalo pasar!
         if final_result.score >= 0.0:
             flash("Ya has realizado este examen y no puedes repetirlo.", "danger")
-            return redirect(url_for('student_exams'))
+            return redirect(url_for("student_exams"))
         elif final_result.score == -1.0:
             flash("Este examen ha sido cancelado o bloqueado.", "danger")
-            return redirect(url_for('dashboard'))
+            return redirect(url_for("dashboard"))
     if exam.start_datetime and exam.start_datetime > current_time:
         time_diff = exam.start_datetime - current_time
         seconds_until_start = int(time_diff.total_seconds())
         is_locked = True
-        return render_template("take_exam.html", exam=exam, is_locked=True, seconds_until_start=seconds_until_start, questions=[], start_time_utc=0, saved_answers={}, time_added_sec=0, is_cancelled=False, cancellation_reason="", active_result=None)
+        return render_template(
+            "take_exam.html",
+            exam=exam,
+            is_locked=True,
+            seconds_until_start=seconds_until_start,
+            questions=[],
+            start_time_utc=0,
+            saved_answers={},
+            time_added_sec=0,
+            is_cancelled=False,
+            cancellation_reason="",
+            active_result=None,
+        )
 
     if exam.end_datetime and exam.end_datetime < current_time:
         flash("El tiempo ha expirado.", "danger")
-        return redirect(url_for("student_exams")) # <--- ✅ CORREGIDO
-    existing_result = ExamResult.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+        return redirect(url_for("student_exams"))  # <--- ✅ CORREGIDO
+    existing_result = ExamResult.query.filter_by(
+        user_id=current_user.id, exam_id=exam_id
+    ).first()
 
     if existing_result:
         if existing_result.score is not None and existing_result.score >= 0.0:
@@ -2850,41 +3571,66 @@ def take_exam(exam_id):
     if request.method == "POST":
         if request.form.get("action") == "start_timer_now":
             try:
-                old_session = ActiveExamSession.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+                old_session = ActiveExamSession.query.filter_by(
+                    user_id=current_user.id, exam_id=exam_id
+                ).first()
                 if old_session:
                     db.session.delete(old_session)
                     db.session.commit()
-                
-                new_session = ActiveExamSession(user_id=current_user.id, exam_id=exam_id, start_time=datetime.now(), time_added_sec=0)
+
+                new_session = ActiveExamSession(
+                    user_id=current_user.id,
+                    exam_id=exam_id,
+                    start_time=datetime.now(),
+                    time_added_sec=0,
+                )
                 db.session.add(new_session)
 
                 if not existing_result:
-                    result = ExamResult(user_id=current_user.id, exam_id=exam_id, score=-2.0)
+                    result = ExamResult(
+                        user_id=current_user.id, exam_id=exam_id, score=-2.0
+                    )
                     result.question_order = generar_orden_comipems(exam_id)
                     db.session.add(result)
 
                 db.session.commit()
-                socketio.emit("new_activity", {"msg": f"🚀 {current_user.username} empezó {exam.title}!", "type": "success"}, room="admin_pulse_room")
+                socketio.emit(
+                    "new_activity",
+                    {
+                        "msg": f"🚀 {current_user.username} empezó {exam.title}!",
+                        "type": "success",
+                    },
+                    room="admin_pulse_room",
+                )
             except Exception as e:
                 db.session.rollback()
                 print(f"Error al iniciar: {e}")
             return "", 204
 
         submission_type = request.form.get("submission_type", "manual")
-        active_session = ActiveExamSession.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+        active_session = ActiveExamSession.query.filter_by(
+            user_id=current_user.id, exam_id=exam_id
+        ).first()
         if not active_session:
             return redirect(url_for("student_exam_detail", exam_id=exam_id))
 
         recording_json = request.form.get("recording_data")
         final_proctoring_data = session.pop(f"proctoring_data_{exam_id}", None)
 
-        total_score_sum = db.session.query(Answer).join(Question).filter(
-            Answer.user_id == current_user.id,
-            Question.exam_id == exam_id,
-            Answer.response == Question.correct_option
-        ).count()
+        total_score_sum = (
+            db.session.query(Answer)
+            .join(Question)
+            .filter(
+                Answer.user_id == current_user.id,
+                Question.exam_id == exam_id,
+                Answer.response == Question.correct_option,
+            )
+            .count()
+        )
 
-        result_to_update = ExamResult.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+        result_to_update = ExamResult.query.filter_by(
+            user_id=current_user.id, exam_id=exam_id
+        ).first()
         if not result_to_update:
             result_to_update = ExamResult(user_id=current_user.id, exam_id=exam_id)
             db.session.add(result_to_update)
@@ -2897,18 +3643,29 @@ def take_exam(exam_id):
 
         db.session.delete(active_session)
         db.session.commit()
-        socketio.emit("new_activity", {"msg": f"✅ {current_user.username} terminó '{exam.title}'.", "type": "success"}, room="admin_pulse_room")
-        
+        socketio.emit(
+            "new_activity",
+            {
+                "msg": f"✅ {current_user.username} terminó '{exam.title}'.",
+                "type": "success",
+            },
+            room="admin_pulse_room",
+        )
+
         return redirect(url_for("student_exam_detail", exam_id=exam.id))
 
-    active_session = ActiveExamSession.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
+    active_session = ActiveExamSession.query.filter_by(
+        user_id=current_user.id, exam_id=exam_id
+    ).first()
     start_time = 0
     time_added_sec = 0
 
     if active_session:
         if active_session.start_time:
             start_time = int(active_session.start_time.timestamp())
-        time_added_sec = active_session.time_added_sec if active_session.time_added_sec else 0
+        time_added_sec = (
+            active_session.time_added_sec if active_session.time_added_sec else 0
+        )
 
     questions = []
     if existing_result and existing_result.question_order:
@@ -2916,15 +3673,25 @@ def take_exam(exam_id):
         todas = Question.query.filter(Question.id.in_(ids_ordenados)).all()
         q_map = {q.id: q for q in todas}
         for q_id in ids_ordenados:
-            if q_id in q_map: questions.append(q_map[q_id])
-        
+            if q_id in q_map:
+                questions.append(q_map[q_id])
+
         ids_set = set(ids_ordenados)
-        nuevas = Question.query.filter_by(exam_id=exam_id).filter(~Question.id.in_(ids_set)).all()
+        nuevas = (
+            Question.query.filter_by(exam_id=exam_id)
+            .filter(~Question.id.in_(ids_set))
+            .all()
+        )
         questions.extend(nuevas)
     else:
         questions = Question.query.filter_by(exam_id=exam_id).all()
 
-    saved_answers = Answer.query.filter_by(user_id=current_user.id).join(Question).filter(Question.exam_id == exam_id).all()
+    saved_answers = (
+        Answer.query.filter_by(user_id=current_user.id)
+        .join(Question)
+        .filter(Question.exam_id == exam_id)
+        .all()
+    )
     saved_answers_dict = {a.question_id: a.response for a in saved_answers}
 
     is_user_cancelled = False
@@ -2947,6 +3714,7 @@ def take_exam(exam_id):
         active_result=existing_result,
     )
 
+
 @app.route("/student/exam/<int:exam_id>/detail")
 @login_required
 def student_exam_detail(exam_id):
@@ -2955,15 +3723,24 @@ def student_exam_detail(exam_id):
 
     session.pop("just_logged_in", None)
     exam = Exam.query.get_or_404(exam_id)
-    result = ExamResult.query.filter_by(user_id=current_user.id, exam_id=exam_id).first()
-    answers = Answer.query.join(Question).filter(Answer.user_id == current_user.id, Question.exam_id == exam_id).all()
+    result = ExamResult.query.filter_by(
+        user_id=current_user.id, exam_id=exam_id
+    ).first()
+    answers = (
+        Answer.query.join(Question)
+        .filter(Answer.user_id == current_user.id, Question.exam_id == exam_id)
+        .all()
+    )
     answers_dict = {a.question_id: a for a in answers}
 
     if not result:
         flash("Aún no completado.", "danger")
         return redirect(url_for("student_exams"))
 
-    return render_template("student_exam_detail.html", exam=exam, answers_dict=answers_dict, result=result)
+    return render_template(
+        "student_exam_detail.html", exam=exam, answers_dict=answers_dict, result=result
+    )
+
 
 @app.route("/admin/repair_scores/<int:exam_id>")
 @login_required
@@ -2976,16 +3753,21 @@ def repair_scores(exam_id):
     log_details = []
 
     for result in stuck_results:
-        real_score = db.session.query(Answer).join(Question).filter(
-            Answer.user_id == result.user_id,
-            Question.exam_id == exam_id,
-            Answer.response == Question.correct_option
-        ).count()
+        real_score = (
+            db.session.query(Answer)
+            .join(Question)
+            .filter(
+                Answer.user_id == result.user_id,
+                Question.exam_id == exam_id,
+                Answer.response == Question.correct_option,
+            )
+            .count()
+        )
 
         result.score = float(real_score)
         result.submission_type = "RESCATE_ADMIN"
         result.date_taken = datetime.now()
-        
+
         log_details.append(f"Usuario {result.user_id}: De -2 a {real_score}")
         count_fixed += 1
 
@@ -2995,16 +3777,22 @@ def repair_scores(exam_id):
     except Exception as e:
         db.session.rollback()
         return f"❌ Error: {str(e)}"
+
+
 # --- RUTA TEMPORAL PARA AGREGAR PAUSA ---
-@app.route('/fix_db_pause')
+@app.route("/fix_db_pause")
 def fix_db_pause():
     try:
         # Comando SQL para agregar la columna
-        db.session.execute(text('ALTER TABLE exam ADD COLUMN is_paused BOOLEAN DEFAULT FALSE'))
+        db.session.execute(
+            text("ALTER TABLE exam ADD COLUMN is_paused BOOLEAN DEFAULT FALSE")
+        )
         db.session.commit()
         return "<h1>✅ Columna 'is_paused' creada con éxito.</h1>"
     except Exception as e:
         return f"<h1>⚠️ Detalle:</h1> <p>{str(e)}</p>"
+
+
 # --- RUTA DE HISTORIAL (Opcional, si quieres que el botón funcione como historial) ---
 @app.route("/student/history")
 @login_required
@@ -3013,47 +3801,59 @@ def student_exam_history():
         return redirect(url_for("admin_panel"))
 
     # Buscar todos los resultados (incluso los completados)
-    history = ExamResult.query.filter_by(user_id=current_user.id).order_by(ExamResult.date_taken.desc()).all()
-    
+    history = (
+        ExamResult.query.filter_by(user_id=current_user.id)
+        .order_by(ExamResult.date_taken.desc())
+        .all()
+    )
+
     # Renderizamos la misma plantilla de exámenes pero pasándole los resultados
     # O podrías crear un 'history.html' específico.
     # Por ahora, redirigir a student_exams es lo más fácil.
-    return redirect(url_for('student_exams'))
+    return redirect(url_for("student_exams"))
+
+
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'), 404
+    return render_template("404.html"), 404
+
+
 # ======================================================================
 # --- RUTA API: MONITOR DE SERVIDOR REAL (Para la gráfica Matrix) ---
 # ======================================================================
-@app.route('/api/server-stats')
+@app.route("/api/server-stats")
 def server_stats():
     # Solo permite ver esto si es admin
-    if not current_user.is_authenticated or current_user.role != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+    if not current_user.is_authenticated or current_user.role != "admin":
+        return jsonify({"error": "Unauthorized"}), 403
 
     # Leer CPU
     cpu = psutil.cpu_percent(interval=None)
-    
+
     # Leer RAM
     ram = psutil.virtual_memory()
     ram_used_mb = ram.used // 1024 // 1024  # Convertir a MB
-    
-    return jsonify({
-        'cpu': cpu,
-        'ram_mb': ram_used_mb,
-        'status': 'stable'
-    })
+
+    return jsonify({"cpu": cpu, "ram_mb": ram_used_mb, "status": "stable"})
+
+
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # Puede ser el ID del admin o del alumno
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipient_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False
+    )  # Puede ser el ID del admin o del alumno
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     is_read = db.Column(db.Boolean, default=False)
 
     # Relaciones para facilitar acceso (opcional pero recomendado)
     sender = db.relationship("User", foreign_keys=[sender_id], backref="sent_messages")
-    recipient = db.relationship("User", foreign_keys=[recipient_id], backref="received_messages")
+    recipient = db.relationship(
+        "User", foreign_keys=[recipient_id], backref="received_messages"
+    )
+
+
 # ======================================================================
 # --- INICIO DEL SERVIDOR ---
 # ======================================================================
@@ -3065,12 +3865,16 @@ if __name__ == "__main__":
 
         if User.query.filter_by(username="gus").first() is None:
             try:
-                pass_limpia = normalizar_texto("241224") 
+                pass_limpia = normalizar_texto("241224")
             except NameError:
-                pass_limpia = "241224" 
-            
-            hashed_password = generate_password_hash(pass_limpia, method="pbkdf2:sha256")
-            admin_user = User(username="gus", password=hashed_password, role="admin", is_active=True)
+                pass_limpia = "241224"
+
+            hashed_password = generate_password_hash(
+                pass_limpia, method="pbkdf2:sha256"
+            )
+            admin_user = User(
+                username="gus", password=hashed_password, role="admin", is_active=True
+            )
             db.session.add(admin_user)
             db.session.commit()
             print("Usuario Admin 'gus' creado exitosamente.")
@@ -3079,4 +3883,4 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5000))
     print(f"🚀 Iniciando servidor SocketIO en http://0.0.0.0:{port}")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)

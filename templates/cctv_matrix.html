@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}SYSTEM MONITOR // CCTV{% endblock %}
+
+{% block content %}
+
+<div class="scanlines"></div>
+
+<div class="cyber-wrapper">
+    
+    <div class="cyber-header">
+        <div class="header-section">
+            <div class="live-tag">
+                <span class="pulse-led"></span> LIVE_FEED
+            </div>
+            <h1 class="glitch-text" data-text="MATRIZ DE VIGILANCIA">MATRIZ DE VIGILANCIA</h1>
+        </div>
+        
+        <div class="header-section center-clock">
+            <span id="system-clock">--:--:-- CDMX</span>
+        </div>
+
+        <div class="header-section right-actions">
+            <div class="status-box">
+                <span class="label">ACTIVOS:</span>
+                <span id="active-feeds-count" class="value">00</span>
+            </div>
+            
+            <a href="{{ url_for('admin_panel') }}" class="cyber-btn-exit">
+                [ EXIT_SYSTEM ]
+            </a>
+        </div>
+    </div>
+
+    <div id="cctv-grid" class="matrix-grid">
+        <div class="empty-signal">
+            <div class="loader-ring"></div>
+            <p>ESPERANDO ENLACE SATELITAL...</p>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    :root {
+        --cyber-black: #050505;
+        --cyber-green: #00ff41;
+        --cyber-dark-green: #003b00;
+        --cyber-red: #ff2a2a;
+        --cyber-blue: #00f3ff;
+        --grid-gap: 2px;
+    }
+
+    body { 
+        background-color: var(--cyber-black); 
+        color: var(--cyber-green); 
+        font-family: 'Share Tech Mono', monospace; /* Fuente Hacker */
+        overflow: hidden; 
+        margin: 0;
+    }
+
+    /* Ocultar elementos del base.html que estorben */
+    .navbar, .sidebar, footer { display: none !important; }
+    .main-content { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+
+    /* EFECTO CRT SCANLINES */
+    .scanlines {
+        position: fixed; inset: 0; pointer-events: none; z-index: 999;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        background-size: 100% 2px, 3px 100%;
+        opacity: 0.6;
+    }
+
+    .cyber-wrapper {
+        display: flex; flex-direction: column; height: 100vh; padding: 20px;
+        box-sizing: border-box; position: relative; z-index: 10;
+    }
+
+    /* HEADER */
+    .cyber-header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid var(--cyber-dark-green);
+        padding-bottom: 15px; margin-bottom: 20px;
+        background: rgba(0, 20, 0, 0.8);
+        border: 1px solid var(--cyber-green);
+        padding: 15px;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+    }
+
+    .header-section { display: flex; align-items: center; gap: 20px; }
+
+    h1 { font-size: 1.5rem; margin: 0; letter-spacing: 2px; text-shadow: 0 0 5px var(--cyber-green); }
+
+    .live-tag {
+        border: 1px solid var(--cyber-red); color: var(--cyber-red);
+        padding: 5px 10px; font-size: 0.8rem; display: flex; align-items: center; gap: 10px;
+        background: rgba(255, 0, 0, 0.1);
+    }
+    .pulse-led { width: 8px; height: 8px; background: var(--cyber-red); border-radius: 50%; box-shadow: 0 0 5px var(--cyber-red); animation: pulse 1s infinite; }
+
+    #system-clock { font-size: 1.2rem; color: var(--cyber-blue); }
+
+    .cyber-btn-exit {
+        border: 1px solid var(--cyber-red); color: var(--cyber-red);
+        background: transparent; padding: 8px 20px; text-decoration: none;
+        font-weight: bold; transition: 0.3s; cursor: pointer;
+    }
+    .cyber-btn-exit:hover { background: var(--cyber-red); color: black; box-shadow: 0 0 15px var(--cyber-red); }
+
+    /* MATRIX GRID */
+    .matrix-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px; overflow-y: auto; flex: 1; padding-right: 5px;
+    }
+
+    /* CÁMARA CARD */
+    .cam-feed {
+        position: relative; border: 1px solid var(--cyber-dark-green);
+        background: #000; aspect-ratio: 4/3; overflow: hidden;
+        transition: 0.2s;
+    }
+    .cam-feed:hover { border-color: var(--cyber-green); box-shadow: 0 0 10px var(--cyber-green); }
+
+    .cam-feed img { width: 100%; height: 100%; object-fit: cover; filter: sepia(100%) hue-rotate(50deg) saturate(2); opacity: 0.8; }
+    
+    /* HUD OVERLAYS */
+    .hud-overlay {
+        position: absolute; inset: 0; pointer-events: none;
+        border: 1px solid rgba(0, 255, 65, 0.1);
+    }
+    .hud-top-left { position: absolute; top: 10px; left: 10px; background: black; padding: 2px 5px; font-size: 0.8rem; color: var(--cyber-green); }
+    .hud-top-right { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; color: var(--cyber-red); display: flex; align-items: center; gap: 5px; }
+    .rec-icon { width: 8px; height: 8px; background: var(--cyber-red); animation: blink 1s infinite; }
+    
+    .hud-bottom {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: rgba(0, 20, 0, 0.9); border-top: 1px solid var(--cyber-dark-green);
+        padding: 5px 10px; display: flex; justify-content: space-between; font-size: 0.75rem;
+    }
+    
+    /* ANIMACIONES */
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    
+    .empty-signal { 
+        grid-column: 1 / -1; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; height: 100%; color: var(--cyber-dark-green); 
+    }
+    .loader-ring {
+        width: 50px; height: 50px; border: 4px solid var(--cyber-dark-green);
+        border-top: 4px solid var(--cyber-green); border-radius: 50%;
+        animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* SCROLLBAR HACKER */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: var(--cyber-dark-green); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyber-green); }
+
+</style>
+
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+    const socket = io.connect(window.location.origin);
+    const grid = document.getElementById('cctv-grid');
+    const countDisplay = document.getElementById('active-feeds-count');
+    let activeCameras = {}; 
+
+    // 🔥 RELOJ CDMX 🔥
+    setInterval(() => {
+        const now = new Date();
+        // Usamos la configuración regional para México
+        const timeString = now.toLocaleTimeString('es-MX', { 
+            timeZone: 'America/Mexico_City',
+            hour12: false, // Formato 24h (militar)
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+        });
+        document.getElementById('system-clock').innerText = timeString + " CDMX";
+    }, 1000);
+
+    // 1. Conexión Segura
+    socket.on('connect', () => {
+        console.log("🟢 ENLACE ESTABLECIDO");
+        socket.emit('join_cctv_room');
+    });
+
+    // 2. Desconexión Táctica
+    window.addEventListener('beforeunload', () => {
+        socket.emit('leave_cctv_room');
+    });
+
+    // 3. Recepción de Señal
+    socket.on('cctv_live_feed', (data) => {
+        const camId = `cam-${data.user_id}`;
+        let camCard = document.getElementById(camId);
+
+        if (!camCard) {
+            createCyberCard(data.user_id, data.username);
+            camCard = document.getElementById(camId);
+            const empty = document.querySelector('.empty-signal');
+            if(empty) empty.style.display = 'none';
+        }
+
+        // Inyectar imagen
+        const img = camCard.querySelector('img');
+        img.src = data.image;
+        
+        activeCameras[data.user_id] = Date.now();
+        updateStats();
+    });
+
+    function createCyberCard(userId, username) {
+        const div = document.createElement('div');
+        div.className = 'cam-feed';
+        div.id = `cam-${userId}`;
+        div.innerHTML = `
+            <img src="" alt="NO SIGNAL">
+            <div class="hud-overlay">
+                <div class="hud-top-left">CAM_${userId} // ${username.toUpperCase()}</div>
+                <div class="hud-top-right">REC <div class="rec-icon"></div></div>
+                <div class="hud-bottom">
+                    <span>SIGNAL: 100%</span>
+                    <span>SECURE</span>
+                </div>
+            </div>
+        `;
+        grid.prepend(div);
+    }
+
+    function updateStats() {
+        const count = Object.keys(activeCameras).length;
+        countDisplay.innerText = count < 10 ? `0${count}` : count;
+    }
+
+    // 4. Recolección de Basura (Señal Perdida)
+    setInterval(() => {
+        const now = Date.now();
+        for (const [userId, lastSeen] of Object.entries(activeCameras)) {
+            if (now - lastSeen > 8000) { // 8 segundos sin señal
+                const card = document.getElementById(`cam-${userId}`);
+                if (card) {
+                    // Efecto de apagado CRT
+                    card.style.filter = "brightness(0.2) grayscale(100%)";
+                    card.style.transform = "scaleX(0)";
+                    setTimeout(() => card.remove(), 300);
+                }
+                delete activeCameras[userId];
+                updateStats();
+            }
+        }
+    }, 2000);
+
+</script>
+
+{% endblock %}

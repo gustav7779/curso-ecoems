@@ -5,38 +5,40 @@
 {% block content %}
 
 <div class="min-h-screen pb-12 font-sans text-left">
-    
+
     <div class="relative pb-24 pt-12 px-4 shadow-xl rounded-b-[3rem] overflow-hidden mb-[-4rem] z-0"
-         style="background: var(--bg-header); border-bottom: 1px solid var(--borde-tarjeta);">
-        
-        <div class="absolute inset-0 opacity-10 pointer-events-none" 
-             style="background-image: radial-gradient(var(--color-texto) 1px, transparent 1px); background-size: 30px 30px;">
+        style="background: var(--bg-header); border-bottom: 1px solid var(--borde-tarjeta);">
+
+        <div class="absolute inset-0 opacity-10 pointer-events-none"
+            style="background-image: radial-gradient(var(--color-texto) 1px, transparent 1px); background-size: 30px 30px;">
         </div>
 
         <div class="relative z-10 container mx-auto max-w-6xl">
             <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div class="text-center md:text-left">
-                    
-                    <span class="font-bold text-xs uppercase tracking-wider mb-2 inline-block px-3 py-1 rounded-full shadow-sm"
-                          style="background: var(--bg-nav-link); color: var(--color-texto-secundario); border: 1px solid var(--borde-tarjeta);">
+
+                    <span
+                        class="font-bold text-xs uppercase tracking-wider mb-2 inline-block px-3 py-1 rounded-full shadow-sm"
+                        style="background: var(--bg-nav-link); color: var(--color-texto-secundario); border: 1px solid var(--borde-tarjeta);">
                         Sistema de Gestión V2.0
                     </span>
-                    
-                    <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow-sm mb-2 mt-2" 
+
+                    <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow-sm mb-2 mt-2"
                         style="color: var(--texto-header);">
                         ⚙️ Panel de Administración
                     </h1>
-                    
+
                     <p class="text-lg font-medium opacity-90" style="color: var(--color-texto-secundario);">
                         Bienvenido, <span style="color: #f59e0b;">{{ current_user.username | capitalize }}</span>.
                     </p>
                 </div>
 
-                <a href="{{ url_for('admin_dashboard') }}" 
-                   class="group p-5 rounded-2xl shadow-xl transform transition hover:scale-105 duration-300 flex flex-col items-center justify-center text-decoration-none"
-                   style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta); min-width: 200px;">
-                    
-                    <i class="fas fa-broadcast-tower text-4xl mb-2 group-hover:animate-pulse" style="color: #0ea5e9;"></i>
+                <a href="{{ url_for('admin_dashboard') }}"
+                    class="group p-5 rounded-2xl shadow-xl transform transition hover:scale-105 duration-300 flex flex-col items-center justify-center text-decoration-none"
+                    style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta); min-width: 200px;">
+
+                    <i class="fas fa-broadcast-tower text-4xl mb-2 group-hover:animate-pulse"
+                        style="color: #0ea5e9;"></i>
                     <span class="font-bold" style="color: var(--color-texto);">Torre de Control</span>
                     <span class="text-xs" style="color: var(--color-texto-secundario);">Monitoreo en Vivo</span>
                 </a>
@@ -45,37 +47,41 @@
     </div>
 
     <div class="container mx-auto max-w-6xl px-4 relative z-10">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            
+
             {% if current_user.role == 'admin' %}
             <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                 style="border-left-color: #3b82f6;">
+                style="border-left-color: #3b82f6;">
                 <div>
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="text-lg font-bold" style="color: var(--color-texto);">👥 Usuarios</h3>
                         <i class="fas fa-users-cog text-2xl" style="color: #3b82f6; opacity: 0.5;"></i>
                     </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Administrar cuentas de estudiantes.</p>
+                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Administrar cuentas de
+                        estudiantes.</p>
                 </div>
-                <a href="{{ url_for('manage_users') }}" class="btn text-center w-full" style="background: #3b82f6;">Administrar</a>
+                <a href="{{ url_for('manage_users') }}" class="btn text-center w-full"
+                    style="background: #3b82f6;">Administrar</a>
             </div>
 
             <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                 style="border-left-color: #10b981;">
+                style="border-left-color: #10b981;">
                 <div>
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="text-lg font-bold" style="color: var(--color-texto);">📊 Reportes</h3>
                         <i class="fas fa-file-csv text-2xl" style="color: #10b981; opacity: 0.5;"></i>
                     </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Descargar historial en CSV.</p>
+                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Descargar historial en CSV.
+                    </p>
                 </div>
-                <a href="{{ url_for('export_results') }}" class="btn text-center w-full" style="background: #10b981;">Descargar CSV</a>
+                <a href="{{ url_for('export_results') }}" class="btn text-center w-full"
+                    style="background: #10b981;">Descargar CSV</a>
             </div>
             {% endif %}
 
             <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                 style="border-left-color: #f59e0b;">
+                style="border-left-color: #f59e0b;">
                 <div>
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="text-lg font-bold" style="color: var(--color-texto);">🛠️ Soporte</h3>
@@ -83,131 +89,181 @@
                     </div>
                     <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Revisar fallas reportadas.</p>
                 </div>
-                <a href="{{ url_for('admin_reports') }}" class="btn text-center w-full" style="background: #f59e0b;">Ver Reportes</a>
+                <a href="{{ url_for('admin_reports') }}" class="btn text-center w-full" style="background: #f59e0b;">Ver
+                    Reportes</a>
             </div>
 
             <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                 style="border-left-color: #ef4444;">
+                style="border-left-color: #ef4444;">
                 <div>
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="text-lg font-bold" style="color: var(--color-texto);">📸 Evidencias</h3>
                         <i class="fas fa-camera-retro text-2xl" style="color: #ef4444; opacity: 0.5;"></i>
                     </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Muro de la vergüenza: Infracciones detectadas.</p>
+                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Muro de la vergüenza:
+                        Infracciones detectadas.</p>
                 </div>
                 <a href="{{ url_for('evidence_gallery') }}" class="btn text-center w-full" style="background: #ef4444;">
                     Ver Galería
                 </a>
             </div>
+        </div>
+        <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
+            style="border-left-color: #000;">
+            <div>
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold" style="color: var(--color-texto);">📹 Video Wall</h3>
+                    <i class="fas fa-video text-2xl" style="color: #333; opacity: 0.5;"></i>
+                </div>
+                <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Matriz CCTV en tiempo real.</p>
             </div>
+            <a href="{{ url_for('cctv_matrix') }}" class="btn text-center w-full"
+                style="background: #000; color: white;">
+                Ver Cámaras
+            </a>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+
             <div class="lg:col-span-2 space-y-8">
-                
+
                 <div class="card !p-0 overflow-hidden">
-                    <div class="p-6 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                    <div class="p-6 flex justify-between items-center"
+                        style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
                         <h2 class="text-xl font-bold flex items-center" style="color: var(--color-texto);">
                             <i class="fas fa-clipboard-list mr-3" style="color: var(--color-primario);"></i> Exámenes
                         </h2>
-                        <a href="{{ url_for('new_exam') }}" class="btn text-sm py-2" style="background: var(--color-primario);">
+                        <a href="{{ url_for('new_exam') }}" class="btn text-sm py-2"
+                            style="background: var(--color-primario);">
                             + Crear
                         </a>
                     </div>
 
                     <div class="p-0">
                         {% if exams %}
-                            <ul class="m-0 p-0" style="list-style: none;">
-                                {% for exam in exams %}
-                                    {% set active_count = 0 %}
-                                    {% for ex_id, ex_title, count in active_exams_summary %}
-                                        {% if ex_id == exam.id %}{% set active_count = count %}{% endif %}
-                                    {% endfor %}
+                        <ul class="m-0 p-0" style="list-style: none;">
+                            {% for exam in exams %}
+                            {% set active_count = 0 %}
+                            {% for ex_id, ex_title, count in active_exams_summary %}
+                            {% if ex_id == exam.id %}{% set active_count = count %}{% endif %}
+                            {% endfor %}
 
-                                    <li class="flex flex-col sm:flex-row justify-between items-center p-5 border-b last:border-0 hover:bg-opacity-50 transition"
-                                        style="border-color: var(--borde-tarjeta); background: var(--bg-tarjeta);">
-                                        
-                                        <div class="mb-3 sm:mb-0 w-full sm:w-auto">
-                                            <div class="font-bold text-lg" style="color: var(--color-texto);">{{ exam.title }}</div>
-                                            <div class="text-sm mt-1" style="color: var(--color-texto-secundario);">
-                                                <i class="fas fa-list-ol"></i> {{ exam.questions | list | length }} Preguntas
-                                                {% if active_count > 0 %}
-                                                    <span class="ml-2 px-2 py-0.5 rounded text-xs font-bold" style="background: #dcfce7; color: #166534;">
-                                                        🟢 {{ active_count }} En vivo
-                                                    </span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
+                            <li class="flex flex-col sm:flex-row justify-between items-center p-5 border-b last:border-0 hover:bg-opacity-50 transition"
+                                style="border-color: var(--borde-tarjeta); background: var(--bg-tarjeta);">
 
-                                        <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
-                                            
-                                            <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: #f97316;" title="Monitor"><i class="fas fa-eye"></i></a>
-                                            <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: var(--color-primario);" title="Editar"><i class="fas fa-cog"></i></a>
-                                            
-                                            <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}" class="inline m-0" onsubmit="return confirm('¿Crear copia exacta de {{ exam.title }}?');">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn py-1 px-3 text-xs" style="background: #8b5cf6;" title="Duplicar / Clonar">
-                                                    <i class="fas fa-copy"></i>
-                                                </button>
-                                            </form>
-                                            
-                                            <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: #a855f7;" title="Preguntas"><i class="fas fa-pencil-alt"></i></a>
-                                            <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs" style="background: #0ea5e9;" title="Resultados"><i class="fas fa-table"></i></a>
-                                            
-                                            <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline m-0" onsubmit="return confirm('¿ELIMINAR EXAMEN?');">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn py-1 px-3 text-xs" style="background: #ef4444;" title="Eliminar"><i class="fas fa-trash"></i></button>
-                                            </form>
-                                        </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                                <div class="mb-3 sm:mb-0 w-full sm:w-auto">
+                                    <div class="font-bold text-lg" style="color: var(--color-texto);">{{ exam.title }}
+                                    </div>
+                                    <div class="text-sm mt-1" style="color: var(--color-texto-secundario);">
+                                        <i class="fas fa-list-ol"></i> {{ exam.questions | list | length }} Preguntas
+                                        {% if active_count > 0 %}
+                                        <span class="ml-2 px-2 py-0.5 rounded text-xs font-bold"
+                                            style="background: #dcfce7; color: #166534;">
+                                            🟢 {{ active_count }} En vivo
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
+
+                                    <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}"
+                                        class="btn py-1 px-3 text-xs" style="background: #f97316;" title="Monitor"><i
+                                            class="fas fa-eye"></i></a>
+                                    <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs"
+                                        style="background: var(--color-primario);" title="Editar"><i
+                                            class="fas fa-cog"></i></a>
+
+                                    <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}"
+                                        class="inline m-0"
+                                        onsubmit="return confirm('¿Crear copia exacta de {{ exam.title }}?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn py-1 px-3 text-xs" style="background: #8b5cf6;"
+                                            title="Duplicar / Clonar">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </form>
+
+                                    <a href="{{ url_for('add_question', exam_id=exam.id) }}"
+                                        class="btn py-1 px-3 text-xs" style="background: #a855f7;" title="Preguntas"><i
+                                            class="fas fa-pencil-alt"></i></a>
+                                    <a href="{{ url_for('view_answers', exam_id=exam.id) }}"
+                                        class="btn py-1 px-3 text-xs" style="background: #0ea5e9;" title="Resultados"><i
+                                            class="fas fa-table"></i></a>
+
+                                    <!-- 🔥 BOTÓN REPORTE FORENSE IA (NUEVO) 🔥 -->
+                                    <a href="{{ url_for('forensic_report', exam_id=exam.id) }}" 
+                                       class="btn py-1 px-3 text-xs" 
+                                       style="background: #1f2937; color: #fff;" 
+                                       title="Ver Reporte IA">
+                                        <i class="fas fa-user-secret"></i>
+                                    </a>
+
+                                    <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}"
+                                        class="inline m-0" onsubmit="return confirm('¿ELIMINAR EXAMEN?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn py-1 px-3 text-xs" style="background: #ef4444;"
+                                            title="Eliminar"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
                         {% else %}
-                            <div class="p-10 text-center">
-                                <p style="color: var(--color-texto-secundario);">No hay exámenes creados.</p>
-                            </div>
+                        <div class="p-10 text-center">
+                            <p style="color: var(--color-texto-secundario);">No hay exámenes creados.</p>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
             <div class="space-y-6">
-                
+
                 {% if current_user.role == 'admin' %}
                 <div class="card !p-0 overflow-hidden">
-                    <div class="p-5 flex justify-between items-center" style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
+                    <div class="p-5 flex justify-between items-center"
+                        style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
                         <h3 class="font-bold" style="color: var(--color-texto);">📢 Anuncios</h3>
-                        <a href="{{ url_for('new_announcement') }}" class="btn text-xs py-1 px-2" style="background: var(--color-primario);">+ Nuevo</a>
+                        <a href="{{ url_for('new_announcement') }}" class="btn text-xs py-1 px-2"
+                            style="background: var(--color-primario);">+ Nuevo</a>
                     </div>
                     <div class="p-4">
                         {% if announcements_list %}
-                            <ul class="space-y-3 m-0 p-0" style="list-style: none;">
-                                {% for ann in announcements_list %}
-                                <li class="flex justify-between items-center p-3 rounded" 
-                                    style="background: var(--bg-tabla-hover); border: 1px solid var(--borde-tarjeta);">
-                                    <div>
-                                        <div class="font-bold text-sm" style="color: var(--color-texto);">{{ ann.title }}</div>
-                                        <div class="text-xs" style="color: {% if ann.is_active %}#10b981{% else %}#94a3b8{% endif %};">
-                                            {{ 'Activo' if ann.is_active else 'Inactivo' }}
-                                        </div>
+                        <ul class="space-y-3 m-0 p-0" style="list-style: none;">
+                            {% for ann in announcements_list %}
+                            <li class="flex justify-between items-center p-3 rounded"
+                                style="background: var(--bg-tabla-hover); border: 1px solid var(--borde-tarjeta);">
+                                <div>
+                                    <div class="font-bold text-sm" style="color: var(--color-texto);">{{ ann.title }}
                                     </div>
-                                    <div class="flex gap-1">
-                                        <a href="{{ url_for('edit_announcement', announcement_id=ann.id) }}" class="text-xs p-1" style="color: var(--color-primario);">✏️</a>
-                                        <form method="POST" action="{{ url_for('delete_announcement', announcement_id=ann.id) }}" class="inline m-0" onsubmit="return confirm('¿Borrar?');">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button type="submit" class="text-xs p-1 border-0 bg-transparent cursor-pointer" style="color: #ef4444;">🗑️</button>
-                                        </form>
+                                    <div class="text-xs"
+                                        style="color: {% if ann.is_active %}#10b981{% else %}#94a3b8{% endif %};">
+                                        {{ 'Activo' if ann.is_active else 'Inactivo' }}
                                     </div>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            <div class="mt-4 text-center">
-                                <a href="{{ url_for('admin_announcement_read_status') }}" class="text-sm font-bold hover:underline" style="color: var(--color-primario);">
-                                    👁️ Ver Lecturas
-                                </a>
-                            </div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <a href="{{ url_for('edit_announcement', announcement_id=ann.id) }}"
+                                        class="text-xs p-1" style="color: var(--color-primario);">✏️</a>
+                                    <form method="POST"
+                                        action="{{ url_for('delete_announcement', announcement_id=ann.id) }}"
+                                        class="inline m-0" onsubmit="return confirm('¿Borrar?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="text-xs p-1 border-0 bg-transparent cursor-pointer"
+                                            style="color: #ef4444;">🗑️</button>
+                                    </form>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="mt-4 text-center">
+                            <a href="{{ url_for('admin_announcement_read_status') }}"
+                                class="text-sm font-bold hover:underline" style="color: var(--color-primario);">
+                                👁️ Ver Lecturas
+                            </a>
+                        </div>
                         {% else %}
-                            <p class="text-sm text-center" style="color: var(--color-texto-secundario);">Sin anuncios.</p>
+                        <p class="text-sm text-center" style="color: var(--color-texto-secundario);">Sin anuncios.</p>
                         {% endif %}
                     </div>
                 </div>
@@ -215,14 +271,17 @@
                 <div class="card !p-5 border-l-4" style="border-left-color: #f97316;">
                     <h3 class="font-bold mb-3" style="color: var(--color-texto);">🔒 Seguridad (2FA)</h3>
                     {% if current_user.two_factor_secret %}
-                        <p class="text-sm mb-3 font-bold" style="color: #10b981;">✅ Activado</p>
-                        <form method="POST" action="{{ url_for('disable_2fa') }}" onsubmit="return confirm('¿Desactivar?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn w-full text-sm" style="background: #ef4444;">Desactivar</button>
-                        </form>
+                    <p class="text-sm mb-3 font-bold" style="color: #10b981;">✅ Activado</p>
+                    <form method="POST" action="{{ url_for('disable_2fa') }}"
+                        onsubmit="return confirm('¿Desactivar?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn w-full text-sm"
+                            style="background: #ef4444;">Desactivar</button>
+                    </form>
                     {% else %}
-                        <p class="text-sm mb-3" style="color: var(--color-texto-secundario);">Protege tu cuenta.</p>
-                        <a href="{{ url_for('setup_2fa') }}" class="btn w-full text-sm" style="background: #10b981;">Activar Ahora</a>
+                    <p class="text-sm mb-3" style="color: var(--color-texto-secundario);">Protege tu cuenta.</p>
+                    <a href="{{ url_for('setup_2fa') }}" class="btn w-full text-sm" style="background: #10b981;">Activar
+                        Ahora</a>
                     {% endif %}
                 </div>
                 {% endif %}

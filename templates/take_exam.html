@@ -47,6 +47,25 @@
     .parpadeo { animation: blink-red 1s infinite; color: #fff !important; background: var(--danger) !important; border-color: var(--danger); }
     @keyframes blink-red { 50% { opacity: 0.7; } }
 
+    /* Estilos del Speed Test HUD */
+    .net-badge {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 15px; border-radius: 12px;
+        font-weight: 700; cursor: pointer; transition: all 0.3s;
+        border: 1px solid var(--borde-color); background: var(--bg-tarjeta);
+        color: var(--color-texto-sec);
+    }
+    .net-badge:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    
+    /* Estados de Color */
+    .net-good { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: #10b981; }
+    .net-fair { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: #f59e0b; }
+    .net-poor { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; animation: pulse-red 2s infinite; }
+    
+    @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+    @media (max-width: 600px) { .net-text-mobile { display: none; } }
+
     /* TARJETAS DE PREGUNTAS */
     .question-card {
         background: var(--bg-tarjeta); border: 1px solid var(--borde-color);
@@ -258,9 +277,15 @@
                 <span id="countdown">--:--:--</span>
             </div>
             
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                
+                <div id="net-status-badge" onclick="runDeepNetworkScan()" class="net-badge" title="Clic para probar conexión">
+                    <i class="fas fa-wifi" id="net-icon"></i>
+                    <span id="net-text" class="net-text-mobile">Calculando...</span>
+                </div>
+
                 <button id="request-help-btn" class="btn" style="background: #8b5cf6; color: white; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);">
-                    🙋‍♂️ Hablar con Gus
+                    🙋‍♂️ Hablar
                 </button>
                 <a href="{{ url_for('new_report') }}" target="_blank" class="btn" style="background: var(--warning); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
                     🚨 Reportar
@@ -554,10 +579,12 @@
 
     // --- 3. INTELIGENCIA ARTIFICIAL ---
     // A) Audio Ultra-Sensible (Umbral 5)
+    // A) Audio Ultra-Sensible + SONAR REPORT
     let audioCtx = null;
     let analyser = null;
-    const AUDIO_THRESHOLD = 5; 
+    const AUDIO_THRESHOLD = 20; // Ajustado para alertas locales
     let voiceStrikes = 0;
+    let lastReportTime = 0;
 
     function processAudio(stream) {
         if(!audioCtx) return; 
@@ -565,7 +592,7 @@
         try {
             const mic = audioCtx.createMediaStreamSource(stream);
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 512;
+            analyser.fftSize = 256; // Tamaño pequeño para rapidez
             mic.connect(analyser);
             const data = new Uint8Array(analyser.frequencyBinCount);
             
@@ -574,22 +601,38 @@
                 
                 if(audioCtx.state === 'suspended') audioCtx.resume(); 
                 
-                analyser.getByteTimeDomainData(data);
-                let sum=0; for(let i=0;i<data.length;i++){ let x=data[i]-128; sum+=x*x; }
-                let rms = Math.sqrt(sum/data.length);
+                analyser.getByteFrequencyData(data);
                 
-                if(rms > AUDIO_THRESHOLD) {
+                // Calcular volumen promedio (RMS simplificado)
+                let sum = 0;
+                for(let i = 0; i < data.length; i++) {
+                    sum += data[i];
+                }
+                let average = sum / data.length; // Valor aprox 0 a 100
+                
+                // 1. Lógica de Alertas (Local)
+                if(average > AUDIO_THRESHOLD) {
                     voiceStrikes++;
-                    if(voiceStrikes > 20) {
-                        window.showFloatingNotification("ruido fuerte detectado", "warning");
-                        voiceStrikes = 0;
+                    if(voiceStrikes > 40) { // Si el ruido persiste
+                        // window.showFloatingNotification("ruido fuerte detectado", "warning"); // Opcional
                         socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_VOICE_DETECTED' });
+                        voiceStrikes = 0;
                     }
-                } else { voiceStrikes = Math.max(0, voiceStrikes-1); }
+                } else {
+                    voiceStrikes = Math.max(0, voiceStrikes - 1);
+                }
+
+                // 2. 🔥 REPORTE AL SONAR DEL ADMIN 🔥
+                // Enviamos cada 500ms para no saturar, o si hay un pico repentino
+                const now = Date.now();
+                if (now - lastReportTime > 500 || (average > 30 && now - lastReportTime > 200)) {
+                    socket.emit('report_audio_level', { level: Math.round(average) });
+                    lastReportTime = now;
+                }
+
             }, 100);
         } catch(e) { console.error(e); }
     }
-
     // B) Video (Objetos + Rostro)
     async function startVideoMonitoring(stream) {
         const video = document.getElementById('ai-video-feed');
@@ -764,10 +807,161 @@
         currentQ=idx; 
         window.scrollTo(0,0); 
     };
+
+    // ==========================================
+    // 💾 MODO TÚNEL (OFFLINE PERSISTENCE)
+    // ==========================================
+    
+    // Claves para LocalStorage
+    const STORAGE_KEY_ANSWERS = `exam_${EXAM_ID}_answers`;
+    const STORAGE_KEY_PENDING = `exam_${EXAM_ID}_pending`;
+
+    // 1. Cargar respuestas locales al iniciar (Por si refresca sin internet)
+    function loadLocalAnswers() {
+        try {
+            const localData = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
+            for (const [qid, val] of Object.entries(localData)) {
+                // Solo llenar si no está marcada ya por el servidor
+                const input = document.querySelector(`input[name="q${qid}"][value="${val}"]`);
+                if (input && !input.checked) {
+                    input.checked = true;
+                    // Actualizar mapa visual
+                    document.getElementById('map-btn-'+qid)?.classList.add('answered'); 
+                    // Marcar visualmente que es un dato local (opcional: borde amarillo)
+                    input.closest('.option-label').style.borderLeft = "4px solid #f59e0b"; 
+                }
+            }
+            // Revisar si hay pendientes de subir
+            checkSyncStatus();
+        } catch(e) { console.error("Error cargando caché local", e); }
+    }
+
+    // 2. La Nueva Función de Guardado (Blindada)
     window.autoSave = (qid, val) => {
-        document.getElementById('map-btn-'+qid)?.classList.add('answered');
-        fetch(SAVE_URL, {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF}, body:JSON.stringify({question_id:qid, response:val})});
+        // A) Guardar en Disco Local (Inmortalidad)
+        try {
+            const answers = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
+            answers[qid] = val;
+            localStorage.setItem(STORAGE_KEY_ANSWERS, JSON.stringify(answers));
+            
+            // Marcar como pendiente de sincronización
+            const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
+            if (!pending.includes(qid)) {
+                pending.push(qid);
+                localStorage.setItem(STORAGE_KEY_PENDING, JSON.stringify(pending));
+            }
+            
+            // Feedback visual inmediato
+            document.getElementById('map-btn-'+qid)?.classList.add('answered');
+            updateSyncIndicator('saving');
+
+        } catch(e) { console.error("Error localStorage", e); }
+
+        // B) Intentar enviar a la Nube
+        if (navigator.onLine) {
+            sendAnswerToServer(qid, val);
+        } else {
+            updateSyncIndicator('offline');
+            showFloatingNotification("Guardado en Modo Túnel (Sin Internet)", "warning");
+        }
     };
+
+    // 3. Envío Real al Servidor
+    async function sendAnswerToServer(qid, val) {
+        try {
+            const response = await fetch(SAVE_URL, {
+                method: 'POST', 
+                headers: {'Content-Type':'application/json','X-CSRF-Token':CSRF}, 
+                body: JSON.stringify({question_id:qid, response:val})
+            });
+
+            if (response.ok) {
+                // ¡Éxito! Quitar de la lista de pendientes
+                removeFromPending(qid);
+                updateSyncIndicator('saved');
+                // Quitar borde amarillo si tenía
+                const input = document.querySelector(`input[name="q${qid}"][value="${val}"]`);
+                if(input) input.closest('.option-label').style.borderLeft = "2px solid transparent";
+            } else {
+                throw new Error("Server reject");
+            }
+        } catch (error) {
+            console.warn("Fallo al subir respuesta, se mantiene en local.");
+            updateSyncIndicator('offline');
+        }
+    }
+
+    // 4. Utilidades del Túnel
+    function removeFromPending(qid) {
+        let pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
+        pending = pending.filter(id => id.toString() !== qid.toString());
+        localStorage.setItem(STORAGE_KEY_PENDING, JSON.stringify(pending));
+        checkSyncStatus();
+    }
+
+    function checkSyncStatus() {
+        const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
+        if (pending.length > 0) updateSyncIndicator('offline');
+        else updateSyncIndicator('saved');
+    }
+
+    // 5. Sincronizador Automático (Cuando vuelve internet)
+    async function syncNow() {
+        if (!navigator.onLine) return;
+        
+        const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
+        const answers = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
+        
+        if (pending.length === 0) return;
+
+        updateSyncIndicator('syncing');
+        showFloatingNotification(`Sincronizando ${pending.length} respuestas...`, "info");
+
+        // Recorrer cola y enviar
+        for (const qid of pending) {
+            const val = answers[qid];
+            if (val) {
+                await sendAnswerToServer(qid, val);
+            }
+        }
+    }
+
+    // 6. Indicador Visual (UI)
+    // Agregaremos un pequeño icono en la pantalla
+    function createSyncUI() {
+        const div = document.createElement('div');
+        div.id = 'tunnel-indicator';
+        div.style.cssText = "position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; z-index: 9000; transition: all 0.3s;";
+        div.innerHTML = '<span id="tunnel-icon">☁️</span> <span id="tunnel-text">Conectado</span>';
+        document.body.appendChild(div);
+    }
+
+    function updateSyncIndicator(status) {
+        const el = document.getElementById('tunnel-indicator');
+        const icon = document.getElementById('tunnel-icon');
+        const text = document.getElementById('tunnel-text');
+        if(!el) return;
+
+        if (status === 'saved') {
+            el.style.background = 'rgba(16, 185, 129, 0.9)'; // Verde
+            icon.innerText = '☁️'; text.innerText = 'Todo Guardado';
+            setTimeout(() => el.style.opacity = '0.5', 2000); // Desvanecer si todo ok
+        } else if (status === 'saving') {
+            el.style.opacity = '1';
+            el.style.background = 'rgba(59, 130, 246, 0.9)'; // Azul
+            icon.innerText = '⏳'; text.innerText = 'Guardando...';
+        } else if (status === 'offline') {
+            el.style.opacity = '1';
+            el.style.background = 'rgba(245, 158, 11, 0.9)'; // Naranja
+            const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
+            icon.innerText = '💾'; text.innerText = `Modo Túnel (${pending.length} pendientes)`;
+        } else if (status === 'syncing') {
+            el.style.opacity = '1';
+            el.style.background = 'rgba(139, 92, 246, 0.9)'; // Morado
+            icon.innerText = '🔄'; text.innerText = 'Subiendo datos...';
+        }
+    }
+
     window.toggleFlag = (qid) => { document.getElementById('map-btn-'+qid)?.classList.toggle('flagged'); };
     window.finishExam = () => { document.getElementById('confirm-submit-modal').style.display='flex'; };
     
@@ -894,23 +1088,185 @@
         });
     });
 
-    // --- 9. MONITOREO DE RED (PING) ---
-    document.addEventListener("DOMContentLoaded", function() { setInterval(measureLatency, 5000); });
+    // ==========================================
+    // ⚡ SPEED TEST & MONITOR DE RED
+    // ==========================================
+    
+    let lastLatency = 0;
 
-    async function measureLatency() {
+    // 1. Monitor Pasivo (Se ejecuta cada 5s en segundo plano)
+    document.addEventListener("DOMContentLoaded", function() {
+        // Inicializar Modo Túnel
+        createSyncUI();
+        loadLocalAnswers(); 
+        
+        // Ping
+        setInterval(() => measureLatency(false), 5000); 
+        
+        // Listeners de Red para Túnel
+        window.addEventListener('online', () => {
+            showFloatingNotification("Conexión recuperada. Sincronizando...", "success");
+            syncNow();
+        });
+        
+        window.addEventListener('offline', () => {
+            showFloatingNotification("Sin conexión. Entrando en Modo Túnel.", "warning");
+            updateSyncIndicator('offline');
+        });
+    });
+
+    async function measureLatency(isDeepScan = false) {
         const start = Date.now();
+        const badge = document.getElementById('net-status-badge');
+        const icon = document.getElementById('net-icon');
+        const text = document.getElementById('net-text');
+
         try {
+            // Hacemos ping (cache: no-cache forza a ir al servidor real)
             await fetch(window.location.href, { method: 'HEAD', cache: 'no-cache' });
+            
             const end = Date.now();
             const latency = end - start;
+            lastLatency = latency;
+
+            // Actualizar UI del Semáforo
+            if (badge) {
+                badge.classList.remove('net-good', 'net-fair', 'net-poor');
+                
+                if (latency < 200) {
+                    badge.classList.add('net-good');
+                    if (icon) icon.className = 'fas fa-wifi';
+                    if (text) text.innerText = isDeepScan ? `${latency}ms (Excelente)` : 'Estable';
+                } else if (latency < 500) {
+                    badge.classList.add('net-fair');
+                    if (icon) icon.className = 'fas fa-exclamation-circle';
+                    if (text) text.innerText = isDeepScan ? `${latency}ms (Lento)` : 'Inestable';
+                } else {
+                    badge.classList.add('net-poor');
+                    if (icon) icon.className = 'fas fa-times-circle';
+                    if (text) text.innerText = isDeepScan ? `${latency}ms (Crítico)` : 'Mala Red';
+                }
+            }
+
+            // Reportar al Admin (Solo si hay cambio drástico o es deep scan)
             if (typeof socket !== 'undefined' && socket.connected) {
                 socket.emit('report_network_status', { latency: latency });
             }
+            
+            return latency;
+
         } catch (error) {
             console.error("⚠️ Sin conexión a internet");
-            if (typeof socket !== 'undefined') {
-                socket.emit('report_network_status', { latency: 9999 });
+            if (badge) {
+                badge.classList.remove('net-good', 'net-fair');
+                badge.classList.add('net-poor');
+                if (icon) icon.className = 'fas fa-ban';
+                if (text) text.innerText = 'Desconectado';
             }
+            
+            if (typeof socket !== 'undefined') socket.emit('report_network_status', { latency: 9999 });
+            return 9999;
+        }
+    }
+
+    // 2. DIAGNÓSTICO PROFUNDO (Al hacer clic)
+    window.runDeepNetworkScan = async () => {
+        const text = document.getElementById('net-text');
+        if (text) text.innerText = "Probando...";
+        
+        let pings = [];
+        let total = 0;
+
+        // Hacemos 5 pings rápidos para sacar promedio
+        for(let i=0; i<5; i++) {
+            const l = await measureLatency(true);
+            pings.push(l);
+            total += l;
+            await new Promise(r => setTimeout(r, 200)); // Pequeña pausa
+        }
+
+        const avg = Math.round(total / 5);
+        let verdict = "";
+        let advice = "";
+        let icon = "";
+
+        if (avg >= 9999) {
+            icon = "error"; verdict = "SIN CONEXIÓN"; 
+            advice = "Tu dispositivo no tiene internet. Revisa tu WiFi.";
+        } else if (avg < 200) {
+            icon = "success"; verdict = "EXCELENTE"; 
+            advice = "Tu conexión es perfecta para el examen. Si algo falla, recarga la página.";
+        } else if (avg < 600) {
+            icon = "warning"; verdict = "INESTABLE"; 
+            advice = "Tu internet está lento. Cierra YouTube, Netflix o acércate al módem.";
+        } else {
+            icon = "error"; verdict = "CRÍTICO"; 
+            advice = "Tu red es demasiado lenta. Es muy probable que se te desconecte. Usa datos móviles si puedes.";
+        }
+
+        Swal.fire({
+            title: `Diagnóstico: ${verdict}`,
+            html: `
+                <div style="text-align:left; background:#f3f4f6; padding:15px; border-radius:10px;">
+                    <p><strong>📶 Latencia Promedio:</strong> ${avg} ms</p>
+                    <p><strong>📉 Estabilidad:</strong> ${pings.map(p => p>=9999?'❌':p).join(', ')}</p>
+                    <hr style="margin:10px 0; border-color:#ddd;">
+                    <p style="color:#1f2937;"><strong>💡 Consejo:</strong> ${advice}</p>
+                </div>
+            `,
+            icon: icon,
+            confirmButtonText: 'Entendido'
+        });
+    };
+
+    // ==========================================
+    // --- 10. CCTV VIA SOCKETS ---
+    // ==========================================
+    let cctvInterval = null;
+
+    // Escuchar orden del Admin
+    socket.on('cctv_command', (data) => {
+        console.log("Comando CCTV recibido:", data.action);
+        
+        if (data.action === 'start') {
+            startCCTVTransmission();
+        } else if (data.action === 'stop') {
+            stopCCTVTransmission();
+        }
+    });
+
+    function startCCTVTransmission() {
+        if (cctvInterval) return; // Ya está transmitiendo
+
+        // Intervalo de 3 segundos (3000ms) para no saturar
+        cctvInterval = setInterval(() => {
+            const video = document.getElementById('ai-video-feed');
+            
+            // Solo enviar si el video está activo y reproduciéndose
+            if (video && video.readyState === 4) {
+                // Usamos un canvas temporal para comprimir la imagen
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 240; // Resolución baja (Thumbnail)
+                tempCanvas.height = 180;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // Compresión agresiva JPEG 0.3
+                const frame = tempCanvas.toDataURL('image/jpeg', 0.3);
+                
+                socket.emit('cctv_stream_frame', {
+                    user_id: USER_ID,
+                    username: USERNAME,
+                    image: frame
+                });
+            }
+        }, 3000); // ⏱️ Cada 3 segundos
+    }
+
+    function stopCCTVTransmission() {
+        if (cctvInterval) {
+            clearInterval(cctvInterval);
+            cctvInterval = null;
         }
     }
     </script>

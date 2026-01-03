@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Informe Forense IA | {{ exam.title }}{% endblock %}
+
+{% block content %}
+
+<div class="forensic-container">
+    
+    <div class="report-header">
+        <div class="header-titles">
+            <div class="badge-exam">EXAMEN #{{ exam.id }}</div>
+            <h1>Informe de Integridad IA</h1>
+            <p>Análisis post-mortem para: <strong>{{ exam.title }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button onclick="window.print()" class="btn-secondary">
+                <i class="fas fa-print"></i> Imprimir / PDF
+            </button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn-primary">
+                <i class="fas fa-arrow-left"></i> Volver al Mando
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon icon-purple"><i class="fas fa-users-viewfinder"></i></div>
+            <div class="stat-data">
+                <h3>{{ suspects | length }}</h3>
+                <p>Sospechosos Analizados</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-red"><i class="fas fa-radiation"></i></div>
+            <div class="stat-data">
+                <h3>{{ suspects[0].total_score if suspects else 0 }} pts</h3>
+                <p>Riesgo Máximo Detectado</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-blue"><i class="fas fa-camera-retro"></i></div>
+            <div class="stat-data">
+                {% set total_inc = namespace(value=0) %}
+                {% for s in suspects %}{% set total_inc.value = total_inc.value + s.timeline|length %}{% endfor %}
+                <h3>{{ total_inc.value }}</h3>
+                <p>Infracciones Totales</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="suspects-grid">
+        
+        {% for data in suspects %}
+        {% set score = data.total_score %}
+        
+        {% set risk_class = 'risk-low' %}
+        {% set risk_text = 'BAJO' %}
+        {% if score >= 100 %}
+            {% set risk_class = 'risk-critical' %}
+            {% set risk_text = 'CRÍTICO' %}
+        {% elif score >= 50 %}
+            {% set risk_class = 'risk-high' %}
+            {% set risk_text = 'ALTO' %}
+        {% elif score >= 20 %}
+            {% set risk_class = 'risk-medium' %}
+            {% set risk_text = 'MEDIO' %}
+        {% endif %}
+
+        <div class="suspect-card {{ risk_class }}">
+            
+            <div class="card-top">
+                <div class="profile-flex">
+                    <div class="avatar-box">
+                        {{ data.user.username[0]|upper }}
+                    </div>
+                    <div class="user-meta">
+                        <h3 class="student-name">{{ data.user.username }}</h3>
+                        <span class="student-id">ID: {{ data.user.id }}</span>
+                    </div>
+                </div>
+                
+                <div class="risk-badge">
+                    <span class="risk-label">NIVEL DE RIESGO</span>
+                    <span class="risk-value">{{ risk_text }}</span>
+                </div>
+            </div>
+
+            <div class="risk-meter-wrapper">
+                <div class="risk-score-display">
+                    <span class="score-number">{{ score }}</span>
+                    <span class="score-total">/ 100 pts</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ [score, 100]|min }}%;"></div>
+                </div>
+            </div>
+
+            <div class="crimes-container">
+                <p class="section-label">INCIDENCIAS DETECTADAS</p>
+                <div class="tags-wrapper">
+                    {% for type, count in data.details.items() %}
+                        {% if 'PHONE' in type %}
+                            <span class="crime-tag tag-phone"><i class="fas fa-mobile-alt"></i> Celular ({{ count }})</span>
+                        {% elif 'PERSON' in type %}
+                            <span class="crime-tag tag-person"><i class="fas fa-user-friends"></i> Persona ({{ count }})</span>
+                        {% elif 'TAB' in type %}
+                            <span class="crime-tag tag-tab"><i class="fas fa-external-link-alt"></i> Salida ({{ count }})</span>
+                        {% elif 'VOICE' in type %}
+                            <span class="crime-tag tag-voice"><i class="fas fa-microphone"></i> Ruido ({{ count }})</span>
+                        {% elif 'FACE' in type %}
+                            <span class="crime-tag tag-face"><i class="fas fa-user-slash"></i> Rostro ({{ count }})</span>
+                        {% else %}
+                            <span class="crime-tag tag-generic"><i class="fas fa-exclamation-triangle"></i> {{ type }} ({{ count }})</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% set evidence_count = data.timeline | selectattr('image_filename') | list | length %}
+            <div class="card-footer">
+                {% if evidence_count > 0 %}
+                    <div class="evidence-status has-evidence">
+                        <i class="fas fa-images"></i> <strong>{{ evidence_count }}</strong> Fotos capturadas por IA
+                    </div>
+                    {% else %}
+                    <div class="evidence-status no-evidence">
+                        <i class="fas fa-check-circle"></i> Sin evidencia visual
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+        {% else %}
+        
+        <div class="empty-state">
+            <div class="empty-icon">🛡️</div>
+            <h2>Informe Limpio</h2>
+            <p>El sistema de Inteligencia Artificial no detectó anomalías en este grupo.</p>
+        </div>
+
+        {% endfor %}
+
+    </div>
+</div>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
+
+    :root {
+        --bg-app: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        
+        /* Paleta de Riesgo */
+        --grad-critical: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        --grad-high: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+        --grad-medium: linear-gradient(135deg, #eab308 0%, #a16207 100%);
+        --grad-low: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        
+        --shadow-card: 0 10px 30px -5px rgba(0,0,0,0.08);
+        --shadow-hover: 0 20px 40px -5px rgba(0,0,0,0.12);
+    }
+
+    body { background-color: var(--bg-app); font-family: 'Outfit', sans-serif; color: var(--text-main); }
+
+    .forensic-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+
+    /* HEADER */
+    .report-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+    .badge-exam { display: inline-block; background: #e0e7ff; color: #4338ca; font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; }
+    .report-header h1 { font-size: 2.5rem; margin: 0; font-weight: 900; background: linear-gradient(90deg, #1e293b, #475569); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .report-header p { margin: 5px 0 0; color: var(--text-muted); font-size: 1.1rem; }
+    
+    .header-actions { display: flex; gap: 10px; }
+    .btn-primary, .btn-secondary { padding: 12px 24px; border-radius: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: 0.2s; cursor: pointer; border: none; font-size: 0.95rem; }
+    .btn-primary { background: #0f172a; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.4); }
+    .btn-secondary { background: white; color: var(--text-main); border: 1px solid #cbd5e1; }
+    .btn-secondary:hover { background: #f1f5f9; }
+
+    /* STATS ROW */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .stat-card { background: white; padding: 20px; border-radius: 16px; display: flex; align-items: center; gap: 20px; box-shadow: var(--shadow-card); border: 1px solid rgba(255,255,255,0.5); }
+    .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .icon-purple { background: #f3e8ff; color: #9333ea; }
+    .icon-red { background: #fee2e2; color: #ef4444; }
+    .icon-blue { background: #e0f2fe; color: #0284c7; }
+    .stat-data h3 { margin: 0; font-size: 1.8rem; font-weight: 800; line-height: 1; }
+    .stat-data p { margin: 5px 0 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* GRID */
+    .suspects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+
+    /* SUSPECT CARD */
+    .suspect-card { 
+        background: var(--card-bg); border-radius: 20px; padding: 25px; 
+        box-shadow: var(--shadow-card); border: 1px solid transparent; 
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;
+    }
+    .suspect-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-hover); }
+
+    /* Colores por Riesgo */
+    .risk-critical { border-top: 6px solid #ef4444; }
+    .risk-critical .risk-value { color: #ef4444; }
+    .risk-critical .progress-fill { background: var(--grad-critical); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+    .risk-critical .avatar-box { background: #fee2e2; color: #ef4444; }
+
+    .risk-high { border-top: 6px solid #f97316; }
+    .risk-high .risk-value { color: #f97316; }
+    .risk-high .progress-fill { background: var(--grad-high); }
+    .risk-high .avatar-box { background: #ffedd5; color: #f97316; }
+
+    .risk-medium { border-top: 6px solid #eab308; }
+    .risk-medium .risk-value { color: #ca8a04; }
+    .risk-medium .progress-fill { background: var(--grad-medium); }
+
+    .risk-low { border-top: 6px solid #10b981; }
+    .risk-low .risk-value { color: #10b981; }
+    .risk-low .progress-fill { background: var(--grad-low); }
+
+    /* Card Top */
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .profile-flex { display: flex; gap: 15px; align-items: center; }
+    .avatar-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; background: #f1f5f9; color: var(--text-muted); }
+    .student-name { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-main); }
+    .student-id { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; }
+    
+    .risk-badge { text-align: right; }
+    .risk-label { display: block; font-size: 0.6rem; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 2px; }
+    .risk-value { font-size: 1.1rem; font-weight: 900; }
+
+    /* Meter */
+    .risk-meter-wrapper { margin-bottom: 25px; }
+    .risk-score-display { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .score-number { font-size: 2.5rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+    .score-total { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+    .progress-track { background: #f1f5f9; height: 10px; border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-out; }
+
+    /* Crimes */
+    .section-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; }
+    .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; }
+    .crime-tag { font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    
+    .tag-phone { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+    .tag-person { background: #fff7ed; color: #f97316; border: 1px solid #fed7aa; }
+    .tag-tab { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+    .tag-voice { background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; }
+    .tag-face { background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
+    .tag-generic { background: #f3f4f6; color: #374151; }
+
+    /* Footer */
+    .card-footer { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .evidence-status { font-size: 0.85rem; color: var(--text-muted); }
+    .has-evidence { color: #0f172a; } .has-evidence i { color: #6366f1; }
+    .no-evidence { opacity: 0.7; }
+
+    /* Print settings */
+    @media print {
+        .report-header .header-actions { display: none; }
+        .suspects-grid { display: block; }
+        .suspect-card { break-inside: avoid; margin-bottom: 20px; border: 1px solid #ccc; box-shadow: none; }
+        .progress-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    
+    .empty-state { grid-column: 1 / -1; text-align: center; padding: 80px; color: var(--text-muted); }
+    .empty-icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+
+</style>
+
+{% endblock %}
