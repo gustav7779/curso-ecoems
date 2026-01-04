@@ -877,20 +877,17 @@
     };
 
     // 3. Envío Real al Servidor
-    async function sendAnswerToServer(qid, val, seconds = 0) { // <--- Recibe seconds
+    async function sendAnswerToServer(qid, val, seconds = 0) {
         try {
             const response = await fetch(SAVE_URL, {
                 method: 'POST', 
                 headers: {'Content-Type':'application/json','X-CSRF-Token':CSRF}, 
-                // Enviamos time_spent en el cuerpo
                 body: JSON.stringify({question_id:qid, response:val, time_spent: seconds}) 
             });
 
             if (response.ok) {
-                // ¡Éxito! Quitar de la lista de pendientes
                 removeFromPending(qid);
                 updateSyncIndicator('saved');
-                // Quitar borde amarillo si tenía
                 const input = document.querySelector(`input[name="q${qid}"][value="${val}"]`);
                 if(input) input.closest('.option-label').style.borderLeft = "2px solid transparent";
             } else {
@@ -899,6 +896,16 @@
         } catch (error) {
             console.warn("Fallo al subir respuesta, se mantiene en local.");
             updateSyncIndicator('offline');
+
+            // 👇👇 AQUÍ AGREGAS ESTO NUEVO 👇👇
+            fetch('/api/log_error', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    message: `CRÍTICO EXAMEN: Alumno ${USERNAME} no pudo guardar Pregunta ${qid}. Razón: ${error.message}` 
+                })
+            });
+            // 👆👆 FIN DE LO NUEVO 👆👆
         }
     }
 

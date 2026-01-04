@@ -713,7 +713,40 @@
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    // --- SISTEMA DE REPORTE DE ERRORES AUTOMÁTICO (CORREGIDO) ---
+    window.onerror = function(message, source, lineno, colno, error) {
+        // Ignorar errores de extensiones de Chrome/Edge
+        if(source && source.includes('chrome-extension')) return;
 
+        // Obtener la llave de seguridad (CSRF)
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch('/api/log_error', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken // <--- ¡ESTO FALTABA!
+            },
+            body: JSON.stringify({
+                message: `Error JS: ${message} (Línea: ${lineno})`
+            })
+        });
+    };
+
+    // Detectar desconexión de internet
+    window.addEventListener('offline', () => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        fetch('/api/log_error', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ message: "⚠️ PÉRDIDA DE CONEXIÓN DETECTADA" })
+        });
+    });
+</script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     {# --- LÓGICA DE MENSAJES PARA EL ALUMNO --- #}
     {% if current_user.is_authenticated and current_user.role == 'student' %}

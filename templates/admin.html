@@ -1,344 +1,298 @@
 {% extends "base.html" %}
 
-{% block title %}Panel de Administración{% endblock %}
+{% block title %}Comando Central | Admin{% endblock %}
 
 {% block content %}
 
-<div class="min-h-screen pb-12 font-sans text-left">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
 
-    <!-- HEADER / HERO SECTION -->
-    <div class="relative pb-24 pt-12 px-4 shadow-xl rounded-b-[3rem] overflow-hidden mb-[-4rem] z-0"
-        style="background: var(--bg-header); border-bottom: 1px solid var(--borde-tarjeta);">
+<style>
+    /* --- PROTOCOLO OSCURIDAD TOTAL --- */
+    :root {
+        --neon-purple: #bc13fe;
+        --neon-blue: #00f3ff;
+        --neon-green: #0aff60;
+        --neon-red: #ff0055;
+        --bg-dark: #020617;
+        --card-bg: rgba(15, 23, 42, 0.75);
+        --border-color: rgba(255, 255, 255, 0.08);
+    }
 
-        <div class="absolute inset-0 opacity-10 pointer-events-none"
-            style="background-image: radial-gradient(var(--color-texto) 1px, transparent 1px); background-size: 30px 30px;">
-        </div>
+    /* Ocultar botón de tema y forzar oscuro */
+    #theme-toggle, .theme-switch, .toggle-theme { display: none !important; }
+    input, textarea, select { color-scheme: dark; }
 
-        <div class="relative z-10 container mx-auto max-w-6xl">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div class="text-center md:text-left">
+    body {
+        background-color: var(--bg-dark) !important;
+        color: #e2e8f0 !important;
+        font-family: 'Inter', sans-serif;
+        background-image: 
+            radial-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px),
+            radial-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
 
-                    <span
-                        class="font-bold text-xs uppercase tracking-wider mb-2 inline-block px-3 py-1 rounded-full shadow-sm"
-                        style="background: var(--bg-nav-link); color: var(--color-texto-secundario); border: 1px solid var(--borde-tarjeta);">
-                        Sistema de Gestión V2.0
-                    </span>
+    h1, h2, h3, .font-tech { font-family: 'Space Grotesk', sans-serif; }
 
-                    <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow-sm mb-2 mt-2"
-                        style="color: var(--texto-header);">
-                        ⚙️ Panel de Administración
-                    </h1>
+    /* HUD CARD */
+    .hud-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
 
-                    <p class="text-lg font-medium opacity-90" style="color: var(--color-texto-secundario);">
-                        Bienvenido, <span style="color: #f59e0b;">{{ current_user.username | capitalize }}</span>.
-                    </p>
-                </div>
+    /* BOTÓN TORRE DE CONTROL */
+    .tower-btn {
+        background: rgba(0, 243, 255, 0.05);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        color: var(--neon-blue);
+        transition: all 0.3s;
+    }
+    .tower-btn:hover {
+        background: rgba(0, 243, 255, 0.15);
+        box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    /* INPUTS */
+    .input-tech {
+        background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); color: white;
+        font-family: 'Space Grotesk', monospace; transition: all 0.3s;
+    }
+    .input-tech:focus {
+        border-color: var(--neon-blue); background: rgba(0, 0, 0, 0.8); outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.1);
+    }
 
-                <a href="{{ url_for('admin_dashboard') }}"
-                    class="group p-5 rounded-2xl shadow-xl transform transition hover:scale-105 duration-300 flex flex-col items-center justify-center text-decoration-none"
-                    style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta); min-width: 200px;">
+    /* TERMINAL LOGS REAL */
+    .terminal-window {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.7rem;
+        color: #ff3333; /* Rojo para alertas */
+        height: 140px;
+        overflow-y: hidden;
+        position: relative;
+        text-shadow: 0 0 2px rgba(255, 51, 51, 0.5);
+    }
+    .terminal-line { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+    
+    /* BOTONES ACCIÓN */
+    .btn-action { transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
+    .btn-action:hover { transform: translateY(-2px); background: rgba(255,255,255,0.1); }
+</style>
 
-                    <i class="fas fa-broadcast-tower text-4xl mb-2 group-hover:animate-pulse"
-                        style="color: #0ea5e9;"></i>
-                    <span class="font-bold" style="color: var(--color-texto);">Torre de Control</span>
-                    <span class="text-xs" style="color: var(--color-texto-secundario);">Monitoreo en Vivo</span>
-                </a>
+<div class="min-h-screen pb-20 pt-8 px-4 md:px-8">
+
+    <div class="max-w-[1400px] mx-auto mb-10 border-b border-white/5 pb-6 flex flex-col md:flex-row justify-between items-end gap-6">
+        <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-mono tracking-widest uppercase mb-3">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                ADMINISTRADOR NIVEL 5
             </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-white font-tech tracking-tight">
+                PANEL DE <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">CONTROL</span>
+            </h1>
         </div>
+        
+        <a href="{{ url_for('admin_dashboard') }}" class="tower-btn px-6 py-3 rounded-xl flex items-center gap-4 group text-decoration-none">
+            <div class="relative">
+                <i class="fas fa-broadcast-tower text-2xl group-hover:animate-pulse"></i>
+                <div class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
+            </div>
+            <div class="text-left">
+                <div class="text-xs font-bold tracking-widest">TORRE DE CONTROL</div>
+                <div class="text-[10px] opacity-70 font-mono">LIVE DASHBOARD</div>
+            </div>
+        </a>
     </div>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <div class="container mx-auto max-w-6xl px-4 relative z-10">
+    <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        <!-- 🎛️ FASE 3: CONTROL DE TRANSMISIÓN (Nuevo Bloque Integrado) -->
-        <div class="card !p-6 mb-8 border-l-4 shadow-lg" 
-             style="background: var(--bg-tarjeta); border: 1px solid var(--borde-tarjeta); border-left-color: #a855f7;">
-            
-            <h3 class="text-xl font-bold mb-4 flex items-center gap-2" style="color: var(--color-texto);">
-                <i class="fas fa-satellite-dish" style="color: #a855f7;"></i> Control de Transmisión (Homepage)
-            </h3>
-            
-            <form action="{{ url_for('update_settings') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
-                <!-- Input Fecha -->
-                <div class="p-4 rounded-lg border" style="background: var(--bg-tabla-hover); border-color: var(--borde-tarjeta);">
-                    <label class="block text-sm font-bold mb-2" style="color: var(--color-texto);">📅 Fecha Próximo Examen</label>
-                    <input type="datetime-local" name="exam_date" 
-                           class="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500" 
-                           style="background: var(--bg-app); color: var(--color-texto); border: 1px solid var(--borde-tarjeta);"
-                           required>
-                    <p class="text-xs mt-1" style="color: var(--color-texto-secundario);">El contador del inicio apuntará a esta fecha.</p>
-                </div>
+        <div class="lg:col-span-8 space-y-8">
 
-                <!-- Input Noticias -->
-                <div class="p-4 rounded-lg border" style="background: var(--bg-tabla-hover); border-color: var(--borde-tarjeta);">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-bold" style="color: var(--color-texto);">📰 Noticia "Breaking News"</label>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" name="news_active" id="newsSwitch" class="w-4 h-4 text-purple-600" checked>
-                            <label for="newsSwitch" class="text-xs" style="color: var(--color-texto-secundario);">Mostrar Cintillo</label>
+            <div class="hud-card p-8 relative overflow-hidden group" data-tilt data-tilt-max="1">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] pointer-events-none"></div>
+                <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3 font-tech border-b border-white/5 pb-4">
+                    <i class="fas fa-sliders-h text-purple-400"></i> CONTROL DE PAGINA DE INICIO
+                </h3>
+                <form action="{{ url_for('update_settings') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div>
+                        <label class="block text-xs font-bold text-purple-300 uppercase tracking-wider mb-3"><i class="far fa-calendar-alt mr-1"></i> Fecha Contador</label>
+                        <input type="datetime-local" name="exam_date" class="input-tech w-full p-4 rounded-xl text-sm block" required>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="block text-xs font-bold text-purple-300 uppercase tracking-wider"><i class="fas fa-bullhorn mr-1"></i> Noticia Cintillo</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="news_active" class="sr-only peer" checked>
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                            </label>
                         </div>
+                        <textarea name="news_text" rows="1" class="input-tech w-full p-4 rounded-xl text-sm resize-none" placeholder="Escribe el mensaje aquí..."></textarea>
                     </div>
-                    <textarea name="news_text" rows="2" 
-                              class="w-full p-2 border rounded focus:ring-2 focus:ring-purple-500"
-                              style="background: var(--bg-app); color: var(--color-texto); border: 1px solid var(--borde-tarjeta);"
-                              placeholder="Ej: 🚨 ¡Atención! Mañana simulacro sorpresa..."></textarea>
-                    <p class="text-xs mt-1" style="color: var(--color-texto-secundario);">Puedes usar Emojis 🚨🔥🏆 para decorar.</p>
-                </div>
-
-                <div class="md:col-span-2 text-right">
-                    <button type="submit" class="btn font-bold py-2 px-6 rounded-lg shadow transition transform hover:scale-105"
-                            style="background: #a855f7; color: white;">
-                        💾 Guardar Cambios en Vivo
-                    </button>
-                </div>
-            </form>
-        </div>
-        <!-- FIN FASE 3 -->
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-
-            {% if current_user.role == 'admin' %}
-            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                style="border-left-color: #3b82f6;">
-                <div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">👥 Usuarios</h3>
-                        <i class="fas fa-users-cog text-2xl" style="color: #3b82f6; opacity: 0.5;"></i>
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="submit" class="bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold py-3 px-8 rounded-xl shadow-lg transition transform hover:scale-105 flex items-center gap-2">
+                            <i class="fas fa-save"></i> GUARDAR
+                        </button>
                     </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Administrar cuentas de
-                        estudiantes.</p>
-                </div>
-                <a href="{{ url_for('manage_users') }}" class="btn text-center w-full"
-                    style="background: #3b82f6;">Administrar</a>
+                </form>
             </div>
 
-            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                style="border-left-color: #10b981;">
-                <div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">📊 Reportes</h3>
-                        <i class="fas fa-file-csv text-2xl" style="color: #10b981; opacity: 0.5;"></i>
-                    </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Descargar historial en CSV.
-                    </p>
+            <div class="hud-card p-0 overflow-hidden">
+                <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2 font-tech">
+                        <i class="fas fa-database text-cyan-400"></i> BASE DE DATOS: EXÁMENES
+                    </h3>
+                    <a href="{{ url_for('new_exam') }}" class="text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-500 hover:text-black px-4 py-2 rounded-lg font-bold transition uppercase tracking-wider">+ Nuevo Examen</a>
                 </div>
-                <a href="{{ url_for('export_results') }}" class="btn text-center w-full"
-                    style="background: #10b981;">Descargar CSV</a>
-            </div>
-            {% endif %}
-
-            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                style="border-left-color: #f59e0b;">
-                <div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">🛠️ Soporte</h3>
-                        <i class="fas fa-tools text-2xl" style="color: #f59e0b; opacity: 0.5;"></i>
-                    </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Revisar fallas reportadas.</p>
-                </div>
-                <a href="{{ url_for('admin_reports') }}" class="btn text-center w-full" style="background: #f59e0b;">Ver
-                    Reportes</a>
-            </div>
-
-            <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4"
-                style="border-left-color: #ef4444;">
-                <div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-lg font-bold" style="color: var(--color-texto);">📸 Evidencias</h3>
-                        <i class="fas fa-camera-retro text-2xl" style="color: #ef4444; opacity: 0.5;"></i>
-                    </div>
-                    <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Muro de la vergüenza:
-                        Infracciones detectadas.</p>
-                </div>
-                <a href="{{ url_for('evidence_gallery') }}" class="btn text-center w-full" style="background: #ef4444;">
-                    Ver Galería
-                </a>
-            </div>
-        </div>
-
-        <div class="card !p-6 flex flex-col justify-between hover:shadow-lg transition-transform hover:-translate-y-1 border-l-4 mb-8"
-            style="border-left-color: #000;">
-            <div>
-                <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-lg font-bold" style="color: var(--color-texto);">📹 Video Wall</h3>
-                    <i class="fas fa-video text-2xl" style="color: #333; opacity: 0.5;"></i>
-                </div>
-                <p class="text-sm mb-4" style="color: var(--color-texto-secundario);">Matriz CCTV en tiempo real.</p>
-            </div>
-            <a href="{{ url_for('cctv_matrix') }}" class="btn text-center w-full"
-                style="background: #000; color: white;">
-                Ver Cámaras
-            </a>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-            <div class="lg:col-span-2 space-y-8">
-
-                <div class="card !p-0 overflow-hidden">
-                    <div class="p-6 flex justify-between items-center"
-                        style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
-                        <h2 class="text-xl font-bold flex items-center" style="color: var(--color-texto);">
-                            <i class="fas fa-clipboard-list mr-3" style="color: var(--color-primario);"></i> Exámenes
-                        </h2>
-                        <a href="{{ url_for('new_exam') }}" class="btn text-sm py-2"
-                            style="background: var(--color-primario);">
-                            + Crear
-                        </a>
-                    </div>
-
-                    <div class="p-0">
-                        {% if exams %}
-                        <ul class="m-0 p-0" style="list-style: none;">
-                            {% for exam in exams %}
-                            {% set active_count = 0 %}
-                            {% for ex_id, ex_title, count in active_exams_summary %}
+                <div class="divide-y divide-white/5">
+                    {% if exams %}
+                        {% for exam in exams %}
+                        {% set active_count = 0 %}
+                        {% for ex_id, ex_title, count in active_exams_summary %}
                             {% if ex_id == exam.id %}{% set active_count = count %}{% endif %}
-                            {% endfor %}
-
-                            <li class="flex flex-col sm:flex-row justify-between items-center p-5 border-b last:border-0 hover:bg-opacity-50 transition"
-                                style="border-color: var(--borde-tarjeta); background: var(--bg-tarjeta);">
-
-                                <div class="mb-3 sm:mb-0 w-full sm:w-auto">
-                                    <div class="font-bold text-lg" style="color: var(--color-texto);">{{ exam.title }}
-                                    </div>
-                                    <div class="text-sm mt-1" style="color: var(--color-texto-secundario);">
-                                        <i class="fas fa-list-ol"></i> {{ exam.questions | list | length }} Preguntas
-                                        {% if active_count > 0 %}
-                                        <span class="ml-2 px-2 py-0.5 rounded text-xs font-bold"
-                                            style="background: #dcfce7; color: #166534;">
-                                            🟢 {{ active_count }} En vivo
-                                        </span>
-                                        {% endif %}
-                                    </div>
+                        {% endfor %}
+                        <div class="p-5 hover:bg-white/5 transition flex flex-col xl:flex-row justify-between items-center gap-4 group">
+                            <div class="w-full xl:w-auto">
+                                <div class="flex items-center gap-3">
+                                    <h4 class="text-lg font-bold text-white group-hover:text-cyan-400 transition font-tech">{{ exam.title }}</h4>
+                                    {% if active_count > 0 %}
+                                    <span class="px-2 py-0.5 rounded bg-green-500/10 text-green-400 text-[10px] font-bold border border-green-500/20 animate-pulse">{{ active_count }} ONLINE</span>
+                                    {% endif %}
                                 </div>
-
-                                <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
-
-                                    <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}"
-                                        class="btn py-1 px-3 text-xs" style="background: #f97316;" title="Monitor"><i
-                                            class="fas fa-eye"></i></a>
-                                    <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn py-1 px-3 text-xs"
-                                        style="background: var(--color-primario);" title="Editar"><i
-                                            class="fas fa-cog"></i></a>
-
-                                    <form method="POST" action="{{ url_for('duplicate_exam', exam_id=exam.id) }}"
-                                        class="inline m-0"
-                                        onsubmit="return confirm('¿Crear copia exacta de {{ exam.title }}?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn py-1 px-3 text-xs" style="background: #8b5cf6;"
-                                            title="Duplicar / Clonar">
-                                            <i class="fas fa-copy"></i>
-                                        </button>
-                                    </form>
-
-                                    <a href="{{ url_for('add_question', exam_id=exam.id) }}"
-                                        class="btn py-1 px-3 text-xs" style="background: #a855f7;" title="Preguntas"><i
-                                            class="fas fa-pencil-alt"></i></a>
-                                    <a href="{{ url_for('view_answers', exam_id=exam.id) }}"
-                                        class="btn py-1 px-3 text-xs" style="background: #0ea5e9;" title="Resultados"><i
-                                            class="fas fa-table"></i></a>
-
-                                    <!-- 🔥 BOTÓN REPORTE FORENSE IA (NUEVO) 🔥 -->
-                                    <a href="{{ url_for('forensic_report', exam_id=exam.id) }}" 
-                                       class="btn py-1 px-3 text-xs" 
-                                       style="background: #1f2937; color: #fff;" 
-                                       title="Ver Reporte IA">
-                                        <i class="fas fa-user-secret"></i>
-                                    </a>
-
-                                    <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}"
-                                        class="inline m-0" onsubmit="return confirm('¿ELIMINAR EXAMEN?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn py-1 px-3 text-xs" style="background: #ef4444;"
-                                            title="Eliminar"><i class="fas fa-trash"></i></button>
-                                    </form>
+                                <div class="text-[11px] text-slate-500 font-mono mt-1 flex gap-4 uppercase tracking-wider">
+                                    <span>ID: {{ exam.id }}</span><span>PREGS: {{ exam.questions | list | length }}</span>
                                 </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <div class="p-10 text-center">
-                            <p style="color: var(--color-texto-secundario);">No hay exámenes creados.</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-orange-400" title="Monitor"><i class="fas fa-eye"></i></a>
+                                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-blue-400" title="Configurar"><i class="fas fa-cog"></i></a>
+                                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-purple-400" title="Preguntas"><i class="fas fa-pencil-alt"></i></a>
+                                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-green-400" title="Resultados"><i class="fas fa-table"></i></a>
+                                <a href="{{ url_for('forensic_report', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-white bg-white/10" title="IA Forense"><i class="fas fa-user-secret"></i></a>
+                                <div class="w-[1px] h-6 bg-white/10 mx-2"></div>
+                                <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline" onsubmit="return confirm('¿ELIMINAR {{ exam.title }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-red-500 hover:bg-red-500/20" title="Eliminar"><i class="fas fa-trash"></i></button></form>
+                            </div>
                         </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="space-y-6">
-
-                {% if current_user.role == 'admin' %}
-                <div class="card !p-0 overflow-hidden">
-                    <div class="p-5 flex justify-between items-center"
-                        style="background: var(--bg-tabla-head); border-bottom: 1px solid var(--borde-tarjeta);">
-                        <h3 class="font-bold" style="color: var(--color-texto);">📢 Anuncios</h3>
-                        <a href="{{ url_for('new_announcement') }}" class="btn text-xs py-1 px-2"
-                            style="background: var(--color-primario);">+ Nuevo</a>
-                    </div>
-                    <div class="p-4">
-                        {% if announcements_list %}
-                        <ul class="space-y-3 m-0 p-0" style="list-style: none;">
-                            {% for ann in announcements_list %}
-                            <li class="flex justify-between items-center p-3 rounded"
-                                style="background: var(--bg-tabla-hover); border: 1px solid var(--borde-tarjeta);">
-                                <div>
-                                    <div class="font-bold text-sm" style="color: var(--color-texto);">{{ ann.title }}
-                                    </div>
-                                    <div class="text-xs"
-                                        style="color: {% if ann.is_active %}#10b981{% else %}#94a3b8{% endif %};">
-                                        {{ 'Activo' if ann.is_active else 'Inactivo' }}
-                                    </div>
-                                </div>
-                                <div class="flex gap-1">
-                                    <a href="{{ url_for('edit_announcement', announcement_id=ann.id) }}"
-                                        class="text-xs p-1" style="color: var(--color-primario);">✏️</a>
-                                    <form method="POST"
-                                        action="{{ url_for('delete_announcement', announcement_id=ann.id) }}"
-                                        class="inline m-0" onsubmit="return confirm('¿Borrar?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="text-xs p-1 border-0 bg-transparent cursor-pointer"
-                                            style="color: #ef4444;">🗑️</button>
-                                    </form>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        <div class="mt-4 text-center">
-                            <a href="{{ url_for('admin_announcement_read_status') }}"
-                                class="text-sm font-bold hover:underline" style="color: var(--color-primario);">
-                                👁️ Ver Lecturas
-                            </a>
-                        </div>
-                        {% else %}
-                        <p class="text-sm text-center" style="color: var(--color-texto-secundario);">Sin anuncios.</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card !p-5 border-l-4" style="border-left-color: #f97316;">
-                    <h3 class="font-bold mb-3" style="color: var(--color-texto);">🔒 Seguridad (2FA)</h3>
-                    {% if current_user.two_factor_secret %}
-                    <p class="text-sm mb-3 font-bold" style="color: #10b981;">✅ Activado</p>
-                    <form method="POST" action="{{ url_for('disable_2fa') }}"
-                        onsubmit="return confirm('¿Desactivar?');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn w-full text-sm"
-                            style="background: #ef4444;">Desactivar</button>
-                    </form>
+                        {% endfor %}
                     {% else %}
-                    <p class="text-sm mb-3" style="color: var(--color-texto-secundario);">Protege tu cuenta.</p>
-                    <a href="{{ url_for('setup_2fa') }}" class="btn w-full text-sm" style="background: #10b981;">Activar
-                        Ahora</a>
+                        <div class="p-10 text-center text-slate-600 font-mono text-sm">// NO DATA FOUND //</div>
                     {% endif %}
                 </div>
-                {% endif %}
-
             </div>
+        </div>
+
+        <div class="lg:col-span-4 space-y-6">
+
+            <div class="grid grid-cols-2 gap-4">
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('manage_users') }}" class="hud-card p-4 flex flex-col items-center justify-center text-center hover:border-blue-500 group transition">
+                    <i class="fas fa-users text-2xl text-blue-500 mb-2 group-hover:scale-110 transition"></i><span class="text-[10px] font-bold text-slate-300 font-tech tracking-widest">USUARIOS</span>
+                </a>
+                <a href="{{ url_for('export_results') }}" class="hud-card p-4 flex flex-col items-center justify-center text-center hover:border-green-500 group transition">
+                    <i class="fas fa-file-csv text-2xl text-green-500 mb-2 group-hover:scale-110 transition"></i><span class="text-[10px] font-bold text-slate-300 font-tech tracking-widest">CSV</span>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('cctv_matrix') }}" class="hud-card p-4 flex flex-col items-center justify-center text-center hover:border-yellow-500 group col-span-2 bg-yellow-500/5 relative overflow-hidden transition">
+                    <i class="fas fa-video text-2xl text-yellow-500 mb-2 relative z-10"></i><span class="text-xs font-bold text-yellow-100 relative z-10 font-tech tracking-widest">CCTV MATRIX</span>
+                </a>
+            </div>
+
+            <a href="{{ url_for('evidence_gallery') }}" class="hud-card p-5 flex items-center justify-between group hover:border-red-500 transition relative overflow-hidden">
+                <div class="flex items-center gap-4 relative z-10">
+                    <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center text-red-500"><i class="fas fa-camera-retro"></i></div>
+                    <div>
+                        <h4 class="font-bold text-white text-sm font-tech">GALERÍA DE EVIDENCIA</h4>
+                        <p class="text-[10px] text-red-400 uppercase tracking-wider">Infracciones Detectadas</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-slate-500 group-hover:text-white transition relative z-10"></i>
+                <div class="absolute inset-0 bg-red-500/5 transform translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+            </a>
+
+            <div class="hud-card p-4 border-t-2 border-red-500/50 bg-black/40">
+                <div class="flex justify-between mb-2 border-b border-white/5 pb-2">
+                    <span class="text-[10px] font-bold text-red-500 font-mono tracking-widest">⚠️ ALERTAS DEL SISTEMA</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                </div>
+                <div class="terminal-window" id="terminal-logs">
+                    <div class="terminal-line">Conectando a feed de errores...</div>
+                </div>
+            </div>
+
+            <div class="hud-card p-5">
+                <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
+                    <h4 class="font-bold text-white text-xs font-tech tracking-widest">COMUNICADOS</h4>
+                    <a href="{{ url_for('new_announcement') }}" class="text-[9px] bg-white/10 px-2 py-1 rounded text-white hover:bg-white/20 transition">+ ADD</a>
+                </div>
+                <div class="space-y-3">
+                    {% if announcements_list %}
+                        {% for ann in announcements_list %}
+                        <div class="bg-white/5 p-3 rounded-lg border border-white/5 flex justify-between items-center group hover:border-white/20 transition">
+                            <div class="overflow-hidden">
+                                <div class="text-xs font-bold text-slate-200 truncate">{{ ann.title }}</div>
+                                <div class="text-[9px] {{ 'text-green-400' if ann.is_active else 'text-slate-500' }}">{{ 'ONLINE' if ann.is_active else 'DRAFT' }}</div>
+                            </div>
+                            <div class="flex gap-2 opacity-50 group-hover:opacity-100 transition">
+                                <a href="{{ url_for('edit_announcement', announcement_id=ann.id) }}" class="text-slate-400 hover:text-white"><i class="fas fa-pen text-xs"></i></a>
+                                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=ann.id) }}" class="inline" onsubmit="return confirm('X');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xs"></i></button></form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-[10px] text-slate-600 text-center py-2 font-mono">// EMPTY //</p>
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+
+<script>
+    // 1. FORZAR OSCURIDAD
+    document.addEventListener("DOMContentLoaded", function() {
+        const themeToggles = document.querySelectorAll('#theme-toggle, .theme-switch, .toggle-theme');
+        themeToggles.forEach(btn => btn.style.display = 'none');
+        document.body.classList.add('dark');
+        document.documentElement.classList.add('dark');
+    });
+
+    // 2. TILT 3D
+    VanillaTilt.init(document.querySelectorAll("[data-tilt]"), {
+        max: 3, speed: 400, glare: true, "max-glare": 0.1
+    });
+
+    // 3. LOGS REALES (Polling cada 4 seg)
+    const term = document.getElementById('terminal-logs');
+    
+    function fetchRealLogs() {
+        fetch('/api/get_logs')
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) return;
+                term.innerHTML = ''; // Limpiar y repoblar
+                data.forEach(logText => {
+                    const line = document.createElement('div');
+                    line.className = 'terminal-line';
+                    line.innerText = logText;
+                    term.appendChild(line);
+                });
+            })
+            .catch(err => console.log("Log error:", err));
+    }
+    
+    setInterval(fetchRealLogs, 4000); // Actualizar cada 4 segundos
+    fetchRealLogs(); // Primera llamada
+</script>
 
 {% endblock %}

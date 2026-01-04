@@ -22,7 +22,7 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_babel import Babel, format_datetime
 import datetime as dt
 import os
@@ -387,7 +387,12 @@ class SiteConfig(db.Model):
     news_text = db.Column(db.Text, default="📢 ¡Bienvenido a ECOEMS! Prepárate para el éxito.")
     news_active = db.Column(db.Boolean, default=True)
     # Truco para que siempre haya solo una configuración (Singleton)
-
+class SystemLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    level = db.Column(db.String(20)) # 'INFO', 'ERROR', 'WARNING'
+    message = db.Column(db.String(255))
+    user = db.Column(db.String(100), default="Sistema")
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
@@ -3912,7 +3917,44 @@ def student_exam_history():
 def page_not_found(e):
     return render_template("404.html"), 404
 
+# --- RUTAS API PARA LOS LOGS ---
+@app.route('/api/get_logs')
+@login_required
+def get_system_logs():
+    if current_user.role != 'admin': 
+        return jsonify([])
+    
+    # Traer los últimos 10 logs
+    try:
+        logs = SystemLog.query.order_by(SystemLog.timestamp.desc()).limit(10).all()
+        data = []
+        for log in logs:
+            # Ajuste horario (-6 horas para CDMX si es necesario, o déjalo directo)
+            # Asegúrate que 'timedelta' esté importado arriba
+            local_time = log.timestamp - timedelta(hours=6) 
+            data.append(f"[{local_time.strftime('%H:%M:%S')}] {log.message}")
+        return jsonify(data)
+    except Exception as e:
+        print(f"ERROR LEYENDO LOGS: {e}") # <--- Esto lo verás en tu terminal
+        return jsonify([f"Error de sistema: {str(e)}"])
 
+@app.route('/api/log_error', methods=['POST'])
+@csrf.exempt
+def log_frontend_error():
+    # Esta ruta la usan los navegadores de los alumnos para reportar fallos
+    data = request.json
+    if not data:
+        return jsonify({"status": "ignored", "reason": "no_json"}), 400
+    msg = data.get('message', 'Error desconocido')
+    user = current_user.username if current_user.is_authenticated else "Anónimo"
+    # Filtrar errores basura (opcional)
+    if "extension" in msg or "ResizeObserver" in msg:
+        return jsonify({"status": "ignored"}), 200
+    
+    new_log = SystemLog(level='ERROR', message=f"Usuario {user}: {msg}", user=user)
+    db.session.add(new_log)
+    db.session.commit()
+    return jsonify({"status": "logged"}), 200
 # ======================================================================
 # --- RUTA API: MONITOR DE SERVIDOR REAL (Para la gráfica Matrix) ---
 # ======================================================================
