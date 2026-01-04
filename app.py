@@ -1382,7 +1382,7 @@ def before_request_hook():
 
 
 # --- CONFIGURACIÓN DE MANTENIMIENTO ---
-MAINTENANCE_MODE = True
+MAINTENANCE_MODE = os.environ.get('FORCE_MAINTENANCE', 'False') == 'True'
 
 
 # ==========================================
@@ -1398,7 +1398,7 @@ def check_maintenance():
     if not MAINTENANCE_MODE:
         return
 
-    # 2. IMPORTANTE: Dejar pasar los estilos (CSS/JS/Imágenes)
+    # 2. IMPORTANTE: Dejar pasar los estilos (CSS/JS/Imágenes)MAINTENANCE_MODE = True
     # Si no ponemos esto, la página de mantenimiento se verá fea y sin estilos.
     if request.endpoint and 'static' in request.endpoint:
         return
