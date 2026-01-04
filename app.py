@@ -1382,30 +1382,40 @@ def before_request_hook():
 
 
 # --- CONFIGURACIÓN DE MANTENIMIENTO ---
-MAINTENANCE_MODE = False
+MAINTENANCE_MODE = True
 
+
+# ==========================================
+# 🚧 ZONA DE MANTENIMIENTO (PROTOCOLO SORPRESA) 🚧
+# ==========================================
+
+# CAMBIA ESTO A 'False' CUANDO QUIERAS ABRIR AL PÚBLICO
+MAINTENANCE_MODE = True 
 
 @app.before_request
 def check_maintenance():
-    # Si el mantenimiento está apagado, no hacemos nada
+    # 1. Si el mantenimiento está APAGADO, dejar pasar a todos
     if not MAINTENANCE_MODE:
         return
 
-    # Si la petición es para archivos estáticos (CSS, JS, Imágenes), dejamos pasar
-    if request.endpoint and "static" in request.endpoint:
+    # 2. IMPORTANTE: Dejar pasar los estilos (CSS/JS/Imágenes)
+    # Si no ponemos esto, la página de mantenimiento se verá fea y sin estilos.
+    if request.endpoint and 'static' in request.endpoint:
+        return
+    
+    # 3. Evitar bucle infinito (Si ya está viendo mantenimiento, no redirigir de nuevo)
+    if request.endpoint == 'maintenance_page':
         return
 
-    # Si intenta entrar al Login o cerrar sesión, dejamos pasar (para que tú puedas entrar)
-    if request.endpoint in ["login", "logout"]:
-        return
+    # --- 🔒 BLOQUEO TOTAL 🔒 ---
+    # No importa si es admin, alumno o hacker. 
+    # Si intenta entrar a CUALQUIER lado (incluido Login), lo mandamos a mantenimiento.
+    return render_template('maintenance.html'), 503
 
-    # --- AQUÍ ESTÁ EL TRUCO BRO ---
-    # Si el usuario es ADMIN, lo dejamos pasar a todo
-    if current_user.is_authenticated and current_user.role == "admin":
-        return
-
-    # Si es Alumno, o no está logueado, y trata de ver cualquier otra cosa -> MANTENIMIENTO
-    return render_template("maintenance.html"), 503
+# Ruta específica para evitar el error de "función no encontrada"
+@app.route('/maintenance')
+def maintenance_page():
+    return render_template('maintenance.html')
 
 
 @login_manager.user_loader
@@ -3609,6 +3619,7 @@ def save_answer():
         print(f"Error emitiendo socket: {e}")
 
     return jsonify({"success": True})@app.route("/exam/<int:exam_id>/take", methods=["GET", "POST"])
+@app.route('/take_exam/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
 def take_exam(exam_id):
     if current_user.role != "student":
