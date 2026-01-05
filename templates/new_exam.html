@@ -1,304 +1,389 @@
 {% extends "base.html" %}
 
-{% block title %}Nuevo Examen - Curso ECOMS{% endblock %}
+{% block title %}Nuevo Examen - ECOMS{% endblock %}
 
 {% block content %}
 
 {# ========================================================= #}
-{# 🎨 ESTILOS MODERNOS (MODO OSCURO + DISEÑO PREMIUM) 🎨 #}
+{# 🎨 ESTILOS CYBERPUNK / DARK FORCE (FORMULARIO) 🎨 #}
 {# ========================================================= #}
 <style>
     :root {
-        --bg-body: #f3f4f6;
-        --bg-card: #ffffff;
-        --text-main: #1f2937;
-        --text-sec: #6b7280;
-        --border-color: #e5e7eb;
-        --input-bg: #f9fafb;
-        --primary: #3b82f6;
-        --primary-hover: #2563eb;
-        --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        --radius: 16px;
+        /* Paleta Dark Force */
+        --bg-body: #020617;       /* Slate 950 */
+        --bg-card: #0f172a;       /* Slate 900 */
+        --bg-input: #1e293b;      /* Slate 800 */
+        --border-color: #334155;  /* Slate 700 */
+        
+        --text-main: #f1f5f9;     /* Slate 100 */
+        --text-sec: #94a3b8;      /* Slate 400 */
+        
+        /* Neones */
+        --primary: #06b6d4;       /* Cyan 500 */
+        --primary-glow: rgba(6, 182, 212, 0.25);
+        --accent: #8b5cf6;        /* Violet 500 */
+        
+        --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
     }
 
-    /* MODO OSCURO */
-    body.dark-mode {
-        --bg-body: #0f172a;
-        --bg-card: #1e293b;
-        --text-main: #f3f4f6;
-        --text-sec: #9ca3af;
-        --border-color: #374151;
-        --input-bg: #020617;
-        --primary: #60a5fa;
-        --primary-hover: #3b82f6;
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        min-height: 100vh;
     }
 
-    /* LAYOUT */
+    /* LAYOUT CENTRADO */
     .new-exam-container {
-        max-width: 800px;
+        max-width: 900px;
         margin: 40px auto;
-        padding: 0 20px;
+        padding: 0 20px 60px 20px;
     }
 
+    /* TARJETA DEL FORMULARIO */
     .form-card {
         background: var(--bg-card);
-        border-radius: var(--radius);
+        border-radius: 20px;
         padding: 40px;
-        box-shadow: var(--shadow);
+        box-shadow: var(--shadow-card);
         border: 1px solid var(--border-color);
-        transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-    /* TÍTULO CON GRADIENTE */
+    /* Decoración de borde superior */
+    .form-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 4px;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    /* HEADER */
     .header-section {
         text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 2px dashed var(--border-color);
-        padding-bottom: 20px;
+        margin-bottom: 40px;
+        position: relative;
     }
     
     .card-title {
-        font-size: 2rem;
-        font-weight: 800;
+        font-size: 2.2rem;
+        font-weight: 900;
         margin: 0 0 10px 0;
-        background: linear-gradient(135deg, var(--primary), #8b5cf6);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: linear-gradient(to right, #fff, #94a3b8);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
     .exam-meta-text {
         color: var(--text-sec);
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
 
-    /* FORMULARIO */
+    /* INPUTS Y LABELS */
     .form-group {
-        margin-bottom: 25px;
+        margin-bottom: 30px;
     }
 
     .form-label {
-        display: block;
-        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
         font-weight: 700;
-        color: var(--text-main);
+        color: var(--primary);
         font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .form-control {
         width: 100%;
-        padding: 14px;
-        background: var(--input-bg);
-        border: 2px solid transparent;
+        padding: 16px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-color);
         border-radius: 12px;
         color: var(--text-main);
         font-size: 1rem;
         font-family: inherit;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
         box-sizing: border-box;
     }
+
+    .form-control::placeholder { color: var(--text-sec); opacity: 0.5; }
 
     .form-control:focus {
         outline: none;
         border-color: var(--primary);
-        background: var(--bg-card);
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        box-shadow: 0 0 15px var(--primary-glow);
+        background: #020617;
     }
 
-    /* Fechas en Grid */
+    /* Date Inputs específicos para modo oscuro */
+    input[type="datetime-local"] {
+        color-scheme: dark;
+    }
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+    }
+
+    /* GRID DE FECHAS */
     .date-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        gap: 25px;
     }
 
-    /* INPUT FECHA (Dark Mode Friendly) */
-    input[type="datetime-local"] {
-        color-scheme: light dark; /* Hace que el calendario nativo sea oscuro si el sistema lo es */
-    }
-
-    /* SELECCIÓN DE ALUMNOS (CHIPS) */
+    /* SELECCIÓN DE ALUMNOS (CHIPS GRID) */
     .students-wrapper {
-        background: var(--input-bg);
-        border-radius: 12px;
+        background: rgba(2, 6, 23, 0.5);
+        border-radius: 16px;
         padding: 20px;
         border: 1px solid var(--border-color);
-        max-height: 300px;
+        max-height: 350px;
         overflow-y: auto;
+        /* Scrollbar personalizada */
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-color) transparent;
     }
+    .students-wrapper::-webkit-scrollbar { width: 8px; }
+    .students-wrapper::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
 
     .students-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
     }
 
-    /* Checkbox Escondido + Label Estilizado */
-    .student-item input[type="checkbox"] {
-        display: none;
-    }
+    /* Estilo del Checkbox Oculto + Card Visual */
+    .student-item input[type="checkbox"] { display: none; }
 
     .student-card {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px 15px;
+        gap: 12px;
+        padding: 12px 16px;
         background: var(--bg-card);
         border: 1px solid var(--border-color);
-        border-radius: 10px;
+        border-radius: 12px;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.2s ease;
         user-select: none;
-        color: var(--text-main);
+        color: var(--text-sec);
+        position: relative;
+        overflow: hidden;
     }
 
     .student-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
+        border-color: var(--text-sec);
+        background: var(--bg-input);
     }
 
     /* Estado Seleccionado */
     .student-item input:checked + .student-card {
-        background: var(--primary);
-        color: white;
+        background: rgba(6, 182, 212, 0.15);
         border-color: var(--primary);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        color: #fff;
+        box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .student-item input:checked + .student-card::before {
+        content: '✓';
+        position: absolute;
+        top: 5px; right: 8px;
+        font-size: 0.8rem;
+        color: var(--primary);
+        font-weight: bold;
     }
 
     .avatar-circle {
-        width: 30px;
-        height: 30px;
-        background: rgba(0,0,0,0.1);
-        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--border-color), #475569);
+        color: #fff;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        font-size: 0.8em;
+        font-weight: 800;
+        font-size: 0.9em;
+        transition: all 0.3s;
     }
 
-    /* BOTONES */
+    .student-item input:checked + .student-card .avatar-circle {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    /* BOTONES DE ACCIÓN */
+    .actions-panel {
+        margin-top: 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
     .create-btn {
         width: 100%;
-        padding: 16px;
-        background: linear-gradient(135deg, var(--primary), #2563eb);
-        color: white;
+        padding: 18px;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: #fff;
         border: none;
         border-radius: 12px;
         font-size: 1.1rem;
         font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
         cursor: pointer;
-        margin-top: 20px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+        box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3);
     }
 
     .create-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 20px -3px rgba(37, 99, 235, 0.3);
+        box-shadow: 0 6px 25px rgba(6, 182, 212, 0.5);
     }
 
     .back-btn {
-        display: block;
         text-align: center;
-        margin-top: 25px;
         color: var(--text-sec);
         text-decoration: none;
         font-weight: 600;
-        transition: color 0.2s;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        transition: all 0.3s;
     }
-    .back-btn:hover { color: var(--primary); }
+    .back-btn:hover {
+        color: var(--text-main);
+        border-color: var(--border-color);
+        background: var(--bg-input);
+    }
+
+    .select-all-btn {
+        background: transparent;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .select-all-btn:hover {
+        background: var(--primary);
+        color: #000;
+        box-shadow: 0 0 10px var(--primary-glow);
+    }
 
     /* RESPONSIVE */
     @media (max-width: 768px) {
-        .date-grid { grid-template-columns: 1fr; }
+        .date-grid { grid-template-columns: 1fr; gap: 15px; }
         .form-card { padding: 25px; }
+        .card-title { font-size: 1.8rem; }
     }
 </style>
 
-    <div class="new-exam-container">
+<div class="new-exam-container">
+    
+    <div class="form-card">
         
-        <div class="form-card">
-            
-            <div class="header-section">
-                <h2 class="card-title"><i class="fas fa-file-signature"></i> Crear Nuevo Examen</h2>
-                <p class="exam-meta-text">Configura los detalles generales y asigna estudiantes.</p>
-            </div>
-
-            <form method="POST" class="exam-form">
-                
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="form-group">
-                    <label class="form-label" for="title"><i class="fas fa-heading"></i> Título del Examen</label>
-                    <input type="text" id="title" name="title" class="form-control" placeholder="Ej: Simulación Matemáticas II" required autofocus>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="description"><i class="fas fa-align-left"></i> Instrucciones / Descripción</label>
-                    <textarea id="description" name="description" rows="3" class="form-control" placeholder="Describe brevemente el contenido..."></textarea>
-                </div>
-                
-                <div class="date-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="start_datetime"><i class="fas fa-calendar-check"></i> Inicio (Opcional)</label>
-                        <input type="datetime-local" id="start_datetime" name="start_datetime" class="form-control">
-                        <small style="color: var(--text-sec); font-size: 0.8em;">Dejar vacío para iniciar ya.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="end_datetime"><i class="fas fa-calendar-times"></i> Cierre (Opcional)</label>
-                        <input type="datetime-local" id="end_datetime" name="end_datetime" class="form-control">
-                        <small style="color: var(--text-sec); font-size: 0.8em;">Límite para entrar.</small>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <label class="form-label" style="margin:0;"><i class="fas fa-users"></i> Asignar Alumnos</label>
-                        <button type="button" onclick="toggleAllStudents()" style="background:none; border:none; color:var(--primary); font-size:0.9em; cursor:pointer; font-weight:bold;">Seleccionar Todos</button>
-                    </div>
-                    
-                    <div class="students-wrapper">
-                        <div class="students-grid">
-                            {% if students %}
-                                {% for student in students %}
-                                    <label class="student-item">
-                                        <input type="checkbox" name="assigned_students" value="{{ student.id }}" class="student-check">
-                                        <div class="student-card">
-                                            <div class="avatar-circle">{{ student.username[0]|upper }}</div>
-                                            <span>{{ student.username }}</span>
-                                        </div>
-                                    </label>
-                                {% endfor %}
-                            {% else %}
-                                <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-sec);">
-                                    <i class="fas fa-user-slash" style="font-size: 2em; margin-bottom: 10px; display:block;"></i>
-                                    No hay alumnos registrados en el sistema.
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <button type="submit" class="create-btn">
-                    <i class="fas fa-plus-circle"></i> CREAR Y CONFIGURAR PREGUNTAS
-                </button>
-
-            </form>
+        <div class="header-section">
+            <h2 class="card-title"><i class="fas fa-microchip"></i> Configurar Examen</h2>
+            <p class="exam-meta-text">Define los parámetros y asigna a los agentes (alumnos).</p>
         </div>
 
-        <a href="{{ url_for('admin_panel') }}" class="back-btn">
-            <i class="fas fa-arrow-left"></i> Cancelar y volver al Panel
-        </a>
-    </div>
+        <form method="POST" class="exam-form">
+            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <script>
-        // Función rápida para seleccionar/deseleccionar todos
-        function toggleAllStudents() {
-            const checks = document.querySelectorAll('.student-check');
-            const allChecked = Array.from(checks).every(c => c.checked);
-            checks.forEach(c => c.checked = !allChecked);
-        }
-    </script>
+            <div class="form-group">
+                <label class="form-label" for="title"><i class="fas fa-terminal"></i> Título del Protocolo</label>
+                <input type="text" id="title" name="title" class="form-control" placeholder="Ej: Evaluación Final - Ciberseguridad 101" required autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="description"><i class="fas fa-align-left"></i> Instrucciones de Misión</label>
+                <textarea id="description" name="description" rows="3" class="form-control" placeholder="Describe los objetivos y reglas del examen..."></textarea>
+            </div>
+            
+            <div class="date-grid">
+                <div class="form-group">
+                    <label class="form-label" for="start_datetime"><i class="fas fa-play"></i> Inicio (Opcional)</label>
+                    <input type="datetime-local" id="start_datetime" name="start_datetime" class="form-control">
+                    <small style="color: var(--text-sec); font-size: 0.8em; margin-top: 5px; display: block;">
+                        <i class="fas fa-info-circle"></i> Dejar vacío para acceso inmediato.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="end_datetime"><i class="fas fa-stop-circle"></i> Cierre Automático (Opcional)</label>
+                    <input type="datetime-local" id="end_datetime" name="end_datetime" class="form-control">
+                    <small style="color: var(--text-sec); font-size: 0.8em; margin-top: 5px; display: block;">
+                        <i class="fas fa-clock"></i> Límite para finalizar.
+                    </small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <label class="form-label" style="margin:0;"><i class="fas fa-users-cog"></i> Asignación de Alumnos</label>
+                    <button type="button" onclick="toggleAllStudents()" class="select-all-btn">
+                        <i class="fas fa-check-double"></i> Seleccionar Todos
+                    </button>
+                </div>
+                
+                <div class="students-wrapper">
+                    <div class="students-grid">
+                        {% if students %}
+                            {% for student in students %}
+                                <label class="student-item">
+                                    <input type="checkbox" name="assigned_students" value="{{ student.id }}" class="student-check">
+                                    <div class="student-card">
+                                        <div class="avatar-circle">{{ student.username[0]|upper }}</div>
+                                        <span style="font-weight: 500;">{{ student.username }}</span>
+                                    </div>
+                                </label>
+                            {% endfor %}
+                        {% else %}
+                            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-sec);">
+                                <i class="fas fa-user-slash" style="font-size: 3em; margin-bottom: 15px; display:block; opacity: 0.5;"></i>
+                                <p>No hay alumnos registrados en el sistema.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-panel">
+                <button type="submit" class="create-btn">
+                    <i class="fas fa-rocket" style="margin-right: 8px;"></i> Iniciar Configuración de Preguntas
+                </button>
+                
+                <a href="{{ url_for('admin_panel') }}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Cancelar Operación
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    // Función rápida para seleccionar/deseleccionar todos con feedback visual
+    function toggleAllStudents() {
+        const checks = document.querySelectorAll('.student-check');
+        // Verificar si todos están marcados
+        const allChecked = Array.from(checks).every(c => c.checked);
+        // Invertir estado
+        checks.forEach(c => c.checked = !allChecked);
+        
+        // Opcional: Feedback en consola
+        console.log(allChecked ? "Todos deseleccionados" : "Todos seleccionados");
+    }
+</script>
 
 {% endblock %}

@@ -1,1275 +1,906 @@
 {% extends "base.html" %}
 
-{% block title %}
-{% if is_locked %}Sala de Espera: {{ exam.title }}{% else %}Examen: {{ exam.title }}{% endif %}
-{% endblock %}
+{% block title %}Torre de Control: {{ exam.title }}{% endblock %}
 
 {% block content %}
 
-{# ========================================================= #}
-{# 🎨 1. ESTILOS VISUALES (MODO ZEN + ALERTAS PRO) 🎨 #}
-{# ========================================================= #}
+{# ========================================================================== #}
+{# 🎨 SECCIÓN 1: ESTILOS CYBERPUNK / DARK FORCE (MONITOR) 🎨 #}
+{# ========================================================================== #}
 <style>
-    /* Ocultar interfaz global para evitar distracciones */
-    header, footer, .navbar, .sidebar { display: none !important; }
-    
+    /* Variables de Diseño Oscuro */
     :root {
-        --bg-body: #f3f4f6; --bg-tarjeta: #ffffff; --color-texto: #1f2937;
-        --color-texto-sec: #6b7280; --borde-color: #e5e7eb; --input-bg: #f9fafb;
-        --primary: #3b82f6; --danger: #ef4444; --warning: #f59e0b; --success: #10b981;
-        --font-main: 'Inter', system-ui, sans-serif;
+        --bg-body: #020617;       /* Slate 950 */
+        --bg-card: #0f172a;       /* Slate 900 */
+        --bg-hover: #1e293b;      /* Slate 800 */
+        
+        --text-main: #f1f5f9;     /* Slate 100 */
+        --text-sec: #94a3b8;      /* Slate 400 */
+        --border-color: #334155;  /* Slate 700 */
+        
+        /* Paleta de Comandos Neón */
+        --cmd-blue: #06b6d4;      /* Cyan */
+        --cmd-purple: #a855f7;    /* Purple */
+        --cmd-green: #10b981;     /* Emerald */
+        --cmd-red: #ef4444;       /* Red */
+        --cmd-yellow: #f59e0b;    /* Amber */
+        
+        /* Sombras Neón */
+        --shadow-neon: 0 0 10px rgba(6, 182, 212, 0.15);
+        --shadow-card: 0 10px 30px rgba(0,0,0,0.5);
     }
-    body.dark-mode {
-        --bg-body: #0f172a; --bg-tarjeta: #1e293b; --color-texto: #f3f4f6;
-        --color-texto-sec: #9ca3af; --borde-color: #374151; --input-bg: #020617;
-        --primary: #60a5fa;
+
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    body { background-color: var(--bg-body); color: var(--color-texto); font-family: var(--font-main); min-height: 100vh; overflow-x: hidden; }
 
-    /* LAYOUT GENERAL */
-    .exam-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; }
+    .monitor-wrapper {
+        max-width: 98%;
+        margin: 30px auto;
+        padding-bottom: 120px; /* Espacio para el FAB */
+    }
 
-    /* HEADER FLOTANTE (STICKY) */
-    .sticky-header {
-        position: sticky; top: 15px; z-index: 100;
-        background: var(--bg-tarjeta); padding: 12px 25px;
-        border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        display: flex; justify-content: space-between; align-items: center;
-        border: 1px solid var(--borde-color); margin-bottom: 40px;
+    /* --- CABECERA DE LA TORRE DE CONTROL --- */
+    .control-tower-header {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
+        padding: 25px 40px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        border-left: 5px solid var(--cmd-blue);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        position: relative;
+        overflow: hidden;
         backdrop-filter: blur(10px);
     }
-    .timer-badge {
-        font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: 800;
-        color: var(--primary); background: var(--input-bg);
-        padding: 5px 20px; border-radius: 30px; border: 1px solid var(--borde-color);
-        display: flex; align-items: center; gap: 10px;
-    }
-    .parpadeo { animation: blink-red 1s infinite; color: #fff !important; background: var(--danger) !important; border-color: var(--danger); }
-    @keyframes blink-red { 50% { opacity: 0.7; } }
 
-    /* Estilos del Speed Test HUD */
-    .net-badge {
-        display: flex; align-items: center; gap: 8px;
-        padding: 10px 15px; border-radius: 12px;
-        font-weight: 700; cursor: pointer; transition: all 0.3s;
-        border: 1px solid var(--borde-color); background: var(--bg-tarjeta);
-        color: var(--color-texto-sec);
+    /* Efecto de barrido en el header */
+    .control-tower-header::after {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+        animation: shine 8s infinite;
     }
-    .net-badge:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    @keyframes shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
+    .header-titles h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: linear-gradient(to right, #fff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .header-titles p {
+        margin: 5px 0 0;
+        font-size: 1.1rem;
+        color: var(--text-sec);
+        font-family: monospace;
+    }
+
+    .header-actions .btn-exit {
+        padding: 10px 20px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-sec);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-actions .btn-exit:hover {
+        border-color: var(--cmd-blue);
+        color: var(--text-main);
+        background: rgba(6, 182, 212, 0.1);
+        box-shadow: 0 0 15px var(--shadow-neon);
+    }
+
+    /* --- TABLA DE MONITOREO --- */
+    .monitor-card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+    }
+
+    .monitor-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .monitor-table thead {
+        background-color: rgba(2, 6, 23, 0.5);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .monitor-table th {
+        padding: 20px;
+        text-align: left;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        color: var(--text-sec);
+    }
+
+    .monitor-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.5); /* Slate 700 con opacidad */
+        vertical-align: middle;
+    }
+
+    .monitor-table tr:hover {
+        background-color: var(--bg-hover);
+    }
+
+    /* Estilos de Celda: Usuario */
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .user-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 10px; /* Cuadrado redondeado estilo tech */
+        background: linear-gradient(135deg, var(--cmd-blue), #3b82f6);
+        color: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 1.2rem;
+        box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .user-details strong {
+        display: block;
+        font-size: 1rem;
+        color: var(--text-main);
+    }
+
+    .user-details span {
+        font-size: 0.8rem;
+        color: var(--text-sec);
+        font-family: monospace;
+    }
+
+    /* 🔥 Semáforo de Red (Neon Style) 🔥 */
+    .ping-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        font-weight: bold;
+        background: rgba(0,0,0,0.2);
+        padding: 5px 10px;
+        border-radius: 6px;
+        width: fit-content;
+        margin: 0 auto;
+    }
+    .ping-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #475569;
+        transition: all 0.3s ease;
+    }
+    .ping-good { background-color: var(--cmd-green); box-shadow: 0 0 8px var(--cmd-green); }
+    .ping-fair { background-color: var(--cmd-yellow); box-shadow: 0 0 8px var(--cmd-yellow); }
+    .ping-bad { 
+        background-color: var(--cmd-red); 
+        box-shadow: 0 0 10px var(--cmd-red);
+        animation: flash-alert 1s infinite; 
+    }
+    @keyframes flash-alert { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Estilos de Celda: Estado */
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        border: 1px solid transparent;
+    }
+
+    .status-active { 
+        background: rgba(16, 185, 129, 0.1); 
+        color: var(--cmd-green); 
+        border-color: var(--cmd-green); 
+    }
+    .status-blocked { 
+        background: rgba(239, 68, 68, 0.1); 
+        color: var(--cmd-red); 
+        border-color: var(--cmd-red); 
+        animation: pulse-border 2s infinite; 
+    }
+    .status-waiting { 
+        background: rgba(148, 163, 184, 0.1); 
+        color: var(--text-sec); 
+        border-color: var(--text-sec); 
+    }
     
-    /* Estados de Color */
-    .net-good { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: #10b981; }
-    .net-fair { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: #f59e0b; }
-    .net-poor { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; animation: pulse-red 2s infinite; }
+    @keyframes pulse-border { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+    /* Estilos de Celda: Advertencias */
+    .warning-counter {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 5px;
+    }
+    .warn-dot { width: 8px; height: 8px; border-radius: 50%; background: #334155; transition: all 0.3s; }
+    .warn-dot.active { background: var(--cmd-yellow); box-shadow: 0 0 5px var(--cmd-yellow); }
+    .warn-dot.critical { background: var(--cmd-red); box-shadow: 0 0 8px var(--cmd-red); }
     
-    @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-
-    @media (max-width: 600px) { .net-text-mobile { display: none; } }
-
-    /* TARJETAS DE PREGUNTAS */
-    .question-card {
-        background: var(--bg-tarjeta); border: 1px solid var(--borde-color);
-        border-radius: 20px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        margin-bottom: 30px; position: relative; animation: slideUp 0.4s ease-out;
-    }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-    .question-badge {
-        position: absolute; top: -15px; left: -15px; background: var(--primary); color: white;
-        width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center;
-        justify-content: center; font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    .question-text { font-size: 1.4rem; font-weight: 600; line-height: 1.5; margin: 25px 0; }
-
-    /* OPCIONES DE RESPUESTA */
-    .option-label {
-        display: flex !important; align-items: center; padding: 18px; margin-bottom: 12px;
-        background: var(--input-bg); border: 2px solid transparent; border-radius: 12px;
-        cursor: pointer; transition: all 0.2s;
-    }
-    .option-label:hover { border-color: var(--primary); background: var(--bg-tarjeta); transform: translateX(5px); }
-    .option-label:has(input:checked) { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); font-weight: bold; }
-    .option-circle {
-        width: 35px; height: 35px; border-radius: 50%; border: 2px solid var(--borde-color);
-        display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; color: var(--color-texto-sec); background: var(--bg-tarjeta);
-    }
-    .option-label input:checked + .option-circle { background: var(--primary); border-color: var(--primary); color: white; }
-
-    /* SIDEBAR / MAPA DE PREGUNTAS */
-    .map-sidebar {
-        background: var(--bg-tarjeta); padding: 20px; border-radius: 16px; border: 1px solid var(--borde-color);
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px;
-    }
-    .map-btn {
-        aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-        background: var(--input-bg); border: 1px solid var(--borde-color); border-radius: 10px;
-        color: var(--color-texto-sec); text-decoration: none; font-weight: bold; transition: all 0.2s;
-    }
-    .map-btn.answered { background: var(--success); color: white; border-color: var(--success); }
-    .map-btn.flagged { background: var(--warning); color: white; border-color: var(--warning); }
-
-    /* 🔥 NOTIFICACIONES FLOTANTES (TOASTS) 🔥 */
-    #exam-toast-container {
-        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100000;
-        display: flex; flex-direction: column-reverse; gap: 15px; pointer-events: none; width: 90%; max-width: 450px;
-    }
-    .modern-toast {
-        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-        color: #1f2937; padding: 20px; border-radius: 15px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.25); border-left: 8px solid;
-        display: flex; align-items: flex-start; gap: 15px;
-        animation: popUp 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); pointer-events: auto;
-    }
-    body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.95); color: #fff; }
+    .violation-log { font-size: 0.8rem; color: var(--cmd-red); font-weight: bold; font-family: monospace; }
     
-    @keyframes popUp { from { transform: translateY(50px) scale(0.8); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-    
-    .toast-icon { font-size: 2rem; }
-    .toast-content { display: flex; flex-direction: column; }
-    .toast-title { font-weight: 900; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 4px; letter-spacing: 1px; }
-    .toast-msg { font-size: 1.1rem; line-height: 1.3; font-weight: 500; }
-    
-    @media (max-width: 768px) {
-        #exam-toast-container { top: 10px !important; bottom: auto !important; flex-direction: column; width: 95%; }
-        .modern-toast { padding: 10px 15px; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.9); }
-        .toast-icon { font-size: 1.2rem; }
-        .toast-title { font-size: 0.8rem; margin-bottom: 2px; }
-        .toast-msg { font-size: 0.9rem; line-height: 1.2; }
+    /* --- GRID DE COMANDOS (CAJA DE HERRAMIENTAS) --- */
+    .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        width: fit-content;
+        background: rgba(0,0,0,0.2);
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
     }
-    
-    .toast-danger { border-left-color: #ef4444; } .toast-danger .toast-title { color: #ef4444; }
-    .toast-warning { border-left-color: #f59e0b; } .toast-warning .toast-title { color: #f59e0b; }
-    .toast-success { border-left-color: #10b981; } .toast-success .toast-title { color: #10b981; }
-    .toast-info { border-left-color: #3b82f6; } .toast-info .toast-title { color: #3b82f6; }
 
-    /* OVERLAYS FULLSCREEN */
-    .fullscreen-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px);
-        z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 20px;
+    .cmd-btn {
+        width: 36px;
+        height: 36px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #fff;
+        transition: all 0.2s;
+        position: relative;
+        font-size: 0.9rem;
     }
-    .welcome-card {
-        background: var(--bg-tarjeta); padding: 50px; border-radius: 30px; text-align: center;
-        max-width: 700px; width: 100%; border: 1px solid var(--borde-color);
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: zoomIn 0.4s;
-    }
-    
-    /* Cancelación Dramática */
-    .cancel-card {
-        background: #fff1f2; color: #881337; padding: 60px 40px; border-radius: 30px; text-align: center;
-        max-width: 800px; width: 100%; border: 10px solid #ef4444;
-        box-shadow: 0 0 100px rgba(239, 68, 68, 0.8); animation: shake 0.5s;
-    }
-    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10px);} 75% {transform: translateX(10px);} }
 
-    /* ESTILOS DEL TELÓN DE PAUSA GLOBAL (NUEVO) */
-    #global-pause-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(44, 62, 80, 0.98); /* Oscuro casi total */
-        backdrop-filter: blur(10px);
-        z-index: 9999; /* Por encima de TODO */
-        justify-content: center; align-items: center; text-align: center;
-        flex-direction: column; color: white;
+    .cmd-btn:hover {
+        transform: translateY(-2px);
+        z-index: 5;
+        box-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
-    .pause-icon { font-size: 5rem; color: #3498db; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
-    .pause-content h2 { font-size: 2.5rem; margin: 0; font-weight: 800; letter-spacing: 1px; }
-    .pulse-loader { width: 50px; height: 50px; background: #3498db; border-radius: 50%; margin-top: 30px; animation: ping 1s infinite; }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
 
-    #ai-video-feed, #ai-canvas { position: fixed; top: 0; left: 0; opacity: 0.01; pointer-events: none; z-index: -1; }
+    /* Colores Específicos para Herramientas (Estilo Dark) */
+    .btn-chat { background: rgba(6, 182, 212, 0.15); color: var(--cmd-blue); border-color: var(--cmd-blue); }
+    .btn-alert { background: rgba(245, 158, 11, 0.15); color: var(--cmd-yellow); border-color: var(--cmd-yellow); }
+    .btn-voice { background: rgba(168, 85, 247, 0.15); color: var(--cmd-purple); border-color: var(--cmd-purple); }
+    .btn-logs { background: rgba(148, 163, 184, 0.15); color: var(--text-sec); border-color: var(--text-sec); }
     
-    .btn { padding: 12px 24px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; transition: transform 0.1s; }
-    .btn:active { transform: scale(0.95); }
+    .btn-probe { background: #000; color: var(--cmd-green); border-color: var(--cmd-green); }
+    .btn-spy { background: #0f172a; color: #38bdf8; border-color: #38bdf8; }
+    .btn-patch { background: #1e1e1e; color: #fbbf24; border: 1px dashed #fbbf24; }
+    .btn-reload { background: rgba(16, 185, 129, 0.15); color: var(--cmd-green); border-color: var(--cmd-green); }
     
-    /* Modo Lectura */
-    .img-zoom-container { text-align: center; margin: 20px 0; background: var(--input-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); }
-    .img-zoom-container img { max-height: 250px; max-width: 100%; border-radius: 4px; cursor: zoom-in; }
-    .reading-scroll-container { height: 75vh !important; overflow-y: auto; background: var(--bg-tarjeta) !important; border: 4px solid var(--primary); z-index: 50; position: relative; padding: 10px; box-shadow: var(--shadow-lg); }
-    .reading-scroll-container img { max-height: none !important; width: 100% !important; cursor: zoom-out; }
+    .btn-freeze { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: #60a5fa; }
+    .btn-snap { background: rgba(249, 115, 22, 0.15); color: #fb923c; border-color: #fb923c; }
+    .btn-medic { background: rgba(236, 72, 153, 0.15); color: #f472b6; border-color: #f472b6; }
+    .btn-unlock { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: #fff; }
+
+    .btn-kill { 
+        background: rgba(239, 68, 68, 0.1); color: var(--cmd-red); border: 1px solid var(--cmd-red); 
+        width: 100%; height: 32px; margin-top: 5px; font-weight: 700; font-size: 0.8rem;
+    }
+    .btn-kill:hover { background: var(--cmd-red); color: white; box-shadow: 0 0 10px var(--cmd-red); }
+
+    /* Tooltips */
+    .cmd-btn::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 110%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #0f172a;
+        color: var(--text-main);
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .cmd-btn:hover::after { opacity: 1; }
+
+    /* Controles de Tiempo */
+    .time-actions { display: flex; gap: 5px; flex-wrap: wrap; max-width: 140px; }
+    .time-chip {
+        padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
+        border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-sec); cursor: pointer;
+        transition: all 0.2s;
+    }
+    .time-chip:hover { border-color: var(--cmd-blue); color: var(--cmd-blue); background: rgba(6, 182, 212, 0.1); }
+
+    /* --- FAB GROUP (CONTROLES FLOTANTES) --- */
+    .fab-container {
+        position: fixed; bottom: 30px; right: 30px;
+        display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 1000;
+        animation: slideUpFab 0.5s ease-out;
+    }
+
+    /* Botón Principal (Mensaje) */
+    .fab-main {
+        width: 65px; height: 65px;
+        background: linear-gradient(135deg, var(--cmd-blue), #3b82f6);
+        border-radius: 50%; color: #000; border: none;
+        font-size: 1.5rem; box-shadow: 0 0 20px var(--shadow-neon);
+        cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .fab-main:hover { transform: scale(1.1) rotate(-10deg); color: white; }
+
+    /* Botón Secundario (Pausa) */
+    .fab-mini {
+        width: 50px; height: 50px;
+        border-radius: 50%; color: white; border: none;
+        font-size: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        cursor: pointer; transition: all 0.3s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    
+    .fab-running { background: var(--cmd-yellow); color: #000; }
+    .fab-running:hover { background: #f59e0b; transform: scale(1.1); box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
+
+    .fab-paused { background: var(--cmd-green); color: #000; animation: pulse-green 2s infinite; }
+    
+    @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+    @keyframes slideUpFab { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 </style>
 
-{# ========================================================= #}
-{# 🔥 SECCIÓN 2: ESTRUCTURA HTML (LÓGICA JINJA) 🔥 #}
-{# ========================================================= #}
+{# ========================================================================== #}
+{# 🏗️ SECCIÓN 2: ESTRUCTURA HTML (HEADER + TABLA + MODALES) 🏗️ #}
+{# ========================================================================== #}
 
-{% if is_locked %}
-    {# --- ESCENARIO A: SALA DE ESPERA (TIME LOCKED) --- #}
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body);">
-        <div style="background: var(--bg-tarjeta); padding: 50px; border-radius: 24px; text-align: center; max-width: 600px; width: 90%; box-shadow: var(--shadow-lg); border-top: 6px solid var(--primary);">
-            <div style="font-size: 4.5rem; margin-bottom: 25px; animation: bounce 2s infinite;">⏳</div>
-            <h1 style="font-size: 2.2rem; margin-bottom: 15px; font-weight: 900; color: var(--color-texto);">Sala de Espera</h1>
-            <p style="color: var(--color-texto-sec); margin-bottom: 35px; font-size: 1.1rem;">
-                Examen: <strong style="color: var(--primary);">{{ exam.title }}</strong><br>
-                El acceso se habilitará automáticamente cuando el contador llegue a cero.
+<div class="monitor-wrapper">
+
+    <div class="control-tower-header">
+        <div class="header-titles">
+            <h1>🔭 Torre de Control</h1>
+            <p>
+                Operación: <strong>{{ exam.title }}</strong> | 
+                <span style="color: var(--cmd-green); text-shadow: 0 0 5px var(--cmd-green);">● En Vivo</span>
             </p>
-
-            <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 35px;">
-                <div class="time-box-unit"><span id="dias">00</span><small>DÍAS</small></div>
-                <div class="time-box-unit"><span id="horas">00</span><small>HRS</small></div>
-                <div class="time-box-unit"><span id="minutos">00</span><small>MIN</small></div>
-                <div class="time-box-unit" style="border-color: var(--danger);"><span id="segundos" style="color: var(--danger);">00</span><small>SEG</small></div>
-            </div>
-
-            <div style="height: 8px; background: var(--input-bg); border-radius: 10px; overflow: hidden;">
-                <div style="height: 100%; width: 50%; background: var(--primary); animation: loading 2s infinite ease-in-out;"></div>
-            </div>
-            
-            <style>
-                .time-box-unit { background: var(--input-bg); padding: 15px; border-radius: 12px; min-width: 80px; border: 1px solid var(--borde-color); }
-                .time-box-unit span { font-size: 2.2rem; font-weight: 800; display: block; color: var(--primary); }
-                .time-box-unit small { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-sec); }
-                @keyframes loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-                @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-15px);} 60% {transform: translateY(-7px);} }
-            </style>
-            
-            <p style="margin-top: 25px; font-size: 0.9em; color: var(--color-texto-sec); opacity: 0.8;">
-                <i class="fas fa-lock"></i> Por favor, no cierres esta pestaña.
-            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('admin_panel') }}" class="btn-exit">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
         </div>
     </div>
 
-    <script>
-        const savedAnswers = {{ saved_answers_dict | tojson | safe }} || {};
-        document.addEventListener('DOMContentLoaded', function() {
-            let startTime = parseInt("{{ start_time_utc | default('0') }}");
-            function updateWaitTimer() {
-                const now = Math.floor(Date.now() / 1000);
-                const distance = startTime - now;
-                if (distance < 0) { location.reload(); return; }
-                const d = Math.floor(distance / (60 * 60 * 24));
-                const h = Math.floor((distance % (60 * 60 * 24)) / (60 * 60));
-                const m = Math.floor((distance % (60 * 60)) / 60);
-                const s = Math.floor(distance % 60);
-                document.getElementById("dias").innerText = d < 10 ? "0" + d : d;
-                document.getElementById("horas").innerText = h < 10 ? "0" + h : h;
-                document.getElementById("minutos").innerText = m < 10 ? "0" + m : m;
-                document.getElementById("segundos").innerText = s < 10 ? "0" + s : s;
-            }
-            if(startTime > 0) { setInterval(updateWaitTimer, 1000); updateWaitTimer(); }
-        });
-    </script>
-
-{% else %}
-
-    {# --- ESCENARIO B: EXAMEN EN CURSO --- #}
-
-    {# 1. Marca de Agua de Seguridad #}
-    <div id="watermark-overlay" style="position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.1; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; overflow: hidden;">
-        {% for _ in range(40) %}
-        <div style="padding: 60px; transform: rotate(-30deg); font-weight: 900; font-size: 20px; color: var(--color-texto);">
-            {{ current_user.username }}
-        </div>
-        {% endfor %}
-    </div>
-
-    {# 2. Elementos de IA (Ocultos pero activos) #}
-    <video id="ai-video-feed" width="320" height="240" autoplay muted playsinline></video>
-    <canvas id="ai-canvas"></canvas>
-
-    {# 3. Contenedor Principal #}
-    <div class="exam-wrapper">
-        
-        {# Header Sticky con Reloj y Botones #}
-        <div class="sticky-header">
-            <div class="timer-badge">
-                <i class="fas fa-clock"></i>
-                <span id="countdown">--:--:--</span>
-            </div>
-            
-            <div style="display: flex; gap: 10px; align-items: center;">
+    <div class="monitor-card">
+        <table class="monitor-table">
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Estudiante</th>
+                    <th style="width: 10%; text-align: center;">📶 Red</th> 
+                    <th style="width: 15%;">Estado</th>
+                    <th style="width: 15%;">Radar de Seguridad</th>
+                    <th style="width: 30%;">Caja de Herramientas</th>
+                    <th style="width: 10%;">Tiempo</th>
+                    <th style="width: 5%;">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in monitoring_data %}
+                {% set is_active = data.is_active %}
+                {% set count = data.violation_count %}
                 
-                <div id="net-status-badge" onclick="runDeepNetworkScan()" class="net-badge" title="Clic para probar conexión">
-                    <i class="fas fa-wifi" id="net-icon"></i>
-                    <span id="net-text" class="net-text-mobile">Calculando...</span>
-                </div>
-
-                <button id="request-help-btn" class="btn" style="background: #8b5cf6; color: white; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);">
-                    🙋‍♂️ Hablar
-                </button>
-                <a href="{{ url_for('new_report') }}" target="_blank" class="btn" style="background: var(--warning); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
-                    🚨 Reportar
-                </a>
-            </div>
-        </div>
-
-        {# Grid Layout Responsive #}
-        <div style="display: grid; grid-template-columns: 1fr; gap: 40px; @media (min-width: 1024px) { grid-template-columns: 300px 1fr; }">
-            
-            {# Columna Izquierda: Mapa de Navegación #}
-            <div style="display: none; @media (min-width: 1024px) { display: block; } grid-column: 1;">
-                <div style="position: sticky; top: 120px;">
-                    <div class="map-sidebar" id="question-map-grid">
-                        {% for q in questions %}
-                        <a href="#q-{{ q.id }}" 
-                           class="map-btn {% if saved_answers.get(q.id | string) %}answered{% endif %}"
-                           id="map-btn-{{ q.id }}" 
-                           data-index="{{ loop.index0 }}">
-                            {{ loop.index }}
-                        </a>
-                        {% endfor %}
-                    </div>
+                <tr id="row-{{ data.user_id }}" {% if count >= 3 %}style="background: rgba(239, 68, 68, 0.05);"{% endif %}>
                     
-                    <div style="margin-top: 20px; font-size: 0.85em; color: var(--color-texto-sec); display: flex; flex-direction: column; gap: 8px;">
-                        <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; background:var(--success); border-radius:50%;"></span> Respondida</div>
-                        <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; background:var(--warning); border-radius:50%;"></span> Marcada</div>
-                        <div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; background:var(--input-bg); border:1px solid var(--borde-color); border-radius:50%;"></span> Pendiente</div>
-                    </div>
-
-                    {% if start_time_utc == 0 %}
-                    <div id="manual-start-container" style="margin-top: 25px; padding: 20px; background: rgba(245, 158, 11, 0.1); border: 2px solid var(--warning); border-radius: 12px; text-align: center;">
-                        <button id="manual-start-btn" class="btn w-full" style="background: var(--success); color: white;">
-                            ▶️ FORZAR INICIO
-                        </button>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            {# Columna Derecha: Tarjetas de Preguntas #}
-            <div style="grid-column: 1 / -1; @media (min-width: 1024px) { grid-column: 2; }">
-                <form method="POST" id="exam-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="recording_data" id="recording-data-input">
-                    <input type="hidden" name="submission_type" id="submission_type" value="manual">
-
-                    {% for question in questions %}
-                    <div class="question-card" id="q-{{ question.id }}" data-index="{{ loop.index0 }}" 
-                         style="{% if not loop.first %}display: none;{% endif %}">
-                        
-                        <div class="question-badge">{{ loop.index }}</div>
-
-                        <div class="question-header">
-                            <span class="subject-pill" style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 8px; font-size: 0.9em; font-weight: 700;">
-                                {{ question.subject or 'General' }}
-                            </span>
-                        </div>
-
-                        <p class="question-text">{{ question.text }}</p>
-
-                        {% if question.image_filename %}
-                        <div id="img-container-{{ question.id }}" class="img-zoom-container">
-                            <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
-                                 loading="lazy" draggable="false"
-                                 onclick="toggleReadingMode('{{ question.id }}')">
-                            <div style="font-size:0.85em; color: var(--primary); margin-top: 8px; font-weight: 600;">
-                                <i class="fas fa-search-plus"></i> Clic para ampliar lectura
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar">{{ data.username[0] | upper }}</div>
+                            <div class="user-details">
+                                <strong>{{ data.username }}</strong>
+                                <span>ID: {{ data.user_id }}</span>
                             </div>
                         </div>
-                        {% endif %}
+                    </td>
 
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            {% set q_name = 'q' + question.id | string %}
-                            {% set saved = saved_answers.get(question.id | string, '') %}
-                            {% set opts = [('A', question.option_a, question.image_a), ('B', question.option_b, question.image_b), ('C', question.option_c, question.image_c), ('D', question.option_d, question.image_d)] %}
-                            
-                            {% for let, txt, img in opts %}
-                                {% if txt or img %}
-                                <label class="option-label">
-                                    <input type="radio" name="{{ q_name }}" value="{{ let }}" data-qid="{{ question.id }}" 
-                                           style="display: none;" 
-                                           {% if saved == let %}checked{% endif %}>
-                                   
-                                    <div class="option-circle">{{ let }}</div>
-
-                                    <div style="flex-grow: 1;">
-                                        {% if txt %}<div style="font-size: 1.1em;">{{ txt }}</div>{% endif %}
-                                        {% if img %}
-                                        <img src="{{ img }}" style="margin-top: 10px; border-radius: 8px; border: 1px solid var(--borde-color); max-height: 180px;">
-                                        {% endif %}
-                                    </div>
-                                </label>
-                                {% endif %}
-                            {% endfor %}
+                    <td style="text-align: center;">
+                        <div class="ping-display" id="ping-wrapper-{{ data.user_id }}">
+                            <div class="ping-dot" id="ping-dot-{{ data.user_id }}" title="Esperando datos..."></div>
+                            <span id="ping-text-{{ data.user_id }}" style="color: var(--text-sec); margin-left: 5px;">--</span>
                         </div>
+                    </td>
 
-                        <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid var(--borde-color); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                            {# --- BOTONES DE CONTROL DE PREGUNTA --- #}
-                            <button type="button" class="btn flag-and-next-btn" style="background: var(--warning); color: white;" 
-                                    onclick="window.toggleFlag('{{ question.id }}')">
-                                🚩 Marcar
-                            </button>
+                    <td>
+                        <span id="status-tag-{{ data.user_id }}" class="status-badge 
+                            {% if data.status == 'Haciendo Examen' %}status-active
+                            {% elif 'Cancelado' in data.status %}status-blocked
+                            {% else %}status-waiting{% endif %}">
+                            {{ data.status }}
+                        </span>
+                    </td>
 
-                            {% if not loop.last %}
-                            <button type="button" class="btn next-question-btn" style="background: var(--primary); color: white; box-shadow: var(--shadow-md);"
-                                    onclick="window.nextQ({{ loop.index }})">
-                                Siguiente Pregunta ➜
-                            </button>
+                    <td class="warnings-cell">
+                        <div class="warning-counter" id="violation-count-{{ data.user_id }}">
+                            <span class="warn-dot {% if count >= 1 %}active{% endif %}"></span>
+                            <span class="warn-dot {% if count >= 2 %}active{% endif %}"></span>
+                            <span class="warn-dot {% if count >= 3 %}critical{% endif %}"></span>
+                            <strong style="margin-left: 8px; font-size: 1.1rem; color: var(--text-main);">{{ count }}</strong>
+                        </div>
+                        <div class="violation-log" id="last-violation-{{ data.user_id }}">
+                            {% if data.last_violation %}
+                                ⚠️ {{ data.last_violation.violation_type }} <br>
+                                <span style="font-weight: normal; color: var(--text-sec); font-family: 'Inter', sans-serif;">{{ data.last_violation.timestamp.strftime('%H:%M:%S') }}</span>
                             {% else %}
-                            <button type="button" class="btn review-mode-btn" style="background: var(--input-bg); color: var(--color-texto); border: 1px solid var(--borde-color); margin-right: 10px;">
-                                🔄 Revisión
-                            </button>
-                            <button type="button" class="btn finish-directly-btn" style="background: var(--success); color: white; box-shadow: var(--shadow-md);" onclick="window.finishExam()">
-                                ✅ FINALIZAR EXAMEN
-                            </button>
+                                <span style="color: var(--cmd-green); font-family: 'Inter', sans-serif;">Sin novedades</span>
                             {% endif %}
                         </div>
-                    </div>
-                    {% endfor %}
-                    
-                    <div id="review-mode-info" style="display: none; text-align: center; padding: 40px; background: var(--bg-tarjeta); border-radius: 16px; border: 2px solid var(--primary); margin-top: 30px;">
-                        <h3 style="font-size: 1.8em; margin-bottom: 15px; color: var(--primary);">Modo de Revisión</h3>
-                        <p style="margin-bottom: 25px; font-size: 1.1em; color: var(--color-texto-sec);">
-                            Usa el mapa lateral para navegar a las preguntas pendientes.<br>
-                            Cuando estés 100% seguro, presiona el botón de abajo.
-                        </p>
-                        <button type="submit" class="btn" id="final-submit-button" style="background: var(--success); color: white; padding: 15px 40px; font-size: 1.2em;">
-                            ✅ Entregar Examen Definitivo
+                        <a href="{{ url_for('view_violation_logs', exam_id=exam.id, user_id=data.user_id) }}" 
+                           target="_blank" style="font-size: 0.75rem; text-decoration: underline; color: var(--cmd-blue); margin-top: 5px; display: block;">
+                           Ver Historial Completo
+                        </a>
+                    </td>
+
+                    <td>
+                        {% if is_active or 'Cancelado' in data.status %}
+                        <div class="tools-grid">
+                            <a href="{{ url_for('admin_chat', user_id=data.user_id) }}" target="_blank" class="cmd-btn btn-chat" data-tooltip="Chat Directo">
+                                <i class="fas fa-comment-dots"></i>
+                            </a>
+                            <button class="cmd-btn btn-alert" onclick="enviarAlertaIndividual('{{ data.user_id }}', '{{ data.username }}')" data-tooltip="Enviar Alerta">
+                                <i class="fas fa-bell"></i>
+                            </button>
+                            <button class="cmd-btn btn-voice" onclick="sendRepairCommand('{{ data.user_id }}', 'speak')" data-tooltip="Voz TTS">
+                                <i class="fas fa-bullhorn"></i>
+                            </button>
+                            <button class="cmd-btn btn-logs" onclick="sendRepairCommand('{{ data.user_id }}', 'ping')" data-tooltip="Solicitar Ping">
+                                <i class="fas fa-wifi"></i>
+                            </button>
+
+                            <button class="cmd-btn btn-probe" onclick="lanzarSonda('{{ data.user_id }}')" data-tooltip="System Probe">
+                                <i class="fas fa-terminal"></i>
+                            </button>
+                            <button class="cmd-btn btn-spy" onclick="toggleSpy('{{ data.user_id }}')" data-tooltip="Console Spy">
+                                <i class="fas fa-satellite-dish"></i>
+                            </button>
+                            <button class="cmd-btn btn-patch" onclick="abrirInyector('{{ data.user_id }}')" data-tooltip="Live Patcher">
+                                <i class="fas fa-code"></i>
+                            </button>
+                            <button class="cmd-btn btn-reload" onclick="sendRepairCommand('{{ data.user_id }}', 'reload')" data-tooltip="Forzar F5">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            
+                            <button class="cmd-btn btn-freeze" onclick="sendRepairCommand('{{ data.user_id }}', 'freeze')" data-tooltip="Congelar">
+                                <i class="fas fa-snowflake"></i>
+                            </button>
+                            <button class="cmd-btn btn-snap" onclick="sendRepairCommand('{{ data.user_id }}', 'snapshot')" data-tooltip="FOTO">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button class="cmd-btn btn-medic" onclick="iniciarRescate('{{ data.user_id }}')" data-tooltip="Rescate">
+                                <i class="fas fa-heartbeat"></i>
+                            </button>
+                            <button class="cmd-btn btn-unlock" onclick="unlockStudent('{{ data.user_id }}', '{{ exam.id }}')" data-tooltip="Desbloquear">
+                                <i class="fas fa-lock-open"></i>
+                            </button>
+                        </div>
+                        {% else %}
+                            <span style="color: var(--text-sec); font-style: italic;">Desconectado</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if is_active %}
+                        <div class="time-actions">
+                            <button class="time-chip" onclick="adjustTime('{{ data.user_id }}', 300, 5, true)">+5m</button>
+                            <button class="time-chip" onclick="adjustTime('{{ data.user_id }}', 600, 10, true)">+10m</button>
+                            <button class="time-chip" onclick="adjustTime('{{ data.user_id }}', -300, 5, false)">-5m</button>
+                            <button class="time-chip" style="border-color: var(--cmd-blue); color: var(--cmd-blue);" onclick="showCustomTimeInput('{{ data.user_id }}')">Manual</button>
+                        </div>
+                        <div id="custom-input-{{ data.user_id }}" style="display: none; margin-top: 5px;">
+                            <input type="number" id="input-{{ data.user_id }}" style="width: 50px; padding: 4px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-hover); color: white;">
+                            <button class="time-chip" style="background: var(--cmd-blue); color: #000;" onclick="confirmCustomTime('{{ data.user_id }}')">OK</button>
+                        </div>
+                        <div id="feedback-{{ data.user_id }}" style="font-size: 0.75rem; margin-top: 2px;"></div>
+                        {% else %}
+                            <span style="color: var(--text-sec);">--</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if is_active or 'Cancelado' in data.status %}
+                        <button class="cmd-btn btn-kill" 
+                                onclick="showCancelModal('{{ data.user_id }}', '{{ data.username }}', '{{ exam.id }}')"
+                                data-tooltip="EXPULSAR ALUMNO">
+                            <i class="fas fa-ban"></i>
                         </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+</div>
 
-    {# --- OVERLAYS Y MODALES --- #}
+<!-- 🔥 FAB GROUP: BOTONES FLOTANTES (PAUSA + MENSAJE) 🔥 -->
+<div class="fab-container">
     
-    {# Overlay de Bienvenida #}
-    {% if start_time_utc == 0 %}
-    <div id="welcome-overlay" class="fullscreen-overlay">
-        <div class="welcome-card">
-            <h1 style="color: var(--primary); font-size: 3rem; margin-bottom: 20px; font-weight: 900;">🚀 ¡LISTO PARA INICIAR!</h1>
-            <p style="margin-bottom: 30px; font-size: 1.2rem;">
-                Hola <strong>{{ current_user.username }}</strong>.<br>
-                Tienes <strong>3 Horas</strong> para completar el examen.<br>
-                <span style="color: var(--warning); font-weight: bold;">⚠️ El monitoreo de IA estará activo.</span>
-            </p>
-            <button id="start-exam-button" class="btn" style="background: var(--success); color: white; padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);">
-                ACTIVAR Y COMENZAR
-            </button>
-            <p style="margin-top: 20px; font-size: 0.9em; color: var(--color-texto-sec);">
-                *Al iniciar aceptas el uso de cámara y micrófono.
-            </p>
-        </div>
-    </div>
-    {% endif %}
+    <button id="btn-global-pause" onclick="toggleGlobalPause()" 
+            class="fab-mini {{ 'fab-paused' if exam.is_paused else 'fab-running' }}" 
+            title="{{ 'Reanudar Examen' if exam.is_paused else 'PAUSAR A TODOS' }}">
+        <i class="fas {{ 'fa-play' if exam.is_paused else 'fa-pause' }}"></i>
+    </button>
 
-    {# Overlay de Cancelación #}
-    <div id="cancellation-overlay" class="fullscreen-overlay" style="display: none;">
-        <div class="cancel-card">
-            <div style="font-size: 6rem; margin-bottom: 20px;">🚫</div>
-            <h1 style="color: #881337; font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">EXAMEN CANCELADO</h1>
-            <p style="font-size: 1.8rem; margin-bottom: 30px;">Se han detectado múltiples infracciones.</p>
-            <div id="cancellation-reason-display" style="background: white; padding: 20px; border-radius: 12px; font-size: 1.3rem; font-weight: bold; margin-bottom: 30px; color: #ef4444; border: 2px dashed #ef4444;"></div>
-            <a href="{{ url_for('dashboard') }}" class="btn" style="background: #1f2937; color: white; padding: 15px 40px; font-size: 1.2rem;">Volver al Inicio</a>
-        </div>
-    </div>
+    <button onclick="enviarMensajeGlobal()" class="fab-main" title="Mensaje a TODOS">
+        <i class="fas fa-bullhorn"></i>
+    </button>
+</div>
 
-    {# Overlay de Confirmación #}
-    <div id="confirm-submit-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
-        <div style="background: var(--bg-tarjeta); padding: 40px; border-radius: 20px; text-align: center; max-width: 450px; border-top: 6px solid var(--warning); box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
-            <h2 style="margin-bottom: 15px; font-size: 1.8rem;">¿Entregar Examen?</h2>
-            <p style="color: var(--color-texto-sec); margin-bottom: 30px; font-size: 1.1rem;">No podrás cambiar tus respuestas después de enviar.</p>
-            <div style="display: flex; gap: 20px; justify-content: center;">
-                <button id="confirm-submit-btn-yes" class="btn" style="background: var(--success); color: white; flex: 1;">Sí, Enviar</button>
-                <button id="confirm-submit-btn-no" class="btn" style="background: var(--danger); color: white; flex: 1;">Cancelar</button>
-            </div>
-        </div>
-    </div>
-    
-    {# 🔥 NUEVO: Overlay de Pausa Global 🔥 #}
-    <div id="global-pause-overlay" style="display: {{ 'flex' if exam.is_paused else 'none' }};">
-        <div class="pause-content">
-            <i class="fas fa-snowflake pause-icon"></i>
-            <h2>Examen Pausado</h2>
-            <p>El administrador ha detenido el tiempo temporalmente.</p>
-            <p class="sub-text">Por favor espera, no cierres esta ventana.</p>
-            <div class="pulse-loader"></div>
-        </div>
-    </div>
-
-    {# Chat Flotante #}
-    <div id="student-chat-panel" style="position: fixed; bottom: 30px; right: 30px; width: 350px; height: 450px; background: var(--bg-tarjeta); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid var(--borde-color); display: none; flex-direction: column; z-index: 5000; overflow: hidden;">
-        <div style="padding: 15px; background: var(--primary); color: white; display: flex; justify-content: space-between; font-weight: bold; align-items: center;">
-            <span style="display: flex; align-items: center; gap: 8px;"><i class="fas fa-headset"></i> Soporte en Vivo</span>
-            <span id="close-chat-button" style="cursor: pointer; padding: 5px; font-size: 1.2rem;">✕</span>
-        </div>
-        <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; background: var(--input-bg); font-size: 0.95em; display: flex; flex-direction: column; gap: 10px;"></div>
-        <form id="student-chat-form" style="padding: 15px; border-top: 1px solid var(--borde-color); display: flex; gap: 10px; background: var(--bg-tarjeta);">
-            <input type="text" id="student-message-input" placeholder="Escribe tu duda..." required style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); background: var(--input-bg); color: var(--color-texto);">
-            <button type="submit" class="btn" style="background: var(--primary); color: white; padding: 0 15px;"><i class="fas fa-paper-plane"></i></button>
-        </form>
-    </div>
-
-    {# Contenedor de Notificaciones #}
-    <div id="exam-toast-container"></div>
-
-    {# ========================================================= #}
-    {# 🔥 CEREBRO JAVASCRIPT ROBUSTO Y COMPLETO 🔥 #}
-    {# ========================================================= #}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.13.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
-
-    <script>
-    // --- VARIABLES Y CONFIG ---
-    const EXAM_ID = parseInt("{{ exam.id }}");
-    const USER_ID = parseInt("{{ current_user.id }}");
-    const USERNAME = "{{ current_user.username }}";
-    const SAVE_URL = '{{ url_for("save_answer") }}';
-    const START_URL = '{{ url_for("take_exam", exam_id=exam.id) }}';
-    const CSRF = "{{ csrf_token() }}";
-    let START_TIME = parseInt("{{ start_time_utc | default('0') }}");
-    let TIME_ADDED = parseInt("{{ time_added_sec | default('0') }}");
-    let BASE_DUR = 3 * 3600;
-    let DURATION = BASE_DUR + TIME_ADDED;
-    let IS_CANCELLED = "{{ is_cancelled | lower }}" === "true";
-    let CANCEL_REASON = "{{ cancellation_reason | default('') }}";
-    let isExamActive = (START_TIME > 0 && !IS_CANCELLED);
-    let socket = io.connect(window.location.origin);
-    const isMobile = window.innerWidth <= 768;
-
-    // --- 1. TOASTS PERSONALIZADOS ---
-    window.showFloatingNotification = function(msg, type) {
-        let container = document.getElementById('exam-toast-container');
-        if(!container) return;
+<!-- Modal de Cancelación -->
+<div id="cancel-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-card); padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; text-align: center; border: 1px solid var(--cmd-red); box-shadow: 0 0 50px rgba(239, 68, 68, 0.3);">
+        <h3 style="color: var(--cmd-red); margin-top: 0; font-size: 1.5rem; text-transform: uppercase;">🛑 Expulsar Alumno</h3>
+        <p style="color: var(--text-sec);">Estudiante: <strong id="modal-username" style="color: var(--text-main); font-size: 1.1rem;"></strong></p>
         
-        container.innerHTML = ''; 
-
-        const toast = document.createElement('div');
-        toast.className = `modern-toast toast-${type}`;
+        <textarea id="cancellation-reason" rows="3" placeholder="Motivo de la expulsión..." 
+                  style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; margin: 15px 0; background: var(--bg-body); color: var(--text-main); font-family: inherit;"></textarea>
         
-        let icon = 'ℹ️'; let title = 'AVISO';
-        if(type==='danger') { icon='🛑'; title='¡PELIGRO!'; }
-        else if(type==='warning') { icon='⚠️'; title='ADVERTENCIA'; }
-        else if(type==='success') { icon='✅'; title='ÉXITO'; }
-        else if(type==='info') { icon='💬'; title='MENSAJE'; }
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="confirmCancellation()" style="background: var(--cmd-red); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">CONFIRMAR EXPULSIÓN</button>
+            <button onclick="closeCancelModal()" style="background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 6px; cursor: pointer;">Cancelar</button>
+        </div>
+        <input type="hidden" id="modal-student-id">
+        <input type="hidden" id="modal-exam-id" value="{{ exam.id }}">
+    </div>
+</div>
 
-        toast.innerHTML = `<div class="toast-icon">${icon}</div><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
-        container.appendChild(toast);
+{# ========================================================================== #}
+{# 🔥 SECCIÓN 3: LÓGICA JAVASCRIPT (SOCKETS Y HERRAMIENTAS) 🔥 #}
+{# ========================================================================== #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // --- VARIABLES E INICIO ---
+    const socket = io.connect();
+    const ADJUST_TIME_URL = '{{ url_for("admin_adjust_exam_time") }}';
+    const CANCEL_EXAM_URL = '{{ url_for("admin_cancel_exam") }}';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const EXAM_ID = "{{ exam.id }}";
+
+    socket.on('connect', () => console.log("📡 Torre de Control Conectada"));
+
+    // --- 🔥 0. LISTENER DEL SEMÁFORO DE RED 🔥 ---
+    socket.on('client_ping_update', (data) => {
+        const dot = document.getElementById(`ping-dot-${data.user_id}`);
+        const text = document.getElementById(`ping-text-${data.user_id}`);
         
-        if(type==='danger' || type==='warning') {
-            try { const a=new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); a.volume=0.5; a.play().catch(e=>{}); } catch(e){}
-        }
-
-        setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 6000);
-    }
-
-    // --- 2. DETECTOR DE PESTAÑAS (AGRESIVO) ---
-    let violations = 0;
-    
-    document.addEventListener('visibilitychange', () => {
-        if(document.hidden && isExamActive) triggerViolation('TAB_CHANGE', "no cambies de ventana/pestaña o el examen se va a cancelar");
-    });
-
-    window.addEventListener('blur', () => {
-        if(isExamActive) {
-            triggerViolation('WINDOW_BLUR', "No salgas de la ventana del examen.");
-        }
-    });
-
-    function triggerViolation(type, msg) {
-        violations++;
-        showFloatingNotification(msg, 'danger');
-        
-        html2canvas(document.body).then(c => {
-            socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:type, screenshot:c.toDataURL('image/jpeg',0.3) });
-        });
-
-        if(violations >= 3) {
-            IS_CANCELLED = true; isExamActive = false;
-            socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'EXAM_CANCELED_AUTO_BLOCK' });
-            stopExamAndShowCancellation("Límite de advertencias alcanzado (Cambio de pestaña).");
-        }
-    }
-
-    // --- 3. INTELIGENCIA ARTIFICIAL ---
-    // A) Audio Ultra-Sensible (Umbral 5)
-    // A) Audio Ultra-Sensible + SONAR REPORT
-    let audioCtx = null;
-    let analyser = null;
-    const AUDIO_THRESHOLD = 20; // Ajustado para alertas locales
-    let voiceStrikes = 0;
-    let lastReportTime = 0;
-
-    function processAudio(stream) {
-        if(!audioCtx) return; 
-
-        try {
-            const mic = audioCtx.createMediaStreamSource(stream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256; // Tamaño pequeño para rapidez
-            mic.connect(analyser);
-            const data = new Uint8Array(analyser.frequencyBinCount);
+        if (dot && text) {
+            dot.className = 'ping-dot';
             
-            setInterval(() => {
-                if(!isExamActive) return;
-                
-                if(audioCtx.state === 'suspended') audioCtx.resume(); 
-                
-                analyser.getByteFrequencyData(data);
-                
-                // Calcular volumen promedio (RMS simplificado)
-                let sum = 0;
-                for(let i = 0; i < data.length; i++) {
-                    sum += data[i];
-                }
-                let average = sum / data.length; // Valor aprox 0 a 100
-                
-                // 1. Lógica de Alertas (Local)
-                if(average > AUDIO_THRESHOLD) {
-                    voiceStrikes++;
-                    if(voiceStrikes > 40) { // Si el ruido persiste
-                        // window.showFloatingNotification("ruido fuerte detectado", "warning"); // Opcional
-                        socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_VOICE_DETECTED' });
-                        voiceStrikes = 0;
-                    }
-                } else {
-                    voiceStrikes = Math.max(0, voiceStrikes - 1);
-                }
-
-                // 2. 🔥 REPORTE AL SONAR DEL ADMIN 🔥
-                // Enviamos cada 500ms para no saturar, o si hay un pico repentino
-                const now = Date.now();
-                if (now - lastReportTime > 500 || (average > 30 && now - lastReportTime > 200)) {
-                    socket.emit('report_audio_level', { level: Math.round(average) });
-                    lastReportTime = now;
-                }
-
-            }, 100);
-        } catch(e) { console.error(e); }
-    }
-    // B) Video (Objetos + Rostro)
-    async function startVideoMonitoring(stream) {
-        const video = document.getElementById('ai-video-feed');
-        video.srcObject = stream;
-        video.play();
-
-        try {
-            const faceModel = await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
-            const objectModel = await cocoSsd.load();
-            
-            let faceMissingCount = 0; 
-
-            setInterval(async () => {
-                if(!isExamActive) return;
-                
-                // Celular
-                const objects = await objectModel.detect(video);
-                if(objects.find(p => p.class==='cell phone' && p.score>0.5)) {
-                    window.showFloatingNotification("guarda el celular", "danger");
-                    socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_PROHIBITED_OBJECT_PHONE' });
-                }
-
-                // Rostro
-                const faces = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
-                if(faces.length === 0) {
-                      faceMissingCount++;
-                      if (faceMissingCount % 3 === 0) { 
-                           window.showFloatingNotification("la camara no te esta viendo", "warning");
-                           socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_FACE_NOT_VISIBLE' });
-                      }
-                } else {
-                    faceMissingCount = 0;
-                }
-            }, 2000);
-        } catch(e) { console.log(e); }
-    }
-
-    // --- 4. HERRAMIENTAS DE ADMIN ---
-    
-    socket.on('ping', () => { socket.emit('pong', { user_id: USER_ID }); });
-
-    socket.on('execute_system_probe', () => {
-        const info = {
-            user_id: USER_ID, username: USERNAME,
-            browser: navigator.userAgent,
-            screen: `${window.screen.width}x${window.screen.height}`,
-            memory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/A',
-            cores: navigator.hardwareConcurrency || 'N/A',
-            connection: navigator.connection ? navigator.connection.effectiveType : '4g',
-            battery: 'Desconocido',
-            platform: navigator.platform
-        };
-        if(navigator.getBattery) {
-             navigator.getBattery().then(b => {
-                 info.battery = `${Math.round(b.level*100)}% ${b.charging?'⚡':''}`;
-                 socket.emit('send_probe_report', info);
-             });
-        } else {
-             socket.emit('send_probe_report', info);
-        }
-    });
-    
-    // Espía de Consola
-    const originalLog = console.log;
-    const originalError = console.error;
-    let spyActive = false;
-    
-    socket.on('set_console_interceptor', (d) => { 
-        spyActive = d.active; 
-        if(spyActive) socket.emit('stream_console_log', {type:'info', message:'Espía Conectado', timestamp:new Date().toLocaleTimeString()});
-    });
-    
-    console.log = function(...args) {
-        if(spyActive) socket.emit('stream_console_log', {type:'log', message:args.join(' '), timestamp:new Date().toLocaleTimeString()});
-        originalLog.apply(console, args);
-    };
-    console.error = function(...args) {
-        if(spyActive) socket.emit('stream_console_log', {type:'error', message:args.join(' '), timestamp:new Date().toLocaleTimeString()});
-        originalError.apply(console, args);
-    };
-    
-    window.onerror = function(msg, url, line) {
-        if(spyActive) socket.emit('stream_console_log', {type:'error', message:`CRITICAL ERROR: ${msg} (Line ${line})`, timestamp:new Date().toLocaleTimeString()});
-    };
-
-    // Inyector
-    socket.on('execute_injected_code', (d) => {
-        try { eval(d.script); showFloatingNotification("Parche aplicado remotamente.", "success"); } catch(e) { console.error("Error inyección:", e); }
-    });
-
-    // Comandos
-    socket.on('execute_repair', d => { 
-        if(d.command === 'reload') window.location.reload(); 
-        if(d.command === 'unlock') window.location.reload(); 
-        if(d.command === 'freeze') document.getElementById('freeze-overlay').style.display = (document.getElementById('freeze-overlay').style.display === 'flex') ? 'none' : 'flex';
-        
-        if(d.command === 'snapshot') {
-             html2canvas(document.body, {logging:false}).then(c => {
-                 socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'SOLICITUD_MANUAL_FOTO', screenshot:c.toDataURL('image/jpeg',0.5) });
-             });
-        }
-        
-        if(d.command === 'speak') { 
-            const utter = new SpeechSynthesisUtterance(d.payload); 
-            let voices = window.speechSynthesis.getVoices();
-            if (voices.length === 0) {
-                 window.speechSynthesis.onvoiceschanged = () => {
-                     voices = window.speechSynthesis.getVoices();
-                     const esVoice = voices.find(v => v.lang.includes('es'));
-                     if(esVoice) utter.voice = esVoice;
-                     window.speechSynthesis.speak(utter);
-                 };
+            if (data.latency < 150) {
+                dot.classList.add('ping-good');
+                text.style.color = 'var(--cmd-green)';
+            } else if (data.latency < 500) {
+                dot.classList.add('ping-fair');
+                text.style.color = 'var(--cmd-yellow)';
             } else {
-                 const esVoice = voices.find(v => v.lang.includes('es'));
-                 if(esVoice) utter.voice = esVoice;
-                 window.speechSynthesis.speak(utter);
+                dot.classList.add('ping-bad');
+                text.style.color = 'var(--cmd-red)';
             }
-            showFloatingNotification("📢 MENSAJE: "+d.payload, "info"); 
+            
+            text.innerText = `${data.latency}ms`;
+            dot.title = `Ping: ${data.latency}ms (Último: Hace instantes)`;
         }
     });
 
-    // Ajuste de Tiempo
-    socket.on('time_update', function (data) {
-        TIME_ADDED = data.extra_time_sec;
-        DURATION = BASE_DUR + TIME_ADDED;
-        showFloatingNotification("Tiempo ajustado por el profesor.", "info");
-    });
-
-    // 🔥 LISTENER DE PAUSA GLOBAL 🔥
-    socket.on('exam_status_change', (data) => {
-        if (data.exam_id == EXAM_ID) {
-            if (data.status === 'paused') {
-                document.getElementById('global-pause-overlay').style.display = 'flex';
-            } else {
-                document.getElementById('global-pause-overlay').style.display = 'none';
-                Swal.fire({ icon: 'info', title: 'Continuamos', text: 'El examen se ha reanudado.', timer: 2000, showConfirmButton: false });
-            }
+    // --- 1. COMANDOS DE REPARACIÓN (Grid Tools) ---
+    function sendRepairCommand(userId, command) {
+        let payload = null;
+        if(command === 'speak') {
+            payload = prompt("📢 Escribe el mensaje de voz:");
+            if(!payload) return;
         }
-    });
-
-    // --- 5. INICIALIZADOR ---
-    window.initExamSystem = function() {
-        const btn = document.getElementById('start-exam-button');
-        if(btn) { btn.disabled=true; btn.innerText="ACTIVANDO..."; }
-
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-
-        navigator.mediaDevices.getUserMedia({video:{width:320}, audio:true}).then(stream => {
-            processAudio(stream);
-            startVideoMonitoring(stream);
-
-            fetch(START_URL, {method:'POST', body:new URLSearchParams({action:'start_timer_now'}), headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':CSRF}})
-            .then(r => { if(r.ok) window.location.reload(); });
-        }).catch(e => {
-            Swal.fire("ERROR", "Debes permitir cámara y micrófono.", "error");
-            if(btn) btn.disabled=false;
-        });
-    };
-    
-    document.addEventListener('click', () => {
-        if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    });
-
-    // --- 6. LÓGICA DE EXAMEN ---
-    let currentQ = 0;
-    const cards = document.querySelectorAll('.question-card');
-    
-    window.nextQ = (idx) => { 
-        if(cards[currentQ]) cards[currentQ].style.display='none'; 
-        if(cards[idx]) cards[idx].style.display='block'; 
-        currentQ=idx; 
-        window.scrollTo(0,0); 
-    };
-
-    // ==========================================
-    // 💾 MODO TÚNEL (OFFLINE PERSISTENCE)
-    // ==========================================
-    
-    // Claves para LocalStorage
-    const STORAGE_KEY_ANSWERS = `exam_${EXAM_ID}_answers`;
-    const STORAGE_KEY_PENDING = `exam_${EXAM_ID}_pending`;
-
-    // 1. Cargar respuestas locales al iniciar (Por si refresca sin internet)
-    function loadLocalAnswers() {
-        try {
-            const localData = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
-            for (const [qid, val] of Object.entries(localData)) {
-                // Solo llenar si no está marcada ya por el servidor
-                const input = document.querySelector(`input[name="q${qid}"][value="${val}"]`);
-                if (input && !input.checked) {
-                    input.checked = true;
-                    // Actualizar mapa visual
-                    document.getElementById('map-btn-'+qid)?.classList.add('answered'); 
-                    // Marcar visualmente que es un dato local (opcional: borde amarillo)
-                    input.closest('.option-label').style.borderLeft = "4px solid #f59e0b"; 
-                }
-            }
-            // Revisar si hay pendientes de subir
-            checkSyncStatus();
-        } catch(e) { console.error("Error cargando caché local", e); }
-    }
-
-    // 2. La Nueva Función de Guardado (Blindada)
-    window.autoSave = (qid, val) => {
-        // A) Guardar en Disco Local (Inmortalidad)
-        try {
-            const answers = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
-            answers[qid] = val;
-            localStorage.setItem(STORAGE_KEY_ANSWERS, JSON.stringify(answers));
-            
-            // Marcar como pendiente de sincronización
-            const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-            if (!pending.includes(qid)) {
-                pending.push(qid);
-                localStorage.setItem(STORAGE_KEY_PENDING, JSON.stringify(pending));
-            }
-            
-            // Feedback visual inmediato
-            document.getElementById('map-btn-'+qid)?.classList.add('answered');
-            updateSyncIndicator('saving');
-
-        } catch(e) { console.error("Error localStorage", e); }
-
-        // B) Intentar enviar a la Nube
-        if (navigator.onLine) {
-            sendAnswerToServer(qid, val);
-        } else {
-            updateSyncIndicator('offline');
-            showFloatingNotification("Guardado en Modo Túnel (Sin Internet)", "warning");
-        }
-    };
-
-    // 3. Envío Real al Servidor
-    async function sendAnswerToServer(qid, val) {
-        try {
-            const response = await fetch(SAVE_URL, {
-                method: 'POST', 
-                headers: {'Content-Type':'application/json','X-CSRF-Token':CSRF}, 
-                body: JSON.stringify({question_id:qid, response:val})
-            });
-
-            if (response.ok) {
-                // ¡Éxito! Quitar de la lista de pendientes
-                removeFromPending(qid);
-                updateSyncIndicator('saved');
-                // Quitar borde amarillo si tenía
-                const input = document.querySelector(`input[name="q${qid}"][value="${val}"]`);
-                if(input) input.closest('.option-label').style.borderLeft = "2px solid transparent";
-            } else {
-                throw new Error("Server reject");
-            }
-        } catch (error) {
-            console.warn("Fallo al subir respuesta, se mantiene en local.");
-            updateSyncIndicator('offline');
-        }
-    }
-
-    // 4. Utilidades del Túnel
-    function removeFromPending(qid) {
-        let pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-        pending = pending.filter(id => id.toString() !== qid.toString());
-        localStorage.setItem(STORAGE_KEY_PENDING, JSON.stringify(pending));
-        checkSyncStatus();
-    }
-
-    function checkSyncStatus() {
-        const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-        if (pending.length > 0) updateSyncIndicator('offline');
-        else updateSyncIndicator('saved');
-    }
-
-    // 5. Sincronizador Automático (Cuando vuelve internet)
-    async function syncNow() {
-        if (!navigator.onLine) return;
         
-        const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-        const answers = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
+        socket.emit('admin_repair_command', { target_user_id: userId, command: command, payload: payload });
         
-        if (pending.length === 0) return;
-
-        updateSyncIndicator('syncing');
-        showFloatingNotification(`Sincronizando ${pending.length} respuestas...`, "info");
-
-        // Recorrer cola y enviar
-        for (const qid of pending) {
-            const val = answers[qid];
-            if (val) {
-                await sendAnswerToServer(qid, val);
-            }
-        }
+        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true });
+        Toast.fire({ icon: 'success', title: `Comando ${command} enviado` });
     }
 
-    // 6. Indicador Visual (UI)
-    // Agregaremos un pequeño icono en la pantalla
-    function createSyncUI() {
-        const div = document.createElement('div');
-        div.id = 'tunnel-indicator';
-        div.style.cssText = "position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; z-index: 9000; transition: all 0.3s;";
-        div.innerHTML = '<span id="tunnel-icon">☁️</span> <span id="tunnel-text">Conectado</span>';
-        document.body.appendChild(div);
-    }
-
-    function updateSyncIndicator(status) {
-        const el = document.getElementById('tunnel-indicator');
-        const icon = document.getElementById('tunnel-icon');
-        const text = document.getElementById('tunnel-text');
-        if(!el) return;
-
-        if (status === 'saved') {
-            el.style.background = 'rgba(16, 185, 129, 0.9)'; // Verde
-            icon.innerText = '☁️'; text.innerText = 'Todo Guardado';
-            setTimeout(() => el.style.opacity = '0.5', 2000); // Desvanecer si todo ok
-        } else if (status === 'saving') {
-            el.style.opacity = '1';
-            el.style.background = 'rgba(59, 130, 246, 0.9)'; // Azul
-            icon.innerText = '⏳'; text.innerText = 'Guardando...';
-        } else if (status === 'offline') {
-            el.style.opacity = '1';
-            el.style.background = 'rgba(245, 158, 11, 0.9)'; // Naranja
-            const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-            icon.innerText = '💾'; text.innerText = `Modo Túnel (${pending.length} pendientes)`;
-        } else if (status === 'syncing') {
-            el.style.opacity = '1';
-            el.style.background = 'rgba(139, 92, 246, 0.9)'; // Morado
-            icon.innerText = '🔄'; text.innerText = 'Subiendo datos...';
-        }
-    }
-
-    window.toggleFlag = (qid) => { document.getElementById('map-btn-'+qid)?.classList.toggle('flagged'); };
-    window.finishExam = () => { document.getElementById('confirm-submit-modal').style.display='flex'; };
-    
-    const confirmYes = document.getElementById('confirm-submit-btn-yes');
-    const confirmNo = document.getElementById('confirm-submit-btn-no');
-    
-    if(confirmYes) confirmYes.onclick = () => {
-        document.getElementById('submission_type').value = 'manual';
-        document.getElementById('exam-form').submit();
-    };
-    if(confirmNo) confirmNo.onclick = () => document.getElementById('confirm-submit-modal').style.display='none';
-
-    document.querySelectorAll('.map-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const idx = parseInt(btn.dataset.index);
-            window.nextQ(idx);
-        });
-    });
-
-    // --- 7. SOCKETS GENERALES ---
-    socket.on('connect', () => { socket.emit('join_room', {user_id: USER_ID}); });
-    
-    socket.on('exam_cancelled_alert', d => { if(d.exam_id===EXAM_ID) { IS_CANCELLED=true; stopExamAndShowCancellation(d.reason); } });
-    
-    socket.on('chat_notification', d => { 
-        if(d.sender==='Admin') { 
-            addChat(d.message,'admin'); 
-            document.getElementById('student-chat-panel').style.display='flex'; 
-            showFloatingNotification("Mensaje del Profesor", "info");
-        } 
-    });
-
-    // --- 8. ARRANQUE ---
-    if(isExamActive) {
-        navigator.mediaDevices.getUserMedia({video:{width:320}, audio:true}).then(stream => { 
-            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            processAudio(stream); 
-            startVideoMonitoring(stream); 
-        });
-        
-        setInterval(() => {
-            const now = Math.floor(Date.now()/1000);
-            const left = DURATION - (now - START_TIME);
-            
-            if(left<=0) {
-                document.getElementById('submission_type').value = 'auto_timeout';
-                document.getElementById('exam-form').submit();
-            }
-            
-            if(left < 300) document.querySelector('.timer-badge')?.classList.add('parpadeo');
-
-            const h=Math.floor(left/3600), m=Math.floor((left%3600)/60), s=left%60;
-            const cd = document.getElementById('countdown');
-            if(cd) cd.innerText = `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        }, 1000);
-        
-        if(cards[0]) cards[0].style.display='block';
-    } 
-    else if(START_TIME===0) {
-        const b = document.getElementById('start-exam-button'); if(b) b.onclick=initExamSystem;
-        const m = document.getElementById('manual-start-btn'); if(m) m.onclick=initExamSystem;
-    }
-    
-    if(IS_CANCELLED) stopExamAndShowCancellation(CANCEL_REASON);
-
-    function stopExamAndShowCancellation(reason) {
-        document.querySelector('.exam-wrapper').style.display='none';
-        document.querySelector('.sticky-header').style.display='none';
-        document.getElementById('cancellation-reason-display').innerText = reason;
-        document.getElementById('cancellation-overlay').style.display='flex';
-    }
-
-    // Chat UI
-    const chatForm = document.getElementById('student-chat-form');
-    if(chatForm) {
-        chatForm.addEventListener('submit', e => { 
-            e.preventDefault(); 
-            const i=document.getElementById('student-message-input'); 
-            if(i.value.trim()){ 
-                socket.emit('send_message_from_student', {message:i.value}); 
-                addChat(i.value,'student'); 
-                i.value=''; 
-            } 
-        });
-    }
-    
-    document.getElementById('close-chat-button').onclick = () => document.getElementById('student-chat-panel').style.display='none';
-    
-    const helpBtn = document.getElementById('request-help-btn');
-    if (helpBtn) {
-        helpBtn.onclick = () => {
-            if(helpBtn.disabled) return;
-            socket.emit('student_requests_chat');
-            showFloatingNotification("Ayuda solicitada.", "info");
-            
-            const originalText = helpBtn.innerHTML;
-            helpBtn.disabled = true; helpBtn.style.opacity = "0.7";
-            let seconds = 10; helpBtn.innerText = `Espere ${seconds}s...`;
-            
-            const interval = setInterval(() => {
-                seconds--; helpBtn.innerText = `Espere ${seconds}s...`;
-                if(seconds <= 0) { clearInterval(interval); helpBtn.disabled = false; helpBtn.style.opacity = "1"; helpBtn.innerHTML = originalText; }
-            }, 1000);
-        };
-    }
-    
-    function addChat(msg, type) { 
-        const d=document.createElement('div'); 
-        d.style.padding='10px'; d.style.borderRadius='10px'; d.style.marginBottom='8px'; 
-        d.style.background=type==='admin'?'#e0f2fe':'#d1fae5'; 
-        d.style.color=type==='admin'?'#0369a1':'#065f46';
-        d.innerText=msg; 
-        document.getElementById('chat-messages').appendChild(d); 
-    }
-    
-    window.toggleReadingMode = (qid) => { const c = document.getElementById('img-container-'+qid); c?.classList.toggle('reading-scroll-container'); };
-    
-    document.querySelectorAll('input[type="radio"]').forEach(input => {
-        input.addEventListener('change', (e) => {
-            const qid = e.target.dataset.qid;
-            const val = e.target.value;
-            window.autoSave(qid, val);
-        });
-    });
-
-    // ==========================================
-    // ⚡ SPEED TEST & MONITOR DE RED
-    // ==========================================
-    
-    let lastLatency = 0;
-
-    // 1. Monitor Pasivo (Se ejecuta cada 5s en segundo plano)
-    document.addEventListener("DOMContentLoaded", function() {
-        // Inicializar Modo Túnel
-        createSyncUI();
-        loadLocalAnswers(); 
-        
-        // Ping
-        setInterval(() => measureLatency(false), 5000); 
-        
-        // Listeners de Red para Túnel
-        window.addEventListener('online', () => {
-            showFloatingNotification("Conexión recuperada. Sincronizando...", "success");
-            syncNow();
-        });
-        
-        window.addEventListener('offline', () => {
-            showFloatingNotification("Sin conexión. Entrando en Modo Túnel.", "warning");
-            updateSyncIndicator('offline');
-        });
-    });
-
-    async function measureLatency(isDeepScan = false) {
-        const start = Date.now();
-        const badge = document.getElementById('net-status-badge');
-        const icon = document.getElementById('net-icon');
-        const text = document.getElementById('net-text');
-
-        try {
-            // Hacemos ping (cache: no-cache forza a ir al servidor real)
-            await fetch(window.location.href, { method: 'HEAD', cache: 'no-cache' });
-            
-            const end = Date.now();
-            const latency = end - start;
-            lastLatency = latency;
-
-            // Actualizar UI del Semáforo
-            if (badge) {
-                badge.classList.remove('net-good', 'net-fair', 'net-poor');
-                
-                if (latency < 200) {
-                    badge.classList.add('net-good');
-                    if (icon) icon.className = 'fas fa-wifi';
-                    if (text) text.innerText = isDeepScan ? `${latency}ms (Excelente)` : 'Estable';
-                } else if (latency < 500) {
-                    badge.classList.add('net-fair');
-                    if (icon) icon.className = 'fas fa-exclamation-circle';
-                    if (text) text.innerText = isDeepScan ? `${latency}ms (Lento)` : 'Inestable';
-                } else {
-                    badge.classList.add('net-poor');
-                    if (icon) icon.className = 'fas fa-times-circle';
-                    if (text) text.innerText = isDeepScan ? `${latency}ms (Crítico)` : 'Mala Red';
-                }
-            }
-
-            // Reportar al Admin (Solo si hay cambio drástico o es deep scan)
-            if (typeof socket !== 'undefined' && socket.connected) {
-                socket.emit('report_network_status', { latency: latency });
-            }
-            
-            return latency;
-
-        } catch (error) {
-            console.error("⚠️ Sin conexión a internet");
-            if (badge) {
-                badge.classList.remove('net-good', 'net-fair');
-                badge.classList.add('net-poor');
-                if (icon) icon.className = 'fas fa-ban';
-                if (text) text.innerText = 'Desconectado';
-            }
-            
-            if (typeof socket !== 'undefined') socket.emit('report_network_status', { latency: 9999 });
-            return 9999;
-        }
-    }
-
-    // 2. DIAGNÓSTICO PROFUNDO (Al hacer clic)
-    window.runDeepNetworkScan = async () => {
-        const text = document.getElementById('net-text');
-        if (text) text.innerText = "Probando...";
-        
-        let pings = [];
-        let total = 0;
-
-        // Hacemos 5 pings rápidos para sacar promedio
-        for(let i=0; i<5; i++) {
-            const l = await measureLatency(true);
-            pings.push(l);
-            total += l;
-            await new Promise(r => setTimeout(r, 200)); // Pequeña pausa
-        }
-
-        const avg = Math.round(total / 5);
-        let verdict = "";
-        let advice = "";
-        let icon = "";
-
-        if (avg >= 9999) {
-            icon = "error"; verdict = "SIN CONEXIÓN"; 
-            advice = "Tu dispositivo no tiene internet. Revisa tu WiFi.";
-        } else if (avg < 200) {
-            icon = "success"; verdict = "EXCELENTE"; 
-            advice = "Tu conexión es perfecta para el examen. Si algo falla, recarga la página.";
-        } else if (avg < 600) {
-            icon = "warning"; verdict = "INESTABLE"; 
-            advice = "Tu internet está lento. Cierra YouTube, Netflix o acércate al módem.";
-        } else {
-            icon = "error"; verdict = "CRÍTICO"; 
-            advice = "Tu red es demasiado lenta. Es muy probable que se te desconecte. Usa datos móviles si puedes.";
-        }
-
+    // --- 2. COMUNICACIÓN (Alertas y Global) ---
+    function enviarAlertaIndividual(userId, username) {
         Swal.fire({
-            title: `Diagnóstico: ${verdict}`,
-            html: `
-                <div style="text-align:left; background:#f3f4f6; padding:15px; border-radius:10px;">
-                    <p><strong>📶 Latencia Promedio:</strong> ${avg} ms</p>
-                    <p><strong>📉 Estabilidad:</strong> ${pings.map(p => p>=9999?'❌':p).join(', ')}</p>
-                    <hr style="margin:10px 0; border-color:#ddd;">
-                    <p style="color:#1f2937;"><strong>💡 Consejo:</strong> ${advice}</p>
-                </div>
-            `,
-            icon: icon,
-            confirmButtonText: 'Entendido'
+            title: `🔔 Alerta para ${username}`,
+            input: 'text', inputPlaceholder: 'Mensaje de advertencia...',
+            showCancelButton: true, confirmButtonText: 'Enviar', confirmButtonColor: '#f59e0b',
+            background: '#0f172a', color: '#fff'
+        }).then((res) => {
+            if(res.isConfirmed && res.value) {
+                socket.emit('send_individual_ping', { user_id: userId, message: res.value });
+            }
         });
-    };
+    }
 
-    // ==========================================
-    // --- 10. CCTV VIA SOCKETS ---
-    // ==========================================
-    let cctvInterval = null;
+    // --- 3. TIEMPO (Sumar/Restar) ---
+    async function adjustTime(studentId, seconds, label, isAdd) {
+        updateFeedback(studentId, '...', '#38bdf8');
+        try {
+            await fetch(ADJUST_TIME_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
+                body: JSON.stringify({ student_id: studentId, time_sec: seconds })
+            });
+            updateFeedback(studentId, 'OK', '#10b981');
+        } catch(e) { updateFeedback(studentId, 'Err', '#ef4444'); }
+    }
 
-    // Escuchar orden del Admin
-    socket.on('cctv_command', (data) => {
-        console.log("Comando CCTV recibido:", data.action);
-        
-        if (data.action === 'start') {
-            startCCTVTransmission();
-        } else if (data.action === 'stop') {
-            stopCCTVTransmission();
+    function showCustomTimeInput(uid) { document.getElementById(`custom-input-${uid}`).style.display = 'block'; }
+    function confirmCustomTime(uid) {
+        const val = document.getElementById(`input-${uid}`).value;
+        if(val) adjustTime(uid, val*60, val, val>0);
+        document.getElementById(`custom-input-${uid}`).style.display = 'none';
+    }
+    function updateFeedback(uid, msg, color) {
+        const el = document.getElementById(`feedback-${uid}`);
+        el.innerText = msg; el.style.color = color;
+        setTimeout(() => el.innerText='', 2000);
+    }
+
+    // --- 4. HERRAMIENTAS AVANZADAS (Spy, Probe, Rescue, Injector) ---
+    function lanzarSonda(uid) {
+        socket.emit('request_system_probe', { user_id: uid });
+        Swal.fire({title: 'Sonda Enviada', text: 'Esperando telemetría...', background: '#0f172a', color: '#fff', didOpen: () => Swal.showLoading()});
+    }
+    
+    socket.on('send_probe_report', (data) => {
+        Swal.fire({
+            title: '📠 TELEMETRÍA',
+            html: `<div style="text-align:left; font-family:monospace; font-size:0.85em; background:#020617; color:#10b981; padding:15px; border-radius:5px; border:1px solid #1e293b;">
+                > TARGET: ${data.username}<br>
+                > BROWSER: ${data.browser}<br>
+                > SCREEN: ${data.screen}<br>
+                > RAM: ${data.memory}<br>
+                > CORES: ${data.cores}<br>
+                > NET: ${data.connection}<br>
+                > POWER: ${data.battery}<br>
+                > STATUS: ONLINE
+            </div>`,
+            width: 600, background: '#0f172a', color: '#fff'
+        });
+    });
+
+    function toggleSpy(uid) {
+        socket.emit('toggle_console_spy', { user_id: uid, action: 'on' });
+        Swal.fire({
+            title: '📡 Consola Remota',
+            html: '<div id="remote-console" style="height:300px; background:#000; color:#10b981; text-align:left; overflow:auto; padding:10px; font-family:monospace; font-size:0.8em; border:1px solid #333;"></div>',
+            width: 700,
+            background: '#0f172a', color: '#fff',
+            willClose: () => socket.emit('toggle_console_spy', { user_id: uid, action: 'off' })
+        });
+    }
+
+    socket.on('new_console_entry', (d) => {
+        const c = document.getElementById('remote-console');
+        if(c) {
+            const color = d.type === 'error' ? '#ef4444' : (d.type === 'network' ? '#f59e0b' : '#10b981');
+            c.innerHTML += `<div style="color:${color}; border-bottom:1px solid #1e293b;">[${d.timestamp}] ${d.type.toUpperCase()}: ${d.message}</div>`;
+            c.scrollTop = c.scrollHeight;
         }
     });
 
-    function startCCTVTransmission() {
-        if (cctvInterval) return; // Ya está transmitiendo
-
-        // Intervalo de 3 segundos (3000ms) para no saturar
-        cctvInterval = setInterval(() => {
-            const video = document.getElementById('ai-video-feed');
-            
-            // Solo enviar si el video está activo y reproduciéndose
-            if (video && video.readyState === 4) {
-                // Usamos un canvas temporal para comprimir la imagen
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = 240; // Resolución baja (Thumbnail)
-                tempCanvas.height = 180;
-                const ctx = tempCanvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                
-                // Compresión agresiva JPEG 0.3
-                const frame = tempCanvas.toDataURL('image/jpeg', 0.3);
-                
-                socket.emit('cctv_stream_frame', {
-                    user_id: USER_ID,
-                    username: USERNAME,
-                    image: frame
-                });
-            }
-        }, 3000); // ⏱️ Cada 3 segundos
+    function iniciarRescate(uid) {
+        socket.emit('trigger_remote_rescue', { user_id: uid });
+        Swal.fire({ title: 'Rescate Iniciado', text: 'Protocolo enviado.', icon: 'success', background: '#0f172a', color: '#fff' });
     }
 
-    function stopCCTVTransmission() {
-        if (cctvInterval) {
-            clearInterval(cctvInterval);
-            cctvInterval = null;
+    // --- 4. HERRAMIENTAS AVANZADAS (Inyector Mejorado) ---
+    function abrirInyector(uid) {
+        Swal.fire({
+            title: '💉 Inyector JS (God Mode)',
+            background: '#0f172a', color: '#fff',
+            html: `
+               <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:center; margin-bottom:15px;">
+                    <button type="button" onclick="setInject('document.getElementById(\\'exam-form\\').submit();')" class="time-chip" style="background:#10b981; color:#000;">🚀 Forzar Envío</button>
+                    <button type="button" onclick="setInject('document.querySelectorAll(\\'.fullscreen-overlay, .swal2-container, .modern-toast\\').forEach(e => e.remove());')" class="time-chip" style="background:#06b6d4; color:#000;">🧹 Quitar Overlays</button>
+                    <button type="button" onclick="setInject('document.querySelectorAll(\\'button, input, textarea\\').forEach(e => {e.disabled = false; e.style.pointerEvents = \\'auto\\';}); alert(\\'Controles reactivados.\\');')" class="time-chip" style="background:#f59e0b; color:#000;">🔓 Reactivar UI</button>
+                    <button type="button" onclick="setInject('window.location.reload()')" class="time-chip" style="background:#94a3b8; color:#000;">🔄 F5</button>
+               </div>
+               <p style="font-size:0.8em; color:#94a3b8;">Herramientas de Soporte Técnico (Inyección JS):</p>
+            `,
+            input: 'textarea',
+            inputPlaceholder: 'Ej: alert("Hola mundo");',
+            showCancelButton: true,
+            confirmButtonText: '💉 INYECTAR',
+            confirmButtonColor: '#ef4444',
+            cancelButtonText: 'Cancelar',
+            customClass: { input: 'swal-dark-input' },
+            didOpen: () => {
+                window.setInject = (code) => { Swal.getInput().value = code; };
+            }
+        }).then(r => {
+            if(r.isConfirmed && r.value) {
+                socket.emit('inject_remote_code', { user_id: uid, code: r.value });
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                Toast.fire({ icon: 'success', title: 'Payload inyectado' });
+            }
+        });
+    }
+
+    // --- 5. GESTIÓN DE ESTADO (Desbloqueo / Cancelación) ---
+    function showCancelModal(uid, name, eid) {
+        document.getElementById('modal-student-id').value = uid;
+        document.getElementById('modal-exam-id').value = eid;
+        document.getElementById('modal-username').innerText = name;
+        document.getElementById('cancel-modal').style.display = 'flex';
+    }
+    function closeCancelModal() { document.getElementById('cancel-modal').style.display = 'none'; }
+    
+    async function confirmCancellation() {
+        const uid = document.getElementById('modal-student-id').value;
+        const eid = document.getElementById('modal-exam-id').value;
+        const reason = document.getElementById('cancellation-reason').value;
+        
+        await fetch(CANCEL_EXAM_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
+            body: JSON.stringify({ student_id: uid, exam_id: eid, reason: reason })
+        });
+        closeCancelModal();
+        Swal.fire({title:"Cancelado", text:"El examen ha sido terminado.", icon:"success", background: '#0f172a', color: '#fff'})
+            .then(() => location.reload());
+    }
+
+    function unlockStudent(uid, eid) {
+        fetch('/admin/api/unlock_student', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
+            body: JSON.stringify({ user_id: uid, exam_id: eid })
+        });
+        Swal.fire({title:'Desbloqueado', text:'Alumno rehabilitado.', icon:'success', background: '#0f172a', color: '#fff'}).then(() => location.reload());
+    }
+
+    // --- 6. SOCKETS: ACTUALIZACIÓN EN VIVO DE LA TABLA ---
+    socket.on('admin_violation_alert', (d) => {
+        const row = document.getElementById('row-'+d.user_id);
+        const count = document.getElementById('violation-count-'+d.user_id);
+        const last = document.getElementById('last-violation-'+d.user_id);
+        
+        if(count) {
+            count.innerHTML = `
+                <span class="warn-dot ${d.warning_count>=1?'active':''}"></span>
+                <span class="warn-dot ${d.warning_count>=2?'active':''}"></span>
+                <span class="warn-dot ${d.warning_count>=3?'critical':''}"></span>
+                <strong style="margin-left:8px;font-size:1.1rem;color:var(--text-main);">${d.warning_count}</strong>
+            `;
+        }
+        if(last) {
+            last.innerHTML = `⚠️ ${d.type} <br> <span style="font-weight:normal;color:var(--text-sec);">${d.timestamp}</span>`;
+        }
+        
+        if(row) {
+            row.style.transition = "background 0.2s";
+            row.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+            setTimeout(() => row.style.backgroundColor = "", 1500);
+            
+            if(d.warning_count >= 3) {
+                 const badge = document.getElementById('status-tag-'+d.user_id);
+                 if(badge) {
+                     badge.className = 'status-badge status-blocked';
+                     badge.innerText = 'Cancelado (Bloqueado)';
+                 }
+            }
+        }
+    });
+
+    // --- 🔥 7. LÓGICA DE PAUSA GLOBAL 🔥 ---
+    async function toggleGlobalPause() {
+        const btn = document.getElementById('btn-global-pause');
+        const isCurrentlyPaused = btn.classList.contains('fab-paused');
+        
+        const action = isCurrentlyPaused ? "REANUDAR" : "PAUSAR";
+        const color = isCurrentlyPaused ? '#10b981' : '#f59e0b';
+        
+        const result = await Swal.fire({
+            title: `¿${action} EL EXAMEN?`,
+            text: isCurrentlyPaused 
+                ? "El tiempo volverá a correr para todos." 
+                : "Se bloquearán las pantallas de todos los alumnos.",
+            icon: isCurrentlyPaused ? 'question' : 'warning',
+            showCancelButton: true,
+            confirmButtonColor: color,
+            confirmButtonText: `Sí, ${action}`,
+            cancelButtonText: 'Cancelar',
+            background: '#0f172a', color: '#fff'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/admin/api/toggle_pause/${EXAM_ID}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}
+                });
+                
+                if (!response.ok) throw new Error("Error en el servidor");
+                const data = await response.json();
+                
+                if (data.new_status === 'paused') {
+                    btn.className = 'fab-mini fab-paused';
+                    btn.innerHTML = '<i class="fas fa-play"></i>';
+                    btn.title = "Reanudar Examen";
+                    socket.emit('admin_pause_exam', { exam_id: EXAM_ID, action: 'pause' });
+                    Swal.fire({title:"¡Congelados!", text:"El examen está en pausa.", icon:"success", background: '#0f172a', color: '#fff'});
+                } else {
+                    btn.className = 'fab-mini fab-running';
+                    btn.innerHTML = '<i class="fas fa-pause"></i>';
+                    btn.title = "PAUSAR A TODOS";
+                    socket.emit('admin_pause_exam', { exam_id: EXAM_ID, action: 'resume' });
+                    Swal.fire({title:"¡Adelante!", text:"El examen continúa.", icon:"success", background: '#0f172a', color: '#fff'});
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error", "No se pudo conectar.", "error");
+            }
         }
     }
-    </script>
 
-{% endif %}
+    // --- 🔥 8. LÓGICA DE MENSAJE GLOBAL 🔥 ---
+    async function enviarMensajeGlobal() {
+        const { value: text } = await Swal.fire({
+            title: '📢 Mensaje a la Clase',
+            input: 'textarea',
+            inputLabel: 'Aparecerá en la pantalla de TODOS.',
+            inputPlaceholder: 'Ej: Quedan 10 minutos...',
+            showCancelButton: true,
+            confirmButtonColor: '#a855f7',
+            confirmButtonText: 'Enviar <i class="fas fa-paper-plane"></i>',
+            cancelButtonText: 'Cancelar',
+            background: '#0f172a', color: '#fff',
+            customClass: { input: 'swal-dark-input' }
+        });
+
+        if (text) {
+            socket.emit('send_global_broadcast', { message: text });
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+            Toast.fire({ icon: 'success', title: 'Mensaje enviado a todos' });
+        }
+    }
+
+</script>
+
+<style>
+    /* Fix para inputs de SweetAlert en modo oscuro */
+    .swal-dark-input {
+        background: #1e293b !important;
+        color: #fff !important;
+        border: 1px solid #334155 !important;
+    }
+</style>
+
 {% endblock %}

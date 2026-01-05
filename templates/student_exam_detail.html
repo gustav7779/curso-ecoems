@@ -3,276 +3,355 @@
 {% block title %}Revisión de Examen: {{ exam.title }}{% endblock %}
 
 {% block content %}
+
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+    /* =========================================
+       🔥 ESTILO CYBER-REVIEW 🔥
+       ========================================= */
+    :root {
+        --bg-body: #020617;       /* Slate 950 */
+        --bg-card: #0f172a;       /* Slate 900 */
+        --border-color: #1e293b;  /* Slate 800 */
+        --text-main: #f1f5f9;     /* Slate 100 */
+        --text-sec: #94a3b8;      /* Slate 400 */
+        --primary: #06b6d4;       /* Cyan 500 */
+        --success: #10b981;       /* Emerald 500 */
+        --danger: #ef4444;        /* Red 500 */
+        --warning: #f59e0b;       /* Amber 500 */
+        --info-bg: rgba(6, 182, 212, 0.1);
+    }
+
+    /* MODO OSCURO FORZADO PARA COHERENCIA */
+    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; }
+
+    /* HEADER */
+    .header-exam-review-title {
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        padding: 40px 20px; text-align: center; border-bottom: 2px solid var(--primary);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px;
+    }
+    .header-exam-review-title h1 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: white; }
+    .exam-subtitle { font-size: 1.1rem; color: var(--primary); margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
     
-    <div class="header-exam-review-title">
-        <h1>🔍 Revisión de Examen</h1>
-        <h2 class="exam-subtitle">{{ exam.title }}</h2>
-        {% if result.submission_type == 'auto' %}
-            <p id="exam-submitted-message" class="auto"><i class="fas fa-clock"></i> El tiempo se agotó y el examen fue enviado automáticamente.</p>
-        {% else %}
-            <p id="exam-submitted-message" class="manual"><i class="fas fa-check-double"></i> Examen enviado correctamente. Estas son tus respuestas.</p>
-        {% endif %}
+    #exam-submitted-message {
+        display: inline-block; margin-top: 15px; padding: 8px 20px; border-radius: 50px;
+        font-size: 0.9rem; font-weight: bold;
+    }
+    .auto { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+    .manual { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+
+    /* CONTENEDOR */
+    .review-container { max-width: 1000px; margin: 0 auto; padding: 0 20px 60px; }
+
+    /* BOTONES */
+    .nav-actions { margin-bottom: 30px; }
+    .dashboard-nav-btn {
+        background: rgba(255, 255, 255, 0.05); color: var(--text-sec); padding: 12px 24px;
+        border-radius: 12px; text-decoration: none; font-weight: 600; border: 1px solid var(--border-color);
+        display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s;
+    }
+    .dashboard-nav-btn:hover { background: var(--primary); color: #000; border-color: var(--primary); }
+
+    /* TARJETA DE PREGUNTA */
+    .question-card {
+        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
+        padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .question-title { margin: 0; font-size: 1.2rem; color: white; font-weight: 800; }
+    .subject-tag {
+        background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 4px 12px;
+        border-radius: 8px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .question-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 25px; color: #e2e8f0; }
+
+    /* --- ESTILOS VISOR (MINI) --- */
+    .img-zoom-container { position: relative; cursor: pointer; transition: transform 0.2s; margin-bottom: 25px; display: inline-block; }
+    .img-zoom-container:hover { transform: scale(1.01); }
+    .main-exam-image { border-radius: 12px; border: 1px solid var(--border-color); max-height: 250px; width: auto; max-width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .gallery-indicator {
+        margin-top: 8px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; 
+        padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold;
+        border: 1px solid rgba(59, 130, 246, 0.4); display: inline-flex; align-items: center; gap: 5px;
+    }
+    .zoom-hint { margin-top: 5px; font-size: 0.8rem; color: var(--text-sec); }
+
+    /* OPCIONES Y FEEDBACK */
+    .options-and-feedback { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    
+    .options-group { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); }
+    .student-review-info { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); }
+
+    .option-item {
+        padding: 12px 15px; margin-bottom: 10px; border-radius: 10px;
+        background: var(--bg-card); border: 1px solid var(--border-color);
+        display: flex; align-items: center; color: var(--text-sec); transition: all 0.2s;
+    }
+    .option-letter { font-weight: bold; margin-right: 10px; color: var(--text-main); }
+    
+    /* Colores de Validación */
+    .correct-option-bg { background: rgba(16, 185, 129, 0.1) !important; border-color: var(--success) !important; color: #fff !important; }
+    .wrong-response-bg { background: rgba(239, 68, 68, 0.1) !important; border-color: var(--danger) !important; color: #fff !important; }
+    .student-choice-bg { border-color: var(--primary) !important; background: rgba(6, 182, 212, 0.1) !important; color: white !important; }
+
+    .grade-display span { padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; }
+    .grade-correct { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .grade-incorrect { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+    .grade-manual { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+
+    .feedback-box {
+        margin-top: 20px; padding: 15px; background: rgba(6, 182, 212, 0.05);
+        border-radius: 10px; font-size: 0.9rem; border-left: 4px solid var(--primary); color: #cbd5e1;
+    }
+
+    @media (max-width: 768px) {
+        .options-and-feedback { grid-template-columns: 1fr; }
+    }
+
+    /* --- ESTILOS LIGHTBOX --- */
+    .lightbox-overlay {
+        position: fixed; z-index: 12000; left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.95); backdrop-filter: blur(10px);
+        display: flex; justify-content: center; align-items: center; flex-direction: column;
+    }
+    .lightbox-content { position: relative; width: 90%; height: 80%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+    #lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.2s ease; cursor: grab; }
+    #lightbox-img:active { cursor: grabbing; }
+    .close-btn { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 12001; }
+    .prev-btn, .next-btn {
+        cursor: pointer; position: absolute; top: 50%; padding: 15px; color: white; font-weight: bold; font-size: 24px;
+        background: rgba(255,255,255,0.1); border-radius: 50%; transition: 0.3s; user-select: none;
+    }
+    .prev-btn { left: 20px; } .next-btn { right: 20px; }
+    .prev-btn:hover, .next-btn:hover { background-color: var(--primary); }
+    .zoom-controls { position: absolute; bottom: 30px; display: flex; gap: 10px; z-index: 12002; }
+    .zoom-controls button {
+        background: rgba(255,255,255,0.1); border: 1px solid white; color: white;
+        width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem;
+    }
+    .zoom-controls button:hover { background: var(--primary); border-color: var(--primary); color: black; }
+    .gallery-counter { color: #ccc; font-size: 1rem; margin-top: 10px; font-family: monospace; }
+</style>
+
+<div class="header-exam-review-title">
+    <h1>🔍 REVISIÓN DE MISIÓN</h1>
+    <h2 class="exam-subtitle">{{ exam.title }}</h2>
+    {% if result.submission_type == 'auto' %}
+        <p id="exam-submitted-message" class="auto"><i class="fas fa-clock"></i> Tiempo Agotado (Auto-Envío)</p>
+    {% else %}
+        <p id="exam-submitted-message" class="manual"><i class="fas fa-check-circle"></i> Envío Manual Exitoso</p>
+    {% endif %}
+</div>
+
+<div class="container review-container">
+    
+    <div class="nav-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn dashboard-nav-btn">
+            <i class="fas fa-arrow-left"></i> Ir al Panel Principal
+        </a>
     </div>
-
-    <div class="container review-container">
-        
-        <div class="nav-actions">
-            <a href="{{ url_for('dashboard') }}" class="btn dashboard-nav-btn">
-                <i class="fas fa-th-large"></i> Ir al Panel Principal
-            </a>
-        </div>
-        
-        {% if exam.questions %}
-            {% for question in exam.questions %}
-                {% set answer = answers_dict.get(question.id) %}
+    
+    {% if exam.questions %}
+        {% for question in exam.questions %}
+            {% set answer = answers_dict.get(question.id) %}
+            
+            <div class="question-card">
+                <div class="card-header">
+                    <h3 class="question-title">Pregunta {{ loop.index }}</h3>
+                    <span class="subject-tag">{{ question.subject or 'General' }}</span>
+                </div>
                 
-                <div class="question-card {% if answer %}answered{% else %}unanswered{% endif %}">
-                    <div class="card-header">
-                        <h3 class="question-title">Pregunta {{ loop.index }}</h3>
-                        <span class="subject-tag">{{ question.subject or 'General' }}</span>
-                    </div>
-                    
-                    <p class="question-text">{{ question.text }}</p>
+                <p class="question-text">{{ question.text }}</p>
 
-                    {% if question.image_filename %}
-                       <div class="image-wrapper">
-                           <p class="image-label"><i class="fas fa-image"></i> Imagen de apoyo:</p>
-                           <img src="{{ question.image_filename }}" alt="Apoyo visual" class="question-image">
-                       </div>
-                    {% endif %}
+                {# --- 🖼️ GATILLO DE GALERÍA (NUEVO) --- #}
+                {% if question.image_filename %}
+                <div class="img-zoom-container">
+                    <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
+                         class="main-exam-image"
+                         loading="lazy" 
+                         onclick="openTacticalGallery(this)"
+                         data-gallery='{{ question.images if question.images else "[]" }}'>
                     
-                    <div class="options-and-feedback">
-                        <div class="options-group">
-                            <h4>Opciones:</h4>
-                            {% for letter in ['A', 'B', 'C', 'D'] %}
-                                {% set option_text = question['option_' + letter.lower()] %}
-                                {% if option_text %}
+                    {% if question.images and question.images != '[]' and question.images != 'null' %}
+                    <div class="gallery-indicator" onclick="this.previousElementSibling.click()">
+                        <i class="fas fa-layer-group"></i> Ver Galería Completa
+                    </div>
+                    {% else %}
+                    <div class="zoom-hint"><i class="fas fa-search-plus"></i> Clic para ampliar</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {# --- FIN GATILLO --- #}
+                
+                <div class="options-and-feedback">
+                    <div class="options-group">
+                        <h4 style="color:white; margin-top:0;">Opciones:</h4>
+                        {% for letter in ['A', 'B', 'C', 'D'] %}
+                            {% set option_text = question['option_' + letter.lower()] %}
+                            {% if option_text %}
+                                {% if exam.answers_released %}
+                                    {% set is_correct = (letter == question.correct_option) %}
+                                    {% set is_student_choice = (answer and letter == answer.response) %}
                                     
-                                    {% if exam.answers_released %}
-                                        {% set is_correct = (letter == question.correct_option) %}
-                                        {% set is_student_choice = (answer and letter == answer.response) %}
-                                        
-                                        <div class="option-item 
-                                            {% if is_correct %}correct-option-bg{% endif %}
-                                            {% if is_student_choice and not is_correct %}wrong-response-bg{% endif %}">
-                                            <span class="option-letter">{{ letter }})</span>
-                                            <span class="option-text">{{ option_text }}</span>
-                                            {% if is_correct %}<span class="correct-mark"><i class="fas fa-check-circle"></i></span>{% endif %}
-                                        </div>
-                                    {% else %}
-                                        <div class="option-item {% if answer and letter == answer.response %}student-choice-bg{% endif %}">
-                                            <span class="option-letter">{{ letter }})</span>
-                                            <span class="option-text">{{ option_text }}</span>
-                                        </div>
-                                    {% endif %}
+                                    <div class="option-item 
+                                        {% if is_correct %}correct-option-bg{% endif %}
+                                        {% if is_student_choice and not is_correct %}wrong-response-bg{% endif %}">
+                                        <span class="option-letter">{{ letter }})</span>
+                                        <span class="option-text">{{ option_text }}</span>
+                                        {% if is_correct %}<span style="margin-left:auto; color:var(--success);"><i class="fas fa-check-circle"></i></span>{% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="option-item {% if answer and letter == answer.response %}student-choice-bg{% endif %}">
+                                        <span class="option-letter">{{ letter }})</span>
+                                        <span class="option-text">{{ option_text }}</span>
+                                    </div>
                                 {% endif %}
-                            {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="student-review-info">
+                        <div class="info-section">
+                            <h4 style="color:white; margin-top:0;">Tu Respuesta:</h4>
+                            <p style="font-size:1.1rem; color:var(--primary); font-weight:bold;">
+                                {{ (answer.response if answer else '---') }}
+                            </p>
                         </div>
 
-                        <div class="student-review-info">
-                            <div class="info-section">
-                                <h4>Tu Respuesta:</h4>
-                                <p class="response-display">
-                                    <span class="letter-badge">{{ (answer.response if answer else '-') }}</span>
-                                    <strong>{{ (answer.response if answer else '--- Sin Responder ---') }}</strong>
-                                </p>
-                            </div>
-
-                            <div class="info-section">
-                                <h4>Resultado:</h4>
-                                {% if exam.answers_released %}
-                                    <p class="grade-display">
-                                        {% if answer and answer.grade == 1.0 %}
+                        <div class="info-section" style="margin-top:20px;">
+                            <h4 style="color:white; margin-top:0;">Resultado:</h4>
+                            {% if exam.answers_released %}
+                                <p class="grade-display">
+                                    {% if answer %}
+                                        {# Como borramos grade, calculamos aquí #}
+                                        {% if answer.response == question.correct_option %}
                                             <span class="grade-correct"><i class="fas fa-check"></i> Correcto</span>
-                                        {% elif answer %}
-                                            <span class="grade-incorrect"><i class="fas fa-times"></i> Incorrecto</span>
                                         {% else %}
-                                            <span class="grade-manual"><i class="fas fa-exclamation-triangle"></i> No contestada</span>
+                                            <span class="grade-incorrect"><i class="fas fa-times"></i> Incorrecto</span>
                                         {% endif %}
-                                    </p>
-                                    
-                                    {% if answer and answer.feedback %}
-                                        <div class="feedback-box">
-                                            <i class="fas fa-comment-dots"></i> <strong>Retroalimentación:</strong><br>
-                                            {{ answer.feedback }}
-                                        </div>
+                                    {% else %}
+                                        <span class="grade-manual"><i class="fas fa-exclamation-triangle"></i> No contestada</span>
                                     {% endif %}
-                                {% else %}
-                                    <p class="grade-display">
-                                         <span class="grade-manual"><i class="fas fa-hourglass-half"></i> Respuestas protegidas.</span>
-                                    </p>
-                                {% endif %}
-                            </div>
+                                </p>
+                            {% else %}
+                                <p class="grade-display">
+                                     <span class="grade-manual"><i class="fas fa-lock"></i> Oculto (Revisión Ciega)</span>
+                                </p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
-            {% endfor %}
-        {% else %}
-            <div class="no-items-message">
-                <i class="fas fa-info-circle"></i> No se encontraron preguntas o respuestas para este examen.
             </div>
-        {% endif %}
-
-        <div class="nav-actions bottom">
-            <a href="{{ url_for('dashboard') }}" class="btn dashboard-nav-btn">
-                <i class="fas fa-arrow-left"></i> Volver al Panel
-            </a>
+        {% endfor %}
+    {% else %}
+        <div style="text-align:center; padding:50px; color:var(--text-sec);">
+            <i class="fas fa-box-open" style="font-size:3rem; opacity:0.3; margin-bottom:10px;"></i>
+            <p>No hay preguntas para mostrar.</p>
         </div>
+    {% endif %}
+
+    <div class="nav-actions bottom" style="text-align:center; margin-top:40px;">
+        <a href="{{ url_for('dashboard') }}" class="btn dashboard-nav-btn">
+            <i class="fas fa-arrow-left"></i> Volver al Panel
+        </a>
     </div>
+</div>
 
-    <style>
-        /* --- Modernización y Modo Nocturno --- */
-        :root {
-            --card-bg: #ffffff;
-            --text-main: #2c3e50;
-            --text-sec: #7f8c8d;
-            --border-color: #eee;
-            --option-bg: #f8fbfc;
-            --info-bg: #fffbe6;
-            --info-border: #f39c12;
-            --header-grad: linear-gradient(135deg, #3498db, #1e3c72);
-        }
+<div id="tactical-lightbox" class="lightbox-overlay" style="display: none;">
+    <span class="close-btn" onclick="closeTacticalGallery()">&times;</span>
+    <div class="lightbox-content">
+        <img id="lightbox-img" src="" alt="Lectura">
+    </div>
+    <a class="prev-btn" onclick="changeGalleryImage(-1)">&#10094;</a>
+    <a class="next-btn" onclick="changeGalleryImage(1)">&#10095;</a>
+    <div class="zoom-controls">
+        <button onclick="zoomImage(0.2)"><i class="fas fa-plus"></i></button>
+        <button onclick="zoomImage(-0.2)"><i class="fas fa-minus"></i></button>
+        <button onclick="resetZoom()"><i class="fas fa-compress"></i></button>
+    </div>
+    <div id="gallery-counter" class="gallery-counter">1 / 1</div>
+</div>
 
-        body.dark-mode {
-            --card-bg: #1e293b;
-            --text-main: #f1f5f9;
-            --text-sec: #94a3b8;
-            --border-color: #334155;
-            --option-bg: #0f172a;
-            --info-bg: #2d2613;
-            --info-border: #b45309;
-            --header-grad: linear-gradient(135deg, #1e293b, #0f172a);
-        }
+<script>
+    // --- LÓGICA DEL VISOR ---
+    let currentGallery = [];
+    let currentIndex = 0;
+    let currentZoom = 1;
 
-        .header-exam-review-title {
-            background: var(--header-grad);
-            color: white; 
-            padding: 40px 20px;
-            text-align: center; 
-            border-radius: 0 0 30px 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        .exam-subtitle { font-size: 1.2rem; opacity: 0.9; font-weight: 300; margin-top: 5px; }
-
-        #exam-submitted-message {
-            font-size: 0.95rem;
-            margin-top: 20px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(5px);
-        }
-
-        .review-container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
-
-        /* Botón Panel */
-        .nav-actions { margin-bottom: 25px; }
-        .nav-actions.bottom { margin-top: 40px; text-align: center; }
-
-        .dashboard-nav-btn {
-            background: #3498db;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
-        .dashboard-nav-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
-            color: white;
-        }
-
-        /* Tarjeta de Pregunta */
-        .question-card {
-            background: var(--card-bg);
-            padding: 30px;
-            margin-bottom: 30px;
-            border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            border: 1px solid var(--border-color);
-            transition: transform 0.3s ease;
-        }
-
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    function openTacticalGallery(imgElement) {
+        const rawGallery = imgElement.getAttribute('data-gallery');
+        const mainSrc = imgElement.src;
         
-        .subject-tag {
-            background: #e0f2fe;
-            color: #0369a1;
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
+        currentGallery = [];
+        if (rawGallery && rawGallery !== '[]' && rawGallery !== 'null' && rawGallery !== 'None') {
+            try {
+                let cleanJson = rawGallery.replace(/'/g, '"'); 
+                currentGallery = JSON.parse(cleanJson);
+            } catch(e) {
+                console.error("Error parseando galería", e);
+                currentGallery = [mainSrc];
+            }
         }
-        body.dark-mode .subject-tag { background: #0c4a6e; color: #7dd3fc; }
-
-        .question-title { font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin: 0; }
-        .question-text { font-size: 1.15rem; color: var(--text-main); line-height: 1.5; margin-bottom: 20px; }
-
-        .image-wrapper { margin-bottom: 25px; padding: 15px; background: var(--option-bg); border-radius: 15px; }
-        .question-image { border-radius: 10px; max-height: 400px; width: auto; max-width: 100%; display: block; margin: 0 auto; }
-
-        .options-and-feedback { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-
-        .options-group { background: var(--option-bg); padding: 20px; border-radius: 15px; }
-        .student-review-info { background: var(--info-bg); border: 1px solid var(--info-border); padding: 20px; border-radius: 15px; }
-
-        .option-item {
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            border-radius: 10px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            color: var(--text-main);
-        }
-
-        .letter-badge {
-            background: #3498db;
-            color: white;
-            width: 30px;
-            height: 30px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            margin-right: 12px;
-            font-weight: bold;
-        }
-
-        /* Colores de validación */
-        .correct-option-bg { background: #dcfce7 !important; border-color: #22c55e !important; color: #166534 !important; }
-        .wrong-response-bg { background: #fee2e2 !important; border-color: #ef4444 !important; color: #991b1b !important; }
-        .student-choice-bg { border-color: #3498db !important; background: #f0f9ff !important; }
         
-        body.dark-mode .correct-option-bg { background: #064e3b !important; color: #a7f3d0 !important; }
-        body.dark-mode .wrong-response-bg { background: #450a0a !important; color: #fecaca !important; }
+        if (currentGallery.length === 0) currentGallery = [mainSrc];
+        
+        // Normalizar rutas
+        currentGallery = currentGallery.map(src => {
+            if (!src.startsWith('http') && !src.startsWith('/')) return '/static/uploads/' + src;
+            return src;
+        });
 
-        .grade-display span { padding: 6px 16px; border-radius: 10px; font-weight: 700; }
-        .grade-correct { background: #dcfce7; color: #166534; }
-        .grade-incorrect { background: #fee2e2; color: #991b1b; }
-        .grade-manual { background: #fef3c7; color: #92400e; }
+        currentIndex = 0;
+        showImageInLightbox();
+        document.getElementById('tactical-lightbox').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 
-        .feedback-box {
-            margin-top: 15px;
-            padding: 12px;
-            background: var(--card-bg);
-            border-radius: 10px;
-            font-size: 0.9rem;
-            border-left: 4px solid #3498db;
+    function closeTacticalGallery() {
+        document.getElementById('tactical-lightbox').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        resetZoom();
+    }
+
+    function showImageInLightbox() {
+        const img = document.getElementById('lightbox-img');
+        img.src = currentGallery[currentIndex];
+        document.getElementById('gallery-counter').innerText = `${currentIndex + 1} / ${currentGallery.length}`;
+        
+        const display = currentGallery.length > 1 ? 'block' : 'none';
+        document.querySelector('.prev-btn').style.display = display;
+        document.querySelector('.next-btn').style.display = display;
+    }
+
+    function changeGalleryImage(n) {
+        currentIndex += n;
+        if (currentIndex >= currentGallery.length) currentIndex = 0;
+        if (currentIndex < 0) currentIndex = currentGallery.length - 1;
+        showImageInLightbox();
+        resetZoom();
+    }
+
+    function zoomImage(amount) {
+        currentZoom += amount;
+        if (currentZoom < 0.5) currentZoom = 0.5;
+        if (currentZoom > 4) currentZoom = 4;
+        document.getElementById('lightbox-img').style.transform = `scale(${currentZoom})`;
+    }
+    
+    function resetZoom() {
+        currentZoom = 1;
+        document.getElementById('lightbox-img').style.transform = `scale(1)`;
+    }
+
+    // Soporte Rueda Mouse
+    document.getElementById('tactical-lightbox').addEventListener('wheel', function(e) {
+        if(e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (e.deltaY < 0) zoomImage(0.2); else zoomImage(-0.2);
         }
+    });
+</script>
 
-        @media (max-width: 768px) {
-            .options-and-feedback { grid-template-columns: 1fr; }
-            .header-exam-review-title h1 { font-size: 1.5rem; }
-            .question-card { padding: 20px; }
-        }
-    </style>
 {% endblock %}

@@ -7,13 +7,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="google-site-verification" content="BHRY97gDzNZNSXQ4FIRyEfmoLuCSQuE-mr6mXJSX4Ns" />
     
-
-    <title>ECOEMS CCSMX</title>
+    <title>ECOEMS CCSMX | Acceso Seguro</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,16 +26,6 @@
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         tech: ['Space Grotesk', 'sans-serif'],
-                    },
-                    animation: {
-                        'spin-slow': 'spin 10s linear infinite',
-                        'pan-image': 'panImage 20s ease-in-out infinite alternate',
-                    },
-                    keyframes: {
-                        panImage: {
-                            '0%': { transform: 'scale(1.1) translate(0,0)' },
-                            '100%': { transform: 'scale(1.2) translate(-10px, -10px)' }
-                        }
                     },
                     colors: {
                         cyberBlue: '#00f3ff',
@@ -60,23 +47,58 @@
         .cursor-dot { width: 8px; height: 8px; background-color: #00f3ff; box-shadow: 0 0 10px #00f3ff; }
         .cursor-outline { width: 40px; height: 40px; border: 1px solid rgba(0, 243, 255, 0.5); transition: 0.1s; }
 
-        /* PRELOADER HACKER */
+        /* PRELOADER MEJORADO */
         #preloader {
-            position: fixed; inset: 0; background: #000; z-index: 10000;
+            position: fixed; inset: 0; 
+            background: radial-gradient(circle at center, #1e1b4b 0%, #000000 100%);
+            z-index: 10000;
             display: flex; justify-content: center; align-items: center;
-            flex-direction: column; transition: opacity 0.5s ease, visibility 0.5s;
+            flex-direction: column; transition: opacity 0.8s ease, visibility 0.8s;
+            overflow: hidden;
         }
+        
+        /* Contenedor de palabras flotantes */
+        #motivation-container {
+            position: absolute; inset: 0; pointer-events: none; z-index: 1;
+        }
+        .moti-word {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.2); /* Sutil y elegante */
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+            /* 🔥 CAMBIO: Ahora dura 6 segundos (más lento) 🔥 */
+            animation: floatWord 6s ease-out forwards;
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        }
+        @keyframes floatWord {
+            0% { opacity: 0; transform: translateY(40px) scale(0.8); }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.8; }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.2); }
+        }
+
+        /* UI Central del Loader */
+        .loader-ui { position: relative; z-index: 10; text-align: center; }
+        
         .loader-bar-bg {
-            width: 300px; height: 4px; background: #1f2937; border-radius: 2px;
-            overflow: hidden; margin-bottom: 15px; position: relative;
+            width: 350px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px;
+            overflow: hidden; margin-bottom: 20px; position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
         }
         .loader-bar-fill {
-            height: 100%; background: #00f3ff; width: 0%;
-            box-shadow: 0 0 15px #00f3ff; transition: width 0.1s;
+            height: 100%; background: linear-gradient(90deg, #00f3ff, #bc13fe); width: 0%;
+            box-shadow: 0 0 20px #00f3ff; transition: width 0.1s; border-radius: 10px;
         }
         .loader-text {
-            font-family: 'Space Grotesk', monospace; color: #00f3ff;
-            letter-spacing: 2px; font-size: 0.9rem; text-transform: uppercase;
+            font-family: 'Space Grotesk', monospace; color: #fff;
+            letter-spacing: 3px; font-size: 1.2rem; text-transform: uppercase; font-weight: 700;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
+        }
+        .loader-sub {
+            font-family: 'Inter', sans-serif; color: #94a3b8; font-size: 0.8rem; margin-top: 8px; letter-spacing: 1px;
         }
 
         /* BACKGROUND */
@@ -85,6 +107,8 @@
             background-size: cover; background-position: center;
             animation: panImage 25s ease-in-out infinite alternate;
         }
+        @keyframes panImage { 0% { transform: scale(1.1); } 100% { transform: scale(1.2); } }
+
         .cyber-grid {
             background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
             linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
@@ -101,6 +125,35 @@
         .glitch-wrapper:hover::after { color: #bc13fe; z-index: -2; animation: glitch-2 0.4s infinite; }
         @keyframes glitch-1 { 0% { clip-path: inset(20% 0 80% 0); transform: translate(-2px, 2px); } 100% { clip-path: inset(60% 0 10% 0); transform: translate(2px, -2px); } }
         @keyframes glitch-2 { 0% { clip-path: inset(10% 0 60% 0); transform: translate(2px, -2px); } 100% { clip-path: inset(80% 0 5% 0); transform: translate(-2px, 2px); } }
+
+        /* WIDGET EDUCATIVO */
+        .intel-widget {
+            margin-top: 30px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            border-left: 4px solid #00f3ff;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 650px;
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+            backdrop-filter: blur(10px);
+        }
+        .intel-header {
+            font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; 
+            margin-bottom: 10px; display: flex; justify-content: space-between; font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;
+        }
+        .intel-content {
+            font-size: 1.15rem; color: #fff; min-height: 4em; line-height: 1.6; font-weight: 500;
+            display: flex; align-items: center;
+        }
+        .highlight-materia { color: #00f3ff; font-weight: 800; margin-right: 8px; text-shadow: 0 0 10px rgba(0, 243, 255, 0.4); }
+        .cursor-blink { animation: blink 1s step-end infinite; color: #00f3ff; font-weight: bold; margin-left: 2px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
         /* RGB BORDER */
         .rgb-border { position: relative; background: #0f172a; border-radius: 1.5rem; z-index: 1; }
@@ -122,7 +175,7 @@
         }
         .spotlight-card:hover::before { opacity: 1; }
 
-        /* MARQUESINA (CINTILLO) */
+        /* MARQUESINA */
         .animate-marquee { display: inline-block; animation: marquee 20s linear infinite; padding-left: 100%; }
         @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
     </style>
@@ -147,18 +200,23 @@
     {% endif %}
 
     <div id="preloader">
-        <div class="loader-bar-bg">
-            <div class="loader-bar-fill" id="loader-fill"></div>
-        </div>
-        <div class="loader-text">
-            INICIANDO SISTEMA... <span id="loader-percent">0%</span>
+        <div id="motivation-container"></div> <div class="loader-ui">
+            <div class="loader-bar-bg">
+                <div class="loader-bar-fill" id="loader-fill"></div>
+            </div>
+            <div class="loader-text">
+                PREPARANDO TU FUTURO...
+            </div>
+            <div class="loader-sub">
+                CARGANDO RECURSOS | <span id="loader-percent" style="color:#00f3ff;">0%</span>
+            </div>
         </div>
     </div>
 
     <div class="cursor-dot" id="cursor-dot"></div>
     <div class="cursor-outline" id="cursor-outline"></div>
 
-    <header class="relative w-full h-[85vh] min-h-[650px] flex items-center justify-center overflow-hidden">
+    <header class="relative w-full h-[90vh] min-h-[750px] flex items-center justify-center overflow-hidden">
         <div class="absolute inset-0 overflow-hidden"><div class="absolute inset-0 hero-bg"></div></div>
         <div class="absolute inset-0 bg-gradient-to-b from-darkBase/70 via-darkBase/80 to-darkBase z-10"></div>
         <div id="particles-js" class="absolute inset-0 z-20 opacity-40"></div>
@@ -179,12 +237,12 @@
                 <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyberBlue via-white to-cyberPurple" id="typed-title"></span>
             </h1>
 
-            <p class="text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto mb-10 font-light" data-aos="fade-up" data-aos-delay="200">
+            <p class="text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto mb-8 font-light" data-aos="fade-up" data-aos-delay="200">
                 Accede al arsenal académico más avanzado.
                 <span class="text-white font-medium">Simuladores, Analítica IA y Resultados en Tiempo Real.</span>
             </p>
 
-            <div class="flex flex-col sm:flex-row gap-5" data-aos="fade-up" data-aos-delay="300">
+            <div class="flex flex-col sm:flex-row gap-5 mb-8" data-aos="fade-up" data-aos-delay="300">
                 <a href="#main-content" class="px-8 py-4 bg-white text-black font-bold rounded-lg hover:bg-cyberBlue hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
                     INICIAR MISIÓN
                 </a>
@@ -192,6 +250,19 @@
                     <i class="fas fa-calendar-alt text-cyberPurple"></i> Próximo Examen
                 </a>
             </div>
+
+            <div class="intel-widget" data-aos="fade-up" data-aos-delay="400">
+                <div class="intel-header">
+                    <span style="color: #00f3ff; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-lightbulb animate-pulse"></i> DATO DE REPASO
+                    </span>
+                    <span style="color: #64748b;">ID: <span id="intel-count">001</span></span>
+                </div>
+                <div class="intel-content">
+                    <span id="intel-text"></span><span class="cursor-blink">|</span>
+                </div>
+            </div>
+
         </div>
 
         <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 animate-bounce text-slate-500">
@@ -391,32 +462,256 @@
     </div>
 
     <script>
-        // 1. AOS
+        // --- 🧠 PROTOCOLO DE DESENCRIPTACIÓN (100 DATOS EXPLICADOS Y ALEATORIOS) ---
+        const intelData = [
+            "MATEMÁTICAS: La fórmula general es x = (-b±√(b²-4ac))/2a.",
+            "MATEMÁTICAS: El Teorema de Pitágoras dice que a² + b² = c² (suma de catetos al cuadrado = hipotenusa).",
+            "MATEMÁTICAS: El valor de Pi (π) es aproximadamente 3.1416.",
+            "MATEMÁTICAS: La suma de los ángulos internos de cualquier triángulo es siempre 180°.",
+            "MATEMÁTICAS: El perímetro es la suma de los lados; el área es la medida de la superficie.",
+            "MATEMÁTICAS: Todo número elevado a la potencia 0 es igual a 1 (n⁰ = 1).",
+            "MATEMÁTICAS: En la jerarquía de operaciones, primero van paréntesis, luego potencias/raíces, luego mult/div, al final sumas/restas.",
+            "MATEMÁTICAS: La pendiente (m) de una recta se calcula como m = (y2 - y1) / (x2 - x1).",
+            "MATEMÁTICAS: Un binomio al cuadrado (a+b)² es igual a: a² + 2ab + b².",
+            "MATEMÁTICAS: La moda es el dato que más se repite en un conjunto.",
+            "MATEMÁTICAS: La media es el promedio (suma de datos entre número de datos).",
+            "MATEMÁTICAS: La mediana es el dato central cuando se ordenan de menor a mayor.",
+            "MATEMÁTICAS: Dos rectas son paralelas si tienen la misma pendiente (m1 = m2).",
+            "MATEMÁTICAS: Dos rectas son perpendiculares si el producto de sus pendientes es -1.",
+            "MATEMÁTICAS: Seno = Cateto Opuesto / Hipotenusa.",
+            "MATEMÁTICAS: Coseno = Cateto Adyacente / Hipotenusa.",
+            "MATEMÁTICAS: Tangente = Cateto Opuesto / Cateto Adyacente.",
+            "MATEMÁTICAS: Factorizar x² - y² (diferencia de cuadrados) da (x+y)(x-y).",
+            "MATEMÁTICAS: La probabilidad de un evento seguro es 1; de un evento imposible es 0.",
+            "MATEMÁTICAS: Un ángulo agudo mide menos de 90°; un obtuso mide más de 90°.",
+            
+            "HISTORIA: La caída de Tenochtitlán fue el 13 de agosto de 1521.",
+            "HISTORIA: La Independencia de México inició el 16 de septiembre de 1810 con el Grito de Dolores.",
+            "HISTORIA: La consumación de la Independencia fue en 1821 con el Ejército Trigarante.",
+            "HISTORIA: La Constitución Política actual de México se promulgó el 5 de febrero de 1917.",
+            "HISTORIA: La Revolución Mexicana inició el 20 de noviembre de 1910 contra Porfirio Díaz.",
+            "HISTORIA: La Expropiación Petrolera fue decretada por Lázaro Cárdenas en 1938.",
+            "HISTORIA: La Primera Guerra Mundial ocurrió entre 1914 y 1918.",
+            "HISTORIA: La Segunda Guerra Mundial ocurrió entre 1939 y 1945.",
+            "HISTORIA: La Revolución Francesa inició en 1789 (Toma de la Bastilla).",
+            "HISTORIA: La Guerra Fría fue un conflicto ideológico entre EE.UU. (Capitalismo) y la URSS (Socialismo).",
+            "HISTORIA: Cristóbal Colón llegó a América en 1492.",
+            "HISTORIA: La cultura Olmeca es conocida como la 'Cultura Madre' de Mesoamérica.",
+            "HISTORIA: El Plan de Iguala proclamó la independencia de México.",
+            "HISTORIA: El Tratado de Guadalupe Hidalgo (1848) cedió más de la mitad del territorio a EE.UU.",
+            "HISTORIA: Benito Juárez promulgó las Leyes de Reforma (separación Iglesia-Estado).",
+
+            "BIOLOGÍA: La célula es la unidad básica, estructural y funcional de los seres vivos.",
+            "BIOLOGÍA: La mitocondria es el organelo encargado de la respiración celular (generar energía).",
+            "BIOLOGÍA: El núcleo celular contiene el material genético (ADN).",
+            "BIOLOGÍA: Los cloroplastos realizan la fotosíntesis en las células vegetales.",
+            "BIOLOGÍA: La mitosis es la división celular que genera células idénticas (crecimiento).",
+            "BIOLOGÍA: La meiosis genera gametos (células sexuales) con la mitad de cromosomas.",
+            "BIOLOGÍA: Charles Darwin propuso la teoría de la Evolución por Selección Natural.",
+            "BIOLOGÍA: Gregor Mendel es considerado el padre de la Genética.",
+            "BIOLOGÍA: La célula eucariota tiene núcleo definido; la procariota NO tiene núcleo.",
+            "BIOLOGÍA: Los organismos autótrofos producen su propio alimento (plantas).",
+            "BIOLOGÍA: Los organismos heterótrofos consumen a otros para obtener energía.",
+            "BIOLOGÍA: El ADN tiene estructura de doble hélice.",
+            "BIOLOGÍA: La biodiversidad es la variedad de vida en la Tierra.",
+            "BIOLOGÍA: El xilema transporta agua en las plantas; el floema transporta nutrientes.",
+            "BIOLOGÍA: La reproducción sexual requiere dos progenitores y genera variabilidad genética.",
+
+            "QUÍMICA: El átomo es la partícula más pequeña de un elemento.",
+            "QUÍMICA: El Número Atómico (Z) indica la cantidad de Protones.",
+            "QUÍMICA: La Masa Atómica (A) es la suma de Protones y Neutrones.",
+            "QUÍMICA: Un catión es un ion con carga positiva (perdió electrones).",
+            "QUÍMICA: Un anión es un ion con carga negativa (ganó electrones).",
+            "QUÍMICA: En la Tabla Periódica, las filas son Periodos y las columnas son Familias (Grupos).",
+            "QUÍMICA: El pH 7 es neutro. Menor a 7 es ácido, mayor a 7 es base (alcalino).",
+            "QUÍMICA: La oxidación es la pérdida de electrones.",
+            "QUÍMICA: La reducción es la ganancia de electrones.",
+            "QUÍMICA: El enlace iónico se da por transferencia de electrones (Metal + No Metal).",
+            "QUÍMICA: El enlace covalente se da por compartición de electrones (No Metal + No Metal).",
+            "QUÍMICA: La fórmula del agua es H2O (2 átomos de Hidrógeno y 1 de Oxígeno).",
+            "QUÍMICA: La Ley de Lavoisier dice: 'La materia no se crea ni se destruye, solo se transforma'.",
+            "QUÍMICA: Una mezcla homogénea tiene una sola fase visible (ej. agua con sal).",
+            "QUÍMICA: Una mezcla heterogénea tiene fases distinguibles (ej. agua con aceite).",
+
+            "ESPAÑOL: La metáfora es una comparación directa sin nexos (Tus ojos son el mar).",
+            "ESPAÑOL: El símil es una comparación usando 'como' (Eres fría como el hielo).",
+            "ESPAÑOL: Las palabras agudas llevan tilde si terminan en n, s o vocal.",
+            "ESPAÑOL: Las palabras graves llevan tilde si NO terminan en n, s o vocal.",
+            "ESPAÑOL: Las palabras esdrújulas SIEMPRE llevan tilde.",
+            "ESPAÑOL: Un sinónimo tiene significado igual o similar; un antónimo, lo opuesto.",
+            "ESPAÑOL: El sujeto tácito (o morfológico) no está escrito, pero se infiere.",
+            "ESPAÑOL: El predicado es lo que se dice del sujeto (incluye el verbo).",
+            "ESPAÑOL: Nexos adversativos indican oposición (pero, sin embargo, no obstante).",
+            "ESPAÑOL: Nexos causales indican motivo (porque, debido a que).",
+            "ESPAÑOL: La ficha bibliográfica registra datos de libros; la hemerográfica, de revistas/periódicos.",
+            "ESPAÑOL: El narrador omnisciente sabe todo lo que piensan y sienten los personajes.",
+            "ESPAÑOL: Una paráfrasis es explicar un texto con tus propias palabras.",
+            "ESPAÑOL: Las oraciones yuxtapuestas se unen por signos de puntuación (, ;).",
+            "ESPAÑOL: Las oraciones coordinadas se unen por nexos (y, o, pero).",
+
+            "FÍSICA: La fórmula de la velocidad es v = d/t (distancia entre tiempo).",
+            "FÍSICA: La Segunda Ley de Newton es F = m·a (Fuerza = masa x aceleración).",
+            "FÍSICA: La Tercera Ley de Newton es Acción y Reacción (a toda acción corresponde una reacción igual y opuesta).",
+            "FÍSICA: La energía cinética es la energía del movimiento.",
+            "FÍSICA: La energía potencial depende de la altura y posición.",
+            "FÍSICA: La densidad se calcula como masa entre volumen (ρ = m/v).",
+            "FÍSICA: La gravedad en la Tierra es aproximadamente 9.8 m/s².",
+            "FÍSICA: El cero absoluto (-273.15°C) es la temperatura más baja posible.",
+            "FÍSICA: La luz se comporta como onda y como partícula.",
+            "FÍSICA: El sonido necesita un medio (aire, agua) para viajar; no viaja en el vacío.",
+            "FÍSICA: La potencia es la rapidez con la que se realiza un trabajo (P = W/t).",
+            "FÍSICA: Un vector tiene magnitud, dirección y sentido.",
+
+            "GEOGRAFÍA: La Latitud mide la distancia al Ecuador (Norte/Sur).",
+            "GEOGRAFÍA: La Longitud mide la distancia al Meridiano de Greenwich (Este/Oeste).",
+            "GEOGRAFÍA: Las placas tectónicas causan sismos y vulcanismo al moverse.",
+            "GEOGRAFÍA: La atmósfera es la capa de gases que rodea la Tierra.",
+            "GEOGRAFÍA: La hidrósfera es la capa de agua (océanos, ríos, lagos).",
+            "GEOGRAFÍA: La migración es el movimiento de población de un lugar a otro.",
+            "GEOGRAFÍA: El PIB (Producto Interno Bruto) mide la riqueza producida por un país.",
+            "GEOGRAFÍA: La globalización es la interconexión económica y cultural mundial.",
+            
+            "F. CÍVICA: El Poder Ejecutivo lo ejerce el Presidente (administra).",
+            "F. CÍVICA: El Poder Legislativo hace las leyes (Diputados y Senadores).",
+            "F. CÍVICA: El Poder Judicial aplica la justicia (Suprema Corte).",
+            "F. CÍVICA: La democracia es el gobierno donde el poder reside en el pueblo.",
+            "F. CÍVICA: La Constitución es la Ley Suprema de México.",
+            "F. CÍVICA: El voto debe ser libre, secreto y directo.",
+            "F. CÍVICA: La tolerancia es el respeto a las ideas y creencias de los demás."
+        ];
+
+        // 🟢 INICIO 100% ALEATORIO
+        let intelIndex = Math.floor(Math.random() * intelData.length);
+        const intelText = document.getElementById('intel-text');
+        const intelCount = document.getElementById('intel-count');
+        
+        // Frases motivadoras aleatorias
+        const motivationalWords = [
+            "NO TE RINDAS", "SIGUE ADELANTE", "TU PUEDES", "ERES CAPAZ",
+            "RESISTE", "PERSISTE", "CONFIANZA", "VALENTÍA", "ESFUERZO",
+            "DEDICACIÓN", "EL FUTURO ES TUYO", "SIN MIEDO", "VAMOS CON TODO",
+            "HAZLO POR TI", "CREE EN TI", "CONSTANCIA", "SUPERACIÓN",
+            "DISCIPLINA", "ENFOQUE", "META CLARA", "NO PARES", "LUCHA",
+            "SUEÑA GRANDE", "TRIUNFA", "ÉXITO TOTAL", "ERES EL MEJOR",
+            "TODO ES POSIBLE", "INQUEBRANTABLE", "FUERZA", "VOLUNTAD"
+        ];
+
+        function typeWriter(text, i, fnCallback) {
+            if (i < text.length) {
+                // Separa la materia del contenido para colorear
+                let formattedText = text;
+                if (text.includes(':')) {
+                    const parts = text.split(':');
+                    const materia = parts[0];
+                    const resto = parts.slice(1).join(':');
+                    
+                    // Solo coloreamos lo que ya se escribió
+                    let visiblePart = text.substring(0, i+1);
+                    
+                    if (i >= materia.length) {
+                        intelText.innerHTML = `<span class="highlight-materia">${materia}:</span>${text.substring(materia.length + 1, i+1)}`;
+                    } else {
+                        intelText.innerHTML = visiblePart;
+                    }
+                } else {
+                    intelText.innerHTML = text.substring(0, i+1);
+                }
+                
+                setTimeout(() => typeWriter(text, i + 1, fnCallback), 30);
+            } else if (typeof fnCallback == 'function') {
+                setTimeout(fnCallback, 8000); // 8 segundos de espera
+            }
+        }
+
+        // --- ⚡ LÓGICA CORREGIDA: EFECTO DESTRUCTOR (WIPE) ---
+        function startDecryption() {
+            if (!intelText) return;
+            
+            // Selección Aleatoria del Siguiente (Sin repetir)
+            let nextIndex;
+            do {
+                nextIndex = Math.floor(Math.random() * intelData.length);
+            } while (nextIndex === intelIndex);
+            
+            intelIndex = nextIndex;
+            
+            // Efecto de desvanecimiento/glitch rápido antes de cambiar
+            const originalText = intelText.innerText;
+            const glitchChars = '!<>-_\\/[]{}—=+*^?#________';
+            
+            let steps = 0;
+            const scrambleInterval = setInterval(() => {
+                intelText.innerText = originalText.split('').map(char => 
+                    Math.random() > 0.5 ? glitchChars[Math.floor(Math.random() * glitchChars.length)] : char
+                ).join('');
+                
+                steps++;
+                if(steps > 5) { // Corto glitch
+                    clearInterval(scrambleInterval);
+                    intelCount.innerText = (intelIndex + 1).toString().padStart(3, '0');
+                    intelText.innerHTML = ''; // Limpiar
+                    typeWriter(intelData[intelIndex], 0, startDecryption); // Escribir nuevo
+                }
+            }, 50);
+        }
+
+        // Iniciar la secuencia al cargar
+        document.addEventListener('DOMContentLoaded', () => {
+            if(intelCount) intelCount.innerText = (intelIndex + 1).toString().padStart(3, '0');
+            typeWriter(intelData[intelIndex], 0, startDecryption);
+        });
+
+        // --- SISTEMAS VISUALES EXISTENTES ---
         AOS.init({ duration: 800, once: true, offset: 100 });
 
-        // 2. PRELOADER REALISTA
+        // 🔥 LOGICA DEL PRELOADER MOTIVACIONAL 🔥
         let progress = 0;
         const loaderFill = document.getElementById('loader-fill');
         const loaderPercent = document.getElementById('loader-percent');
         const preloader = document.getElementById('preloader');
+        const motivationContainer = document.getElementById('motivation-container');
 
-        const interval = setInterval(() => {
-            progress += Math.floor(Math.random() * 5) + 2; 
+        // Función para crear palabras flotantes
+        function spawnMotivationWord() {
+            const word = document.createElement('div');
+            word.classList.add('moti-word');
+            word.innerText = motivationalWords[Math.floor(Math.random() * motivationalWords.length)];
+            
+            // Posición aleatoria
+            const left = Math.random() * 90 + 5; // 5% a 95%
+            const top = Math.random() * 90 + 5;
+            const size = Math.random() * 1.5 + 0.8; // Tamaño variable
+            
+            word.style.left = `${left}%`;
+            word.style.top = `${top}%`;
+            word.style.fontSize = `${size}rem`;
+            
+            motivationContainer.appendChild(word);
+            
+            // Eliminar después de la animación
+            // 🔥 CAMBIO: Ajustar tiempo de remoción al tiempo de animación (6s) 🔥
+            setTimeout(() => { word.remove(); }, 6000); 
+        }
+
+        const intervalL = setInterval(() => {
+            progress += Math.floor(Math.random() * 3) + 1; 
             if (progress > 100) progress = 100;
             
             loaderFill.style.width = `${progress}%`;
             loaderPercent.innerText = `${progress}%`;
 
+            // Generar palabras aleatoriamente mientras carga
+            if (Math.random() > 0.7) spawnMotivationWord();
+
             if (progress === 100) {
-                clearInterval(interval);
+                clearInterval(intervalL);
                 setTimeout(() => {
                     preloader.style.opacity = '0';
                     preloader.style.visibility = 'hidden';
-                }, 500);
+                }, 800); // Un poco más de tiempo al final
             }
-        }, 50);
+        }, 60);
 
-        // 3. CURSOR
         const cursorDot = document.getElementById("cursor-dot");
         const cursorOutline = document.getElementById("cursor-outline");
         window.addEventListener("mousemove", function (e) {
@@ -425,7 +720,6 @@
             cursorOutline.animate({ left: `${posX}px`, top: `${posY}px` }, { duration: 500, fill: "forwards" });
         });
 
-        // 4. SPOTLIGHT
         function handleMouseMove(e) {
             const cards = document.getElementsByClassName("spotlight-card");
             for(const card of cards) {
@@ -435,26 +729,21 @@
             }
         }
 
-        // 5. PARTICLES
         particlesJS('particles-js', {
             "particles": { "number": { "value": 60 }, "color": { "value": "#ffffff" }, "opacity": { "value": 0.3, "random": true }, "size": { "value": 2, "random": true }, "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.2, "width": 1 }, "move": { "enable": true, "speed": 1.5 } }, "interactivity": { "detect_on": "window", "events": { "onhover": { "enable": true, "mode": "grab" } } }
         });
 
-        // 6. TYPED
         new Typed('#typed-title', {
             strings: ['ECOEMS CCSMX.', 'TU FUTURO.', 'TU MISIÓN.'],
             typeSpeed: 60, backSpeed: 40, loop: true, showCursor: true, cursorChar: '_',
         });
 
-        // 7. FLASH & COOKIES
         document.addEventListener('DOMContentLoaded', () => {
-            // Flash Messages
             const msgs = document.querySelectorAll('.flash-message');
             msgs.forEach((m, i) => {
                 setTimeout(() => { m.classList.remove('translate-y-10', 'opacity-0'); setTimeout(() => { m.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => m.remove(), 500); }, 5000); }, i * 200);
             });
 
-            // Cookie Logic
             const cookieBanner = document.getElementById('cookie-banner');
             if (!localStorage.getItem('ecoems_cookies_accepted')) {
                 setTimeout(() => { cookieBanner.classList.remove('translate-y-[150%]'); }, 2500);
@@ -464,7 +753,6 @@
                 cookieBanner.classList.add('translate-y-[150%]');
             });
 
-            // 8. CINTILLO AUTO-CLOSE (2 VUELTAS)
             const newsBar = document.getElementById('breaking-news-bar');
             const newsText = document.getElementById('marquee-text');
             if(newsBar && newsText) {
@@ -477,7 +765,6 @@
             }
         });
 
-        // FUNCIÓN CERRAR NOTICIAS
         function closeNews() {
             const bar = document.getElementById('breaking-news-bar');
             if(bar) {
@@ -487,7 +774,6 @@
             }
         }
 
-        // 9. CONTADOR DINÁMICO (Lee config de DB)
         const dbDate = "{{ config.next_exam_date if config and config.next_exam_date else '2026-01-30T00:00' }}";
         const targetDate = new Date(dbDate).getTime();
 

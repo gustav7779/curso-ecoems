@@ -1,126 +1,250 @@
 {% extends "base.html" %}
 
-{% block title %}Reportar Problema{% endblock %}
+{% block title %}Reportar Incidencia | Soporte{% endblock %}
 
 {% block content %}
-    <div class="container report-form-container"> 
-        <div class="card form-card">
-            <h2 class="card-title">🛠️ Reportar un Problema</h2>
-            <p class="form-meta">Por favor, describe el problema o falla que estás experimentando. Si es posible, adjunta una captura de pantalla.</p>
 
-            <form method="POST" enctype="multipart/form-data" class="report-form">
-                
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+    /* VARIABLES LOCALES (Cyberpunk) */
+    :root {
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(0, 0, 0, 0.4);
+        --neon-red: #ef4444;
+        --neon-blue: #3b82f6;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .report-wrapper {
+        min-height: 85vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* TARJETA DE CRISTAL */
+    .cyber-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 40px;
+        width: 100%;
+        max-width: 600px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        z-index: 10;
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ENCABEZADO */
+    .card-header {
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .card-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 10px;
+        letter-spacing: -1px;
+    }
+    .form-meta {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    /* INPUTS MODERNOS */
+    .form-group { margin-bottom: 25px; }
+    
+    .cyber-label {
+        display: block;
+        color: #cbd5e1;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .cyber-input {
+        width: 100%;
+        background: var(--input-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 15px;
+        color: white;
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    .cyber-input:focus {
+        outline: none;
+        border-color: var(--neon-red);
+        background: rgba(0, 0, 0, 0.6);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+    }
+    .cyber-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+    /* INPUT FILE PERSONALIZADO */
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+    }
+    .file-input-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+    .file-custom-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px dashed var(--glass-border);
+        color: #94a3b8;
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        transition: all 0.3s;
+        display: block;
+        cursor: pointer;
+    }
+    .file-input-wrapper:hover .file-custom-btn {
+        border-color: var(--neon-red);
+        color: white;
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* BOTONES */
+    .btn-cyber-submit {
+        width: 100%;
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+        margin-top: 10px;
+    }
+    .btn-cyber-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 40px rgba(239, 68, 68, 0.5);
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-top: 20px;
+        transition: color 0.3s;
+        font-weight: 600;
+    }
+    .btn-back:hover { color: white; }
+
+    /* DECORACIÓN DE FONDO */
+    .bg-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.4;
+        z-index: 0;
+    }
+    .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #ef4444; }
+    .blob-2 { bottom: -10%; right: -10%; width: 300px; height: 300px; background: #3b82f6; }
+
+</style>
+
+<div class="report-wrapper">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="flex flex-col items-center w-full z-10">
+        
+        <div class="cyber-card">
+            <div class="card-header">
+                <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                    <i class="fas fa-life-ring text-3xl text-red-500"></i>
+                </div>
+                <h2 class="card-title">Reportar Incidencia</h2>
+                <p class="form-meta">
+                    ¿Algo no funciona bien? Describe el error para que nuestro equipo técnico lo solucione de inmediato.
+                </p>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-group">
-                    <label for="title">Título/Asunto:</label>
-                    <input type="text" id="title" name="title" placeholder="Ej: No puedo ver las opciones de la Pregunta 5" required>
+                    <label for="title" class="cyber-label"><i class="fas fa-heading mr-2"></i> Asunto</label>
+                    <input type="text" id="title" name="title" class="cyber-input" 
+                           placeholder="Ej: Error al cargar imágenes en Examen 2" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="description">Descripción del Problema:</label>
-                    <textarea id="description" name="description" rows="6" placeholder="Describe exactamente lo que hiciste y el error que apareció." required></textarea>
+                    <label for="description" class="cyber-label"><i class="fas fa-align-left mr-2"></i> Detalles del Error</label>
+                    <textarea id="description" name="description" rows="5" class="cyber-input" 
+                              placeholder="Describe paso a paso qué estabas haciendo cuando ocurrió el error..." required></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="image_file">Adjuntar Imagen/Captura (Opcional):</label>
-                    <input type="file" id="image_file" name="image_file" accept="image/*">
+                    <label class="cyber-label"><i class="fas fa-camera mr-2"></i> Evidencia (Opcional)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="image_file" name="image_file" accept="image/*" onchange="updateFileName(this)">
+                        <div class="file-custom-btn" id="file-label">
+                            <i class="fas fa-cloud-upload-alt text-2xl mb-2"></i><br>
+                            Click para subir captura de pantalla
+                        </div>
+                    </div>
                 </div>
                 
-                <button type="submit" class="button submit-button report-btn">Enviar Reporte</button>
+                <button type="submit" class="btn-cyber-submit">
+                    <i class="fas fa-paper-plane mr-2"></i> Enviar Reporte
+                </button>
             </form>
         </div>
 
-        <a href="{{ url_for('dashboard') }}" class="btn back-nav-btn">⬅ Volver al Dashboard</a>
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Cancelar y volver al Panel
+        </a>
     </div>
+</div>
 
-    <style>
-        /* --- Contenedor y Tarjeta Base --- */
-        .report-form-container {
-            max-width: 700px;
-            margin: 30px auto;
+<script>
+    function updateFileName(input) {
+        const label = document.getElementById('file-label');
+        if (input.files && input.files[0]) {
+            label.innerHTML = `<i class="fas fa-check-circle text-green-500 text-2xl mb-2"></i><br><span class="text-white">${input.files[0].name}</span>`;
+            label.style.borderColor = '#10b981';
+            label.style.background = 'rgba(16, 185, 129, 0.1)';
         }
+    }
+</script>
 
-        .form-card {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-title {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #e74c3c; /* Rojo de soporte */
-        }
-        
-        .form-meta {
-            font-size: 0.95em;
-            color: #555;
-            margin-bottom: 20px;
-            border-bottom: 1px dashed #f0f0f0;
-            padding-bottom: 15px;
-        }
-
-        /* --- Estructura del Formulario --- */
-        .form-group { 
-            margin-bottom: 20px; 
-        }
-
-        .form-group label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: bold; 
-            color: var(--color-texto);
-        }
-        
-        /* Botón de Enviar Reporte */
-        .report-btn { 
-            display: block;
-            width: 100%;
-            padding: 12px; 
-            margin-top: 10px;
-            background: #e74c3c; 
-            color: white;
-            border: none;
-            border-radius: 6px; 
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1.1em;
-            transition: background 0.3s;
-        }
-        .report-btn:hover {
-            background: #c0392b;
-        }
-
-        /* --- Estilos Mejorados para Volver al Panel (back-nav-btn) --- */
-        .back-nav-btn {
-            margin-top: 25px;
-            display: inline-block;
-            background: #7f8c8d; /* Gris de navegación */
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            transition: background 0.3s, transform 0.2s;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .back-nav-btn:hover {
-            background: #5c6a74; /* Gris oscuro al pasar el ratón */
-            transform: translateX(-3px); /* Pequeño desplazamiento para indicar navegación */
-        }
-
-
-        /* --- MEDIA QUERY (Ajustes finos para móvil) --- */
-        @media (max-width: 600px) {
-            .report-form-container {
-                width: 100%;
-                margin: 10px auto;
-            }
-            .form-card {
-                padding: 15px;
-            }
-        }
-    </style>
 {% endblock %}

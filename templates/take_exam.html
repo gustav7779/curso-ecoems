@@ -7,24 +7,40 @@
 {% block content %}
 
 {# ========================================================= #}
-{# 🎨 1. ESTILOS VISUALES (MODO ZEN + ALERTAS PRO) 🎨 #}
+{# 🎨 1. ESTILOS VISUALES (CYBERPUNK / MODO OSCURO FORZADO) 🎨 #}
 {# ========================================================= #}
 <style>
     /* Ocultar interfaz global para evitar distracciones */
     header, footer, .navbar, .sidebar { display: none !important; }
     
     :root {
-        --bg-body: #f3f4f6; --bg-tarjeta: #ffffff; --color-texto: #1f2937;
-        --color-texto-sec: #6b7280; --borde-color: #e5e7eb; --input-bg: #f9fafb;
-        --primary: #3b82f6; --danger: #ef4444; --warning: #f59e0b; --success: #10b981;
-        --font-main: 'Inter', system-ui, sans-serif;
+        /* PALETA CYBERPUNK / DARK FORCE */
+        --bg-body: #020617;       /* Slate 950 - Fondo casi negro */
+        --bg-tarjeta: #0f172a;    /* Slate 900 - Tarjetas oscuras */
+        --color-texto: #f1f5f9;   /* Slate 100 - Texto casi blanco */
+        --color-texto-sec: #94a3b8; /* Slate 400 - Texto secundario */
+        --borde-color: #1e293b;   /* Slate 800 - Bordes sutiles */
+        --input-bg: #1e293b;      /* Slate 800 - Fondo inputs */
+        
+        --primary: #06b6d4;       /* Cyan 500 - Neón principal */
+        --primary-glow: rgba(6, 182, 212, 0.4);
+        
+        --danger: #ef4444;        /* Red 500 */
+        --warning: #f59e0b;       /* Amber 500 */
+        --success: #10b981;       /* Emerald 500 */
+        
+        --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+        --shadow-neon: 0 0 10px rgba(6, 182, 212, 0.1);
     }
-    body.dark-mode {
-        --bg-body: #0f172a; --bg-tarjeta: #1e293b; --color-texto: #f3f4f6;
-        --color-texto-sec: #9ca3af; --borde-color: #374151; --input-bg: #020617;
-        --primary: #60a5fa;
+
+    /* Forzar estilos oscuros en todo el body siempre */
+    body { 
+        background-color: var(--bg-body); 
+        color: var(--color-texto); 
+        font-family: var(--font-main); 
+        min-height: 100vh; 
+        overflow-x: hidden; 
     }
-    body { background-color: var(--bg-body); color: var(--color-texto); font-family: var(--font-main); min-height: 100vh; overflow-x: hidden; }
 
     /* LAYOUT GENERAL */
     .exam-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; }
@@ -32,17 +48,21 @@
     /* HEADER FLOTANTE (STICKY) */
     .sticky-header {
         position: sticky; top: 15px; z-index: 100;
-        background: var(--bg-tarjeta); padding: 12px 25px;
-        border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        background: rgba(15, 23, 42, 0.9); /* Transparencia oscura */
+        padding: 12px 25px;
+        border-radius: 9999px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         display: flex; justify-content: space-between; align-items: center;
         border: 1px solid var(--borde-color); margin-bottom: 40px;
         backdrop-filter: blur(10px);
     }
+    
     .timer-badge {
         font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: 800;
         color: var(--primary); background: var(--input-bg);
-        padding: 5px 20px; border-radius: 30px; border: 1px solid var(--borde-color);
+        padding: 5px 20px; border-radius: 30px; border: 1px solid var(--primary);
         display: flex; align-items: center; gap: 10px;
+        box-shadow: 0 0 10px var(--primary-glow);
     }
     .parpadeo { animation: blink-red 1s infinite; color: #fff !important; background: var(--danger) !important; border-color: var(--danger); }
     @keyframes blink-red { 50% { opacity: 0.7; } }
@@ -55,7 +75,7 @@
         border: 1px solid var(--borde-color); background: var(--bg-tarjeta);
         color: var(--color-texto-sec);
     }
-    .net-badge:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .net-badge:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(255,255,255,0.1); border-color: var(--primary); }
     
     /* Estados de Color */
     .net-good { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: #10b981; }
@@ -69,31 +89,32 @@
     /* TARJETAS DE PREGUNTAS */
     .question-card {
         background: var(--bg-tarjeta); border: 1px solid var(--borde-color);
-        border-radius: 20px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        border-radius: 20px; padding: 40px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
         margin-bottom: 30px; position: relative; animation: slideUp 0.4s ease-out;
     }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
     .question-badge {
-        position: absolute; top: -15px; left: -15px; background: var(--primary); color: white;
+        position: absolute; top: -15px; left: -15px; background: var(--primary); color: #000;
         width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center;
-        justify-content: center; font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        justify-content: center; font-weight: 900; font-size: 1.2rem; 
+        box-shadow: 0 0 15px var(--primary-glow);
     }
-    .question-text { font-size: 1.4rem; font-weight: 600; line-height: 1.5; margin: 25px 0; }
+    .question-text { font-size: 1.4rem; font-weight: 600; line-height: 1.5; margin: 25px 0; color: #fff; }
 
     /* OPCIONES DE RESPUESTA */
     .option-label {
         display: flex !important; align-items: center; padding: 18px; margin-bottom: 12px;
-        background: var(--input-bg); border: 2px solid transparent; border-radius: 12px;
+        background: var(--input-bg); border: 2px solid var(--borde-color); border-radius: 12px;
         cursor: pointer; transition: all 0.2s;
     }
-    .option-label:hover { border-color: var(--primary); background: var(--bg-tarjeta); transform: translateX(5px); }
-    .option-label:has(input:checked) { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); font-weight: bold; }
+    .option-label:hover { border-color: var(--primary); background: #1e293b; transform: translateX(5px); box-shadow: 0 0 10px var(--primary-glow); }
+    .option-label:has(input:checked) { border-color: var(--primary); background: rgba(6, 182, 212, 0.1); font-weight: bold; }
     .option-circle {
         width: 35px; height: 35px; border-radius: 50%; border: 2px solid var(--borde-color);
-        display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; color: var(--color-texto-sec); background: var(--bg-tarjeta);
+        display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; color: var(--color-texto-sec); background: var(--bg-body);
     }
-    .option-label input:checked + .option-circle { background: var(--primary); border-color: var(--primary); color: white; }
+    .option-label input:checked + .option-circle { background: var(--primary); border-color: var(--primary); color: #000; }
 
     /* SIDEBAR / MAPA DE PREGUNTAS */
     .map-sidebar {
@@ -105,8 +126,9 @@
         background: var(--input-bg); border: 1px solid var(--borde-color); border-radius: 10px;
         color: var(--color-texto-sec); text-decoration: none; font-weight: bold; transition: all 0.2s;
     }
-    .map-btn.answered { background: var(--success); color: white; border-color: var(--success); }
-    .map-btn.flagged { background: var(--warning); color: white; border-color: var(--warning); }
+    .map-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .map-btn.answered { background: var(--success); color: #000; border-color: var(--success); }
+    .map-btn.flagged { background: var(--warning); color: #000; border-color: var(--warning); }
 
     /* 🔥 NOTIFICACIONES FLOTANTES (TOASTS) 🔥 */
     #exam-toast-container {
@@ -114,25 +136,24 @@
         display: flex; flex-direction: column-reverse; gap: 15px; pointer-events: none; width: 90%; max-width: 450px;
     }
     .modern-toast {
-        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-        color: #1f2937; padding: 20px; border-radius: 15px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.25); border-left: 8px solid;
+        background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px);
+        color: #fff; padding: 20px; border-radius: 15px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.5); border-left: 6px solid;
         display: flex; align-items: flex-start; gap: 15px;
         animation: popUp 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); pointer-events: auto;
+        border: 1px solid var(--borde-color);
     }
-    body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.95); color: #fff; }
     
     @keyframes popUp { from { transform: translateY(50px) scale(0.8); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
     
     .toast-icon { font-size: 2rem; }
     .toast-content { display: flex; flex-direction: column; }
     .toast-title { font-weight: 900; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 4px; letter-spacing: 1px; }
-    .toast-msg { font-size: 1.1rem; line-height: 1.3; font-weight: 500; }
+    .toast-msg { font-size: 1.1rem; line-height: 1.3; font-weight: 500; color: #cbd5e1; }
     
     @media (max-width: 768px) {
         #exam-toast-container { top: 10px !important; bottom: auto !important; flex-direction: column; width: 95%; }
-        .modern-toast { padding: 10px 15px; border-radius: 10px; background: rgba(255, 255, 255, 0.9); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        body.dark-mode .modern-toast { background: rgba(30, 41, 59, 0.9); }
+        .modern-toast { padding: 10px 15px; border-radius: 10px; }
         .toast-icon { font-size: 1.2rem; }
         .toast-title { font-size: 0.8rem; margin-bottom: 2px; }
         .toast-msg { font-size: 0.9rem; line-height: 1.2; }
@@ -151,29 +172,29 @@
     .welcome-card {
         background: var(--bg-tarjeta); padding: 50px; border-radius: 30px; text-align: center;
         max-width: 700px; width: 100%; border: 1px solid var(--borde-color);
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: zoomIn 0.4s;
+        box-shadow: 0 0 50px rgba(6, 182, 212, 0.2); animation: zoomIn 0.4s;
     }
     
     /* Cancelación Dramática */
     .cancel-card {
-        background: #fff1f2; color: #881337; padding: 60px 40px; border-radius: 30px; text-align: center;
-        max-width: 800px; width: 100%; border: 10px solid #ef4444;
-        box-shadow: 0 0 100px rgba(239, 68, 68, 0.8); animation: shake 0.5s;
+        background: #2b0b14; color: #fda4af; padding: 60px 40px; border-radius: 30px; text-align: center;
+        max-width: 800px; width: 100%; border: 4px solid #ef4444;
+        box-shadow: 0 0 100px rgba(239, 68, 68, 0.4); animation: shake 0.5s;
     }
     @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10px);} 75% {transform: translateX(10px);} }
 
-    /* ESTILOS DEL TELÓN DE PAUSA GLOBAL (NUEVO) */
+    /* ESTILOS DEL TELÓN DE PAUSA GLOBAL */
     #global-pause-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(44, 62, 80, 0.98); /* Oscuro casi total */
+        background: rgba(2, 6, 23, 0.98);
         backdrop-filter: blur(10px);
-        z-index: 9999; /* Por encima de TODO */
+        z-index: 9999;
         justify-content: center; align-items: center; text-align: center;
         flex-direction: column; color: white;
     }
-    .pause-icon { font-size: 5rem; color: #3498db; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+    .pause-icon { font-size: 5rem; color: #06b6d4; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
     .pause-content h2 { font-size: 2.5rem; margin: 0; font-weight: 800; letter-spacing: 1px; }
-    .pulse-loader { width: 50px; height: 50px; background: #3498db; border-radius: 50%; margin-top: 30px; animation: ping 1s infinite; }
+    .pulse-loader { width: 50px; height: 50px; background: #06b6d4; border-radius: 50%; margin-top: 30px; animation: ping 1s infinite; }
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
 
@@ -183,10 +204,63 @@
     .btn:active { transform: scale(0.95); }
     
     /* Modo Lectura */
-    .img-zoom-container { text-align: center; margin: 20px 0; background: var(--input-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); }
-    .img-zoom-container img { max-height: 250px; max-width: 100%; border-radius: 4px; cursor: zoom-in; }
-    .reading-scroll-container { height: 75vh !important; overflow-y: auto; background: var(--bg-tarjeta) !important; border: 4px solid var(--primary); z-index: 50; position: relative; padding: 10px; box-shadow: var(--shadow-lg); }
+    .reading-scroll-container { height: 75vh !important; overflow-y: auto; background: var(--bg-tarjeta) !important; border: 2px solid var(--primary); z-index: 50; position: relative; padding: 10px; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
     .reading-scroll-container img { max-height: none !important; width: 100% !important; cursor: zoom-out; }
+
+    /* --- ESTILOS DE GALERÍA TÁCTICA --- */
+    .img-zoom-container { position: relative; cursor: pointer; transition: transform 0.2s; }
+    .img-zoom-container:hover { transform: scale(1.01); }
+    .main-exam-image { border-radius: 12px; border: 1px solid var(--borde-color); max-height: 300px; width: auto; max-width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    
+    .gallery-indicator {
+        margin-top: 8px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; 
+        padding: 8px; border-radius: 8px; font-size: 0.9rem; font-weight: bold;
+        border: 1px solid rgba(59, 130, 246, 0.4); display: inline-block;
+    }
+    .zoom-hint { margin-top: 5px; font-size: 0.8rem; color: var(--color-texto-sec); }
+    
+    /* Lightbox (Visor) */
+    .lightbox-overlay {
+        position: fixed; z-index: 12000; /* Encima de todo */
+        left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.95); backdrop-filter: blur(10px);
+        display: flex; justify-content: center; align-items: center; flex-direction: column;
+    }
+    .lightbox-content {
+        position: relative; width: 90%; height: 80%; display: flex; justify-content: center; align-items: center; overflow: hidden;
+    }
+    #lightbox-img {
+        max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.2s ease; cursor: grab;
+    }
+    #lightbox-img:active { cursor: grabbing; }
+    
+    /* Botones */
+    .close-btn { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 12001; }
+    .prev-btn, .next-btn {
+        cursor: pointer; position: absolute; top: 50%; width: auto; padding: 16px; margin-top: -50px;
+        color: white; font-weight: bold; font-size: 30px; transition: 0.3s; user-select: none;
+        background: rgba(0,0,0,0.5); border-radius: 50%;
+    }
+    .prev-btn { left: 20px; } .next-btn { right: 20px; }
+    .prev-btn:hover, .next-btn:hover { background-color: var(--primary); }
+    
+    .gallery-counter { color: #f2f2f2; font-size: 1.2rem; margin-top: 10px; font-family: monospace; }
+    
+    .zoom-controls {
+        position: absolute; bottom: 30px; display: flex; gap: 10px; z-index: 12002;
+    }
+    .zoom-controls button {
+        background: rgba(255,255,255,0.1); border: 1px solid white; color: white;
+        width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem;
+    }
+    .zoom-controls button:hover { background: var(--primary); border-color: var(--primary); }
+    /* 🛡️ ESCUDO ANTI-COPIA */
+    .question-text, .option-label {
+        -webkit-user-select: none; /* Safari */
+        -moz-user-select: none;    /* Firefox */
+        -ms-user-select: none;     /* IE10+/Edge */
+        user-select: none;         /* Standard */
+    }
 </style>
 
 {# ========================================================= #}
@@ -196,7 +270,7 @@
 {% if is_locked %}
     {# --- ESCENARIO A: SALA DE ESPERA (TIME LOCKED) --- #}
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body);">
-        <div style="background: var(--bg-tarjeta); padding: 50px; border-radius: 24px; text-align: center; max-width: 600px; width: 90%; box-shadow: var(--shadow-lg); border-top: 6px solid var(--primary);">
+        <div style="background: var(--bg-tarjeta); padding: 50px; border-radius: 24px; text-align: center; max-width: 600px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border-top: 4px solid var(--primary);">
             <div style="font-size: 4.5rem; margin-bottom: 25px; animation: bounce 2s infinite;">⏳</div>
             <h1 style="font-size: 2.2rem; margin-bottom: 15px; font-weight: 900; color: var(--color-texto);">Sala de Espera</h1>
             <p style="color: var(--color-texto-sec); margin-bottom: 35px; font-size: 1.1rem;">
@@ -211,7 +285,7 @@
                 <div class="time-box-unit" style="border-color: var(--danger);"><span id="segundos" style="color: var(--danger);">00</span><small>SEG</small></div>
             </div>
 
-            <div style="height: 8px; background: var(--input-bg); border-radius: 10px; overflow: hidden;">
+            <div style="height: 4px; background: var(--input-bg); border-radius: 10px; overflow: hidden;">
                 <div style="height: 100%; width: 50%; background: var(--primary); animation: loading 2s infinite ease-in-out;"></div>
             </div>
             
@@ -232,7 +306,7 @@
     <script>
         const savedAnswers = {{ saved_answers_dict | tojson | safe }} || {};
         document.addEventListener('DOMContentLoaded', function() {
-            let currentQStartTime = Date.now(); // Hora de inicio de la pregunta actual
+            let currentQStartTime = Date.now(); 
             let startTime = parseInt("{{ start_time_utc | default('0') }}");
             function updateWaitTimer() {
                 const now = Math.floor(Date.now() / 1000);
@@ -256,7 +330,7 @@
     {# --- ESCENARIO B: EXAMEN EN CURSO --- #}
 
     {# 1. Marca de Agua de Seguridad #}
-    <div id="watermark-overlay" style="position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.1; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; overflow: hidden;">
+    <div id="watermark-overlay" style="position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.05; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; overflow: hidden;">
         {% for _ in range(40) %}
         <div style="padding: 60px; transform: rotate(-30deg); font-weight: 900; font-size: 20px; color: var(--color-texto);">
             {{ current_user.username }}
@@ -288,7 +362,7 @@
                 <button id="request-help-btn" class="btn" style="background: #8b5cf6; color: white; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);">
                     🙋‍♂️ Hablar
                 </button>
-                <a href="{{ url_for('new_report') }}" target="_blank" class="btn" style="background: var(--warning); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
+                <a href="{{ url_for('new_report') }}" target="_blank" class="btn" style="background: var(--warning); color: #000; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
                     🚨 Reportar
                 </a>
             </div>
@@ -341,23 +415,32 @@
                         <div class="question-badge">{{ loop.index }}</div>
 
                         <div class="question-header">
-                            <span class="subject-pill" style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 8px; font-size: 0.9em; font-weight: 700;">
+                            <span class="subject-pill" style="background: rgba(6, 182, 212, 0.15); color: var(--primary); padding: 4px 12px; border-radius: 8px; font-size: 0.9em; font-weight: 700; border: 1px solid var(--primary);">
                                 {{ question.subject or 'General' }}
                             </span>
                         </div>
 
                         <p class="question-text">{{ question.text }}</p>
 
+                        {# BLOQUE DE GALERÍA INTELIGENTE REEMPLAZADO #}
                         {% if question.image_filename %}
-                        <div id="img-container-{{ question.id }}" class="img-zoom-container">
+                        <div class="img-zoom-container">
                             <img src="{{ question.image_filename.replace('/upload/', '/upload/f_auto,q_auto/') }}" 
-                                 loading="lazy" draggable="false"
-                                 onclick="toggleReadingMode('{{ question.id }}')">
-                            <div style="font-size:0.85em; color: var(--primary); margin-top: 8px; font-weight: 600;">
-                                <i class="fas fa-search-plus"></i> Clic para ampliar lectura
+                                 class="main-exam-image"
+                                 loading="lazy" 
+                                 onclick="openTacticalGallery(this)"
+                                 data-gallery='{{ question.images if question.images else "[]" }}'>
+                            
+                            {% if question.images and question.images != '[]' and question.images != 'null' %}
+                            <div class="gallery-indicator" onclick="this.previousElementSibling.click()">
+                                <i class="fas fa-layer-group"></i> Ver Galería Completa
                             </div>
+                            {% else %}
+                            <div class="zoom-hint"><i class="fas fa-search-plus"></i> Clic para ampliar</div>
+                            {% endif %}
                         </div>
                         {% endif %}
+                        {# FIN BLOQUE DE GALERÍA #}
 
                         <div style="display: flex; flex-direction: column; gap: 10px;">
                             {% set q_name = 'q' + question.id | string %}
@@ -386,13 +469,13 @@
 
                         <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid var(--borde-color); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
                             {# --- BOTONES DE CONTROL DE PREGUNTA --- #}
-                            <button type="button" class="btn flag-and-next-btn" style="background: var(--warning); color: white;" 
+                            <button type="button" class="btn flag-and-next-btn" style="background: var(--warning); color: #000;" 
                                     onclick="window.toggleFlag('{{ question.id }}')">
                                 🚩 Marcar
                             </button>
 
                             {% if not loop.last %}
-                            <button type="button" class="btn next-question-btn" style="background: var(--primary); color: white; box-shadow: var(--shadow-md);"
+                            <button type="button" class="btn next-question-btn" style="background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary-glow);"
                                     onclick="window.nextQ({{ loop.index }})">
                                 Siguiente Pregunta ➜
                             </button>
@@ -400,7 +483,7 @@
                             <button type="button" class="btn review-mode-btn" style="background: var(--input-bg); color: var(--color-texto); border: 1px solid var(--borde-color); margin-right: 10px;">
                                 🔄 Revisión
                             </button>
-                            <button type="button" class="btn finish-directly-btn" style="background: var(--success); color: white; box-shadow: var(--shadow-md);" onclick="window.finishExam()">
+                            <button type="button" class="btn finish-directly-btn" style="background: var(--success); color: #000; box-shadow: var(--shadow-neon);" onclick="window.finishExam()">
                                 ✅ FINALIZAR EXAMEN
                             </button>
                             {% endif %}
@@ -414,7 +497,7 @@
                             Usa el mapa lateral para navegar a las preguntas pendientes.<br>
                             Cuando estés 100% seguro, presiona el botón de abajo.
                         </p>
-                        <button type="submit" class="btn" id="final-submit-button" style="background: var(--success); color: white; padding: 15px 40px; font-size: 1.2em;">
+                        <button type="submit" class="btn" id="final-submit-button" style="background: var(--success); color: #000; padding: 15px 40px; font-size: 1.2em;">
                             ✅ Entregar Examen Definitivo
                         </button>
                     </div>
@@ -435,7 +518,7 @@
                 Tienes <strong>3 Horas</strong> para completar el examen.<br>
                 <span style="color: var(--warning); font-weight: bold;">⚠️ El monitoreo de IA estará activo.</span>
             </p>
-            <button id="start-exam-button" class="btn" style="background: var(--success); color: white; padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);">
+            <button id="start-exam-button" class="btn" style="background: var(--success); color: #000; padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);">
                 ACTIVAR Y COMENZAR
             </button>
             <p style="margin-top: 20px; font-size: 0.9em; color: var(--color-texto-sec);">
@@ -449,20 +532,20 @@
     <div id="cancellation-overlay" class="fullscreen-overlay" style="display: none;">
         <div class="cancel-card">
             <div style="font-size: 6rem; margin-bottom: 20px;">🚫</div>
-            <h1 style="color: #881337; font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">EXAMEN CANCELADO</h1>
+            <h1 style="color: #ef4444; font-size: 3.5rem; font-weight: 900; margin-bottom: 20px;">EXAMEN CANCELADO</h1>
             <p style="font-size: 1.8rem; margin-bottom: 30px;">Se han detectado múltiples infracciones.</p>
-            <div id="cancellation-reason-display" style="background: white; padding: 20px; border-radius: 12px; font-size: 1.3rem; font-weight: bold; margin-bottom: 30px; color: #ef4444; border: 2px dashed #ef4444;"></div>
+            <div id="cancellation-reason-display" style="background: #1e293b; padding: 20px; border-radius: 12px; font-size: 1.3rem; font-weight: bold; margin-bottom: 30px; color: #ef4444; border: 2px dashed #ef4444;"></div>
             <a href="{{ url_for('dashboard') }}" class="btn" style="background: #1f2937; color: white; padding: 15px 40px; font-size: 1.2rem;">Volver al Inicio</a>
         </div>
     </div>
 
     {# Overlay de Confirmación #}
     <div id="confirm-submit-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
-        <div style="background: var(--bg-tarjeta); padding: 40px; border-radius: 20px; text-align: center; max-width: 450px; border-top: 6px solid var(--warning); box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+        <div style="background: var(--bg-tarjeta); padding: 40px; border-radius: 20px; text-align: center; max-width: 450px; border-top: 6px solid var(--warning); box-shadow: 0 0 50px rgba(0,0,0,0.5);">
             <h2 style="margin-bottom: 15px; font-size: 1.8rem;">¿Entregar Examen?</h2>
             <p style="color: var(--color-texto-sec); margin-bottom: 30px; font-size: 1.1rem;">No podrás cambiar tus respuestas después de enviar.</p>
             <div style="display: flex; gap: 20px; justify-content: center;">
-                <button id="confirm-submit-btn-yes" class="btn" style="background: var(--success); color: white; flex: 1;">Sí, Enviar</button>
+                <button id="confirm-submit-btn-yes" class="btn" style="background: var(--success); color: #000; flex: 1;">Sí, Enviar</button>
                 <button id="confirm-submit-btn-no" class="btn" style="background: var(--danger); color: white; flex: 1;">Cancelar</button>
             </div>
         </div>
@@ -480,20 +563,41 @@
     </div>
 
     {# Chat Flotante #}
-    <div id="student-chat-panel" style="position: fixed; bottom: 30px; right: 30px; width: 350px; height: 450px; background: var(--bg-tarjeta); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid var(--borde-color); display: none; flex-direction: column; z-index: 5000; overflow: hidden;">
-        <div style="padding: 15px; background: var(--primary); color: white; display: flex; justify-content: space-between; font-weight: bold; align-items: center;">
+    <div id="student-chat-panel" style="position: fixed; bottom: 30px; right: 30px; width: 350px; height: 450px; background: var(--bg-tarjeta); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid var(--borde-color); display: none; flex-direction: column; z-index: 5000; overflow: hidden;">
+        <div style="padding: 15px; background: #0f172a; color: var(--primary); display: flex; justify-content: space-between; font-weight: bold; align-items: center; border-bottom: 1px solid var(--borde-color);">
             <span style="display: flex; align-items: center; gap: 8px;"><i class="fas fa-headset"></i> Soporte en Vivo</span>
             <span id="close-chat-button" style="cursor: pointer; padding: 5px; font-size: 1.2rem;">✕</span>
         </div>
         <div id="chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; background: var(--input-bg); font-size: 0.95em; display: flex; flex-direction: column; gap: 10px;"></div>
         <form id="student-chat-form" style="padding: 15px; border-top: 1px solid var(--borde-color); display: flex; gap: 10px; background: var(--bg-tarjeta);">
-            <input type="text" id="student-message-input" placeholder="Escribe tu duda..." required style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); background: var(--input-bg); color: var(--color-texto);">
-            <button type="submit" class="btn" style="background: var(--primary); color: white; padding: 0 15px;"><i class="fas fa-paper-plane"></i></button>
+            <input type="text" id="student-message-input" placeholder="Escribe tu duda..." required style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--borde-color); background: var(--bg-body); color: var(--color-texto);">
+            <button type="submit" class="btn" style="background: var(--primary); color: #000; padding: 0 15px;"><i class="fas fa-paper-plane"></i></button>
         </form>
     </div>
 
     {# Contenedor de Notificaciones #}
     <div id="exam-toast-container"></div>
+
+    {# VISOR LIGHTBOX AGREGADO #}
+    <div id="tactical-lightbox" class="lightbox-overlay" style="display: none;">
+        <span class="close-btn" onclick="closeTacticalGallery()">&times;</span>
+        
+        <div class="lightbox-content">
+            <img id="lightbox-img" src="" alt="Lectura">
+        </div>
+
+        <a class="prev-btn" onclick="changeGalleryImage(-1)">&#10094;</a>
+        <a class="next-btn" onclick="changeGalleryImage(1)">&#10095;</a>
+        
+        <div class="zoom-controls">
+            <button onclick="zoomImage(0.2)"><i class="fas fa-plus"></i></button>
+            <button onclick="zoomImage(-0.2)"><i class="fas fa-minus"></i></button>
+            <button onclick="resetZoom()"><i class="fas fa-compress"></i></button>
+        </div>
+
+        <div id="gallery-counter" class="gallery-counter">1 / 1</div>
+    </div>
+    {# FIN VISOR #}
 
     {# ========================================================= #}
     {# 🔥 CEREBRO JAVASCRIPT ROBUSTO Y COMPLETO 🔥 #}
@@ -508,7 +612,7 @@
 
     <script>
     // --- VARIABLES Y CONFIG ---
-    let currentQStartTime = Date.now(); // Hora de inicio de la pregunta actual (Añadido)
+    let currentQStartTime = Date.now(); 
     const EXAM_ID = parseInt("{{ exam.id }}");
     const USER_ID = parseInt("{{ current_user.id }}");
     const USERNAME = "{{ current_user.username }}";
@@ -525,13 +629,102 @@
     let socket = io.connect(window.location.origin);
     const isMobile = window.innerWidth <= 768;
 
+    // --- 🔭 LÓGICA DEL VISOR TÁCTICO ---
+    let currentGallery = [];
+    let currentIndex = 0;
+    let currentZoom = 1;
+    // 🚨 BANDERA DE SEGURIDAD: Evita que te expulsen por ver la imagen
+    let isViewingImage = false; 
+
+    function openTacticalGallery(imgElement) {
+        const rawGallery = imgElement.getAttribute('data-gallery');
+        const mainSrc = imgElement.src;
+        
+        // 1. Activar modo seguro (Pausa la detección de trampas)
+        isViewingImage = true; 
+        
+        // 2. Parsear galería
+        currentGallery = [];
+        if (rawGallery && rawGallery !== '[]' && rawGallery !== 'null' && rawGallery !== 'None') {
+            try {
+                // Convertir strings de python a array JS si es necesario
+                let cleanJson = rawGallery.replace(/'/g, '"'); 
+                currentGallery = JSON.parse(cleanJson);
+            } catch(e) {
+                console.error("Error parseando galería", e);
+                currentGallery = [mainSrc]; // Fallback
+            }
+        }
+        
+        // Si la galería está vacía o falló, usar la imagen principal
+        if (currentGallery.length === 0) currentGallery = [mainSrc];
+        
+        // Asegurar que la imagen principal sea la primera si no está en la lista
+        currentIndex = 0;
+        showImageInLightbox();
+        document.getElementById('tactical-lightbox').style.display = 'flex';
+        
+        // Bloquear scroll de fondo
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeTacticalGallery() {
+        document.getElementById('tactical-lightbox').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        resetZoom();
+        
+        // 🚨 DESACTIVAR MODO SEGURO (Vuelve a vigilar)
+        // Damos un pequeño delay de 500ms para evitar falsos positivos al cerrar
+        setTimeout(() => { isViewingImage = false; }, 500);
+    }
+
+    function showImageInLightbox() {
+        const img = document.getElementById('lightbox-img');
+        // Ajustar ruta si viene relativa
+        let src = currentGallery[currentIndex];
+        if (!src.startsWith('http') && !src.startsWith('/')) src = '/' + src;
+        
+        img.src = src;
+        document.getElementById('gallery-counter').innerText = `${currentIndex + 1} / ${currentGallery.length}`;
+        
+        // Ocultar flechas si solo hay una imagen
+        document.querySelector('.prev-btn').style.display = currentGallery.length > 1 ? 'block' : 'none';
+        document.querySelector('.next-btn').style.display = currentGallery.length > 1 ? 'block' : 'none';
+    }
+
+    function changeGalleryImage(n) {
+        currentIndex += n;
+        if (currentIndex >= currentGallery.length) currentIndex = 0;
+        if (currentIndex < 0) currentIndex = currentGallery.length - 1;
+        showImageInLightbox();
+        resetZoom();
+    }
+
+    // ZOOM TÁCTICO
+    function zoomImage(amount) {
+        currentZoom += amount;
+        if (currentZoom < 0.5) currentZoom = 0.5;
+        if (currentZoom > 4) currentZoom = 4;
+        document.getElementById('lightbox-img').style.transform = `scale(${currentZoom})`;
+    }
+
+    function resetZoom() {
+        currentZoom = 1;
+        document.getElementById('lightbox-img').style.transform = `scale(1)`;
+    }
+
+    // Soporte para Rueda del Mouse
+    document.getElementById('lightbox-img').addEventListener('wheel', function(e) {
+        e.preventDefault();
+        if (e.deltaY < 0) zoomImage(0.1);
+        else zoomImage(-0.1);
+    });
+
     // --- 1. TOASTS PERSONALIZADOS ---
     window.showFloatingNotification = function(msg, type) {
         let container = document.getElementById('exam-toast-container');
         if(!container) return;
         
-        container.innerHTML = ''; 
-
         const toast = document.createElement('div');
         toast.className = `modern-toast toast-${type}`;
         
@@ -555,10 +748,13 @@
     let violations = 0;
     
     document.addEventListener('visibilitychange', () => {
-        if(document.hidden && isExamActive) triggerViolation('TAB_CHANGE', "no cambies de ventana/pestaña o el examen se va a cancelar");
+        if(document.hidden && isExamActive) triggerViolation('TAB_CHANGE', "No cambies de ventana/pestaña.");
     });
 
     window.addEventListener('blur', () => {
+        // 👇👇 AGREGA ESTO AQUÍ 👇👇
+        if (isViewingImage) return; // Si está viendo una imagen, NO reportar falta.
+        
         if(isExamActive) {
             triggerViolation('WINDOW_BLUR', "No salgas de la ventana del examen.");
         }
@@ -580,11 +776,9 @@
     }
 
     // --- 3. INTELIGENCIA ARTIFICIAL ---
-    // A) Audio Ultra-Sensible (Umbral 5)
-    // A) Audio Ultra-Sensible + SONAR REPORT
     let audioCtx = null;
     let analyser = null;
-    const AUDIO_THRESHOLD = 20; // Ajustado para alertas locales
+    const AUDIO_THRESHOLD = 20; 
     let voiceStrikes = 0;
     let lastReportTime = 0;
 
@@ -594,7 +788,7 @@
         try {
             const mic = audioCtx.createMediaStreamSource(stream);
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256; // Tamaño pequeño para rapidez
+            analyser.fftSize = 256; 
             mic.connect(analyser);
             const data = new Uint8Array(analyser.frequencyBinCount);
             
@@ -605,18 +799,13 @@
                 
                 analyser.getByteFrequencyData(data);
                 
-                // Calcular volumen promedio (RMS simplificado)
                 let sum = 0;
-                for(let i = 0; i < data.length; i++) {
-                    sum += data[i];
-                }
-                let average = sum / data.length; // Valor aprox 0 a 100
+                for(let i = 0; i < data.length; i++) { sum += data[i]; }
+                let average = sum / data.length; 
                 
-                // 1. Lógica de Alertas (Local)
                 if(average > AUDIO_THRESHOLD) {
                     voiceStrikes++;
-                    if(voiceStrikes > 40) { // Si el ruido persiste
-                        // window.showFloatingNotification("ruido fuerte detectado", "warning"); // Opcional
+                    if(voiceStrikes > 40) { 
                         socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_VOICE_DETECTED' });
                         voiceStrikes = 0;
                     }
@@ -624,8 +813,7 @@
                     voiceStrikes = Math.max(0, voiceStrikes - 1);
                 }
 
-                // 2. 🔥 REPORTE AL SONAR DEL ADMIN 🔥
-                // Enviamos cada 500ms para no saturar, o si hay un pico repentino
+                // REPORTE SONAR
                 const now = Date.now();
                 if (now - lastReportTime > 500 || (average > 30 && now - lastReportTime > 200)) {
                     socket.emit('report_audio_level', { level: Math.round(average) });
@@ -635,7 +823,7 @@
             }, 100);
         } catch(e) { console.error(e); }
     }
-    // B) Video (Objetos + Rostro)
+
     async function startVideoMonitoring(stream) {
         const video = document.getElementById('ai-video-feed');
         video.srcObject = stream;
@@ -650,19 +838,17 @@
             setInterval(async () => {
                 if(!isExamActive) return;
                 
-                // Celular
                 const objects = await objectModel.detect(video);
                 if(objects.find(p => p.class==='cell phone' && p.score>0.5)) {
-                    window.showFloatingNotification("guarda el celular", "danger");
+                    window.showFloatingNotification("Detectado Celular", "danger");
                     socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_PROHIBITED_OBJECT_PHONE' });
                 }
 
-                // Rostro
                 const faces = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
                 if(faces.length === 0) {
                       faceMissingCount++;
                       if (faceMissingCount % 3 === 0) { 
-                           window.showFloatingNotification("la camara no te esta viendo", "warning");
+                           window.showFloatingNotification("Rostro no visible", "warning");
                            socket.emit('exam_violation', { user_id:USER_ID, exam_id:EXAM_ID, type:'AI_FACE_NOT_VISIBLE' });
                       }
                 } else {
@@ -673,10 +859,10 @@
     }
 
     // --- 4. HERRAMIENTAS DE ADMIN ---
-    
     socket.on('ping', () => { socket.emit('pong', { user_id: USER_ID }); });
 
-    socket.on('execute_system_probe', () => {
+// CAMBIO AQUÍ: De 'execute' a 'request' para coincidir con el monitor
+    socket.on('request_system_probe', () => {
         const info = {
             user_id: USER_ID, username: USERNAME,
             browser: navigator.userAgent,
@@ -687,6 +873,7 @@
             battery: 'Desconocido',
             platform: navigator.platform
         };
+        
         if(navigator.getBattery) {
              navigator.getBattery().then(b => {
                  info.battery = `${Math.round(b.level*100)}% ${b.charging?'⚡':''}`;
@@ -720,12 +907,10 @@
         if(spyActive) socket.emit('stream_console_log', {type:'error', message:`CRITICAL ERROR: ${msg} (Line ${line})`, timestamp:new Date().toLocaleTimeString()});
     };
 
-    // Inyector
     socket.on('execute_injected_code', (d) => {
         try { eval(d.script); showFloatingNotification("Parche aplicado remotamente.", "success"); } catch(e) { console.error("Error inyección:", e); }
     });
 
-    // Comandos
     socket.on('execute_repair', d => { 
         if(d.command === 'reload') window.location.reload(); 
         if(d.command === 'unlock') window.location.reload(); 
@@ -752,18 +937,16 @@
                  if(esVoice) utter.voice = esVoice;
                  window.speechSynthesis.speak(utter);
             }
-            showFloatingNotification("📢 MENSAJE: "+d.payload, "info"); 
+            showFloatingNotification("📢 PROFESOR DICE: "+d.payload, "info"); 
         }
     });
 
-    // Ajuste de Tiempo
     socket.on('time_update', function (data) {
         TIME_ADDED = data.extra_time_sec;
         DURATION = BASE_DUR + TIME_ADDED;
         showFloatingNotification("Tiempo ajustado por el profesor.", "info");
     });
 
-    // 🔥 LISTENER DE PAUSA GLOBAL 🔥
     socket.on('exam_status_change', (data) => {
         if (data.exam_id == EXAM_ID) {
             if (data.status === 'paused') {
@@ -790,7 +973,7 @@
             fetch(START_URL, {method:'POST', body:new URLSearchParams({action:'start_timer_now'}), headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':CSRF}})
             .then(r => { if(r.ok) window.location.reload(); });
         }).catch(e => {
-            Swal.fire("ERROR", "Debes permitir cámara y micrófono.", "error");
+            Swal.fire("ERROR DE PERMISOS", "Debes permitir cámara y micrófono para continuar.", "error");
             if(btn) btn.disabled=false;
         });
     };
@@ -804,45 +987,34 @@
     const cards = document.querySelectorAll('.question-card');
     
    window.nextQ = (idx) => { 
-    // 1. Antes de cambiar, calcular tiempo en la pregunta ANTERIOR (si quisieras guardar al salir)
-    // Por ahora solo reiniciamos el reloj para la nueva
     currentQStartTime = Date.now();
-
     if(cards[currentQ]) cards[currentQ].style.display='none'; 
     if(cards[idx]) cards[idx].style.display='block'; 
     currentQ=idx; 
     window.scrollTo(0,0); 
-};
+    };
 
     // ==========================================
     // 💾 MODO TÚNEL (OFFLINE PERSISTENCE)
     // ==========================================
-    
-    // Claves para LocalStorage
     const STORAGE_KEY_ANSWERS = `exam_${EXAM_ID}_answers`;
     const STORAGE_KEY_PENDING = `exam_${EXAM_ID}_pending`;
 
-    // 1. Cargar respuestas locales al iniciar (Por si refresca sin internet)
     function loadLocalAnswers() {
         try {
             const localData = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
             for (const [qid, val] of Object.entries(localData)) {
-                // Solo llenar si no está marcada ya por el servidor
                 const input = document.querySelector(`input[name="q${qid}"][value="${val}"]`);
                 if (input && !input.checked) {
                     input.checked = true;
-                    // Actualizar mapa visual
                     document.getElementById('map-btn-'+qid)?.classList.add('answered'); 
-                    // Marcar visualmente que es un dato local (opcional: borde amarillo)
                     input.closest('.option-label').style.borderLeft = "4px solid #f59e0b"; 
                 }
             }
-            // Revisar si hay pendientes de subir
             checkSyncStatus();
         } catch(e) { console.error("Error cargando caché local", e); }
     }
 
-    // 2. La Nueva Función de Guardado (Blindada)
     window.autoSave = (qid, val) => {
         // A) Guardar en Disco Local (Inmortalidad)
         try {
@@ -850,33 +1022,29 @@
             answers[qid] = val;
             localStorage.setItem(STORAGE_KEY_ANSWERS, JSON.stringify(answers));
             
-            // Marcar como pendiente de sincronización
             const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
             if (!pending.includes(qid)) {
                 pending.push(qid);
                 localStorage.setItem(STORAGE_KEY_PENDING, JSON.stringify(pending));
             }
             
-            // Feedback visual inmediato
             document.getElementById('map-btn-'+qid)?.classList.add('answered');
             updateSyncIndicator('saving');
 
         } catch(e) { console.error("Error localStorage", e); }
 
-        // Calcular segundos transcurridos
         const now = Date.now();
         const seconds = Math.round((now - currentQStartTime) / 1000);
 
-        // B) Intentar enviar a la Nube (MODIFICADO para enviar time_spent)
+        // B) Intentar enviar a la Nube
         if (navigator.onLine) {
-            sendAnswerToServer(qid, val, seconds); // <--- Agregamos seconds
+            sendAnswerToServer(qid, val, seconds);
         } else {
             updateSyncIndicator('offline');
             showFloatingNotification("Guardado en Modo Túnel (Sin Internet)", "warning");
         }
     };
 
-    // 3. Envío Real al Servidor
     async function sendAnswerToServer(qid, val, seconds = 0) {
         try {
             const response = await fetch(SAVE_URL, {
@@ -897,7 +1065,7 @@
             console.warn("Fallo al subir respuesta, se mantiene en local.");
             updateSyncIndicator('offline');
 
-            // 👇👇 AQUÍ AGREGAS ESTO NUEVO 👇👇
+            // 👇👇 LOG DE ERROR CRÍTICO AGREGADO 👇👇
             fetch('/api/log_error', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -905,11 +1073,10 @@
                     message: `CRÍTICO EXAMEN: Alumno ${USERNAME} no pudo guardar Pregunta ${qid}. Razón: ${error.message}` 
                 })
             });
-            // 👆👆 FIN DE LO NUEVO 👆👆
+            // 👆👆 FIN LOG 👆👆
         }
     }
 
-    // 4. Utilidades del Túnel
     function removeFromPending(qid) {
         let pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
         pending = pending.filter(id => id.toString() !== qid.toString());
@@ -923,34 +1090,42 @@
         else updateSyncIndicator('saved');
     }
 
-    // 5. Sincronizador Automático (Cuando vuelve internet)
     async function syncNow() {
-        if (!navigator.onLine) return;
+        if (!navigator.onLine) {
+            Swal.fire("Sin Internet", "No se puede sincronizar en este momento.", "error");
+            return;
+        }
         
         const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
         const answers = JSON.parse(localStorage.getItem(STORAGE_KEY_ANSWERS) || '{}');
         
-        if (pending.length === 0) return;
+        if (pending.length === 0) {
+            Swal.fire("Todo al día", "No tienes respuestas pendientes de subir.", "success");
+            return;
+        }
 
         updateSyncIndicator('syncing');
-        showFloatingNotification(`Sincronizando ${pending.length} respuestas...`, "info");
+        let count = 0;
 
         // Recorrer cola y enviar
         for (const qid of pending) {
             const val = answers[qid];
             if (val) {
                 await sendAnswerToServer(qid, val);
+                count++;
             }
         }
+        Swal.fire("Sincronizado", `Se subieron ${count} respuestas exitosamente.`, "success");
     }
 
-    // 6. Indicador Visual (UI)
-    // Agregaremos un pequeño icono en la pantalla
+    // UI del Modo Túnel (Botón Manual)
     function createSyncUI() {
         const div = document.createElement('div');
         div.id = 'tunnel-indicator';
-        div.style.cssText = "position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; z-index: 9000; transition: all 0.3s;";
+        div.style.cssText = "position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; z-index: 9000; transition: all 0.3s; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);";
         div.innerHTML = '<span id="tunnel-icon">☁️</span> <span id="tunnel-text">Conectado</span>';
+        div.onclick = syncNow; // Hacer clicable para forzar sync
+        div.title = "Clic para forzar sincronización";
         document.body.appendChild(div);
     }
 
@@ -963,7 +1138,7 @@
         if (status === 'saved') {
             el.style.background = 'rgba(16, 185, 129, 0.9)'; // Verde
             icon.innerText = '☁️'; text.innerText = 'Todo Guardado';
-            setTimeout(() => el.style.opacity = '0.5', 2000); // Desvanecer si todo ok
+            setTimeout(() => el.style.opacity = '0.5', 2000); 
         } else if (status === 'saving') {
             el.style.opacity = '1';
             el.style.background = 'rgba(59, 130, 246, 0.9)'; // Azul
@@ -972,11 +1147,13 @@
             el.style.opacity = '1';
             el.style.background = 'rgba(245, 158, 11, 0.9)'; // Naranja
             const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-            icon.innerText = '💾'; text.innerText = `Modo Túnel (${pending.length} pendientes)`;
+            icon.innerText = '💾'; text.innerText = `Modo Túnel (${pending.length})`;
+            // Animación para llamar la atención
+            el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.1)' }, { transform: 'scale(1)' }], { duration: 1000, iterations: Infinity });
         } else if (status === 'syncing') {
             el.style.opacity = '1';
             el.style.background = 'rgba(139, 92, 246, 0.9)'; // Morado
-            icon.innerText = '🔄'; text.innerText = 'Subiendo datos...';
+            icon.innerText = '🔄'; text.innerText = 'Subiendo...';
         }
     }
 
@@ -1090,8 +1267,9 @@
     function addChat(msg, type) { 
         const d=document.createElement('div'); 
         d.style.padding='10px'; d.style.borderRadius='10px'; d.style.marginBottom='8px'; 
-        d.style.background=type==='admin'?'#e0f2fe':'#d1fae5'; 
-        d.style.color=type==='admin'?'#0369a1':'#065f46';
+        d.style.background=type==='admin'?'#0f172a':'#020617'; 
+        d.style.color=type==='admin'?'#06b6d4':'#10b981';
+        d.style.border = '1px solid ' + (type==='admin'?'#06b6d4':'#10b981');
         d.innerText=msg; 
         document.getElementById('chat-messages').appendChild(d); 
     }
@@ -1107,21 +1285,16 @@
     });
 
     // ==========================================
-    // ⚡ SPEED TEST & MONITOR DE RED
+    // ⚡ SPEED TEST (CORREGIDO Y AJUSTADO)
     // ==========================================
-    
     let lastLatency = 0;
 
-    // 1. Monitor Pasivo (Se ejecuta cada 5s en segundo plano)
     document.addEventListener("DOMContentLoaded", function() {
-        // Inicializar Modo Túnel
         createSyncUI();
         loadLocalAnswers(); 
         
-        // Ping
         setInterval(() => measureLatency(false), 5000); 
         
-        // Listeners de Red para Túnel
         window.addEventListener('online', () => {
             showFloatingNotification("Conexión recuperada. Sincronizando...", "success");
             syncNow();
@@ -1140,67 +1313,72 @@
         const text = document.getElementById('net-text');
 
         try {
-            // Hacemos ping (cache: no-cache forza a ir al servidor real)
+            // Fetch HEAD a la página actual para medir ida y vuelta
             await fetch(window.location.href, { method: 'HEAD', cache: 'no-cache' });
             
             const end = Date.now();
             const latency = end - start;
             lastLatency = latency;
 
-            // Actualizar UI del Semáforo
             if (badge) {
                 badge.classList.remove('net-good', 'net-fair', 'net-poor');
-                
-                if (latency < 200) {
+                // Umbrales relajados para evitar falsos positivos
+                if (latency < 400) { // Antes 200
                     badge.classList.add('net-good');
                     if (icon) icon.className = 'fas fa-wifi';
                     if (text) text.innerText = isDeepScan ? `${latency}ms (Excelente)` : 'Estable';
-                } else if (latency < 500) {
+                } else if (latency < 1000) { // Antes 500
                     badge.classList.add('net-fair');
                     if (icon) icon.className = 'fas fa-exclamation-circle';
                     if (text) text.innerText = isDeepScan ? `${latency}ms (Lento)` : 'Inestable';
                 } else {
                     badge.classList.add('net-poor');
                     if (icon) icon.className = 'fas fa-times-circle';
-                    if (text) text.innerText = isDeepScan ? `${latency}ms (Crítico)` : 'Mala Red';
+                    if (text) text.innerText = isDeepScan ? `${latency}ms (Lag)` : 'Mala Red';
                 }
             }
-
-            // Reportar al Admin (Solo si hay cambio drástico o es deep scan)
             if (typeof socket !== 'undefined' && socket.connected) {
                 socket.emit('report_network_status', { latency: latency });
             }
-            
             return latency;
 
         } catch (error) {
-            console.error("⚠️ Sin conexión a internet");
+            // SI FALLA EL PING PERO EL NAVEGADOR DICE ONLINE (CORS o Bloqueo)
+            if (navigator.onLine) {
+                 console.warn("Ping fallido pero navigator.onLine es true. Asumiendo red aceptable.");
+                 if (badge) {
+                    badge.classList.remove('net-good', 'net-poor');
+                    badge.classList.add('net-fair'); // Mostrar advertencia leve
+                    if (text) text.innerText = "⚠️ Red";
+                 }
+                 return 500; // Valor dummy seguro
+            }
+            
+            console.error("⚠️ Sin conexión real");
             if (badge) {
                 badge.classList.remove('net-good', 'net-fair');
                 badge.classList.add('net-poor');
                 if (icon) icon.className = 'fas fa-ban';
-                if (text) text.innerText = 'Desconectado';
+                if (text) text.innerText = 'Offline';
             }
-            
             if (typeof socket !== 'undefined') socket.emit('report_network_status', { latency: 9999 });
             return 9999;
         }
     }
 
-    // 2. DIAGNÓSTICO PROFUNDO (Al hacer clic)
+    // DIAGNÓSTICO PROFUNDO CON SWEETALERT
     window.runDeepNetworkScan = async () => {
         const text = document.getElementById('net-text');
-        if (text) text.innerText = "Probando...";
+        if (text) text.innerText = "Midiendo...";
         
         let pings = [];
         let total = 0;
 
-        // Hacemos 5 pings rápidos para sacar promedio
         for(let i=0; i<5; i++) {
             const l = await measureLatency(true);
             pings.push(l);
             total += l;
-            await new Promise(r => setTimeout(r, 200)); // Pequeña pausa
+            await new Promise(r => setTimeout(r, 200)); 
         }
 
         const avg = Math.round(total / 5);
@@ -1210,26 +1388,25 @@
 
         if (avg >= 9999) {
             icon = "error"; verdict = "SIN CONEXIÓN"; 
-            advice = "Tu dispositivo no tiene internet. Revisa tu WiFi.";
-        } else if (avg < 200) {
+            advice = "Tu dispositivo no conecta con el servidor. Se activará el guardado local.";
+        } else if (avg < 400) {
             icon = "success"; verdict = "EXCELENTE"; 
-            advice = "Tu conexión es perfecta para el examen. Si algo falla, recarga la página.";
-        } else if (avg < 600) {
-            icon = "warning"; verdict = "INESTABLE"; 
-            advice = "Tu internet está lento. Cierra YouTube, Netflix o acércate al módem.";
+            advice = "Conexión perfecta para el examen.";
+        } else if (avg < 1000) {
+            icon = "warning"; verdict = "ACEPTABLE"; 
+            advice = "Puede haber un ligero retraso, pero es seguro continuar.";
         } else {
-            icon = "error"; verdict = "CRÍTICO"; 
-            advice = "Tu red es demasiado lenta. Es muy probable que se te desconecte. Usa datos móviles si puedes.";
+            icon = "error"; verdict = "LENTA"; 
+            advice = "Tu red tiene mucha latencia. Si se cae, el 'Modo Túnel' guardará tus respuestas.";
         }
 
         Swal.fire({
-            title: `Diagnóstico: ${verdict}`,
+            title: `Red: ${verdict}`,
             html: `
-                <div style="text-align:left; background:#f3f4f6; padding:15px; border-radius:10px;">
-                    <p><strong>📶 Latencia Promedio:</strong> ${avg} ms</p>
-                    <p><strong>📉 Estabilidad:</strong> ${pings.map(p => p>=9999?'❌':p).join(', ')}</p>
-                    <hr style="margin:10px 0; border-color:#ddd;">
-                    <p style="color:#1f2937;"><strong>💡 Consejo:</strong> ${advice}</p>
+                <div style="text-align:left; background:#1e293b; color:#fff; padding:15px; border-radius:10px;">
+                    <p><strong>📶 Ping Promedio:</strong> ${avg} ms</p>
+                    <hr style="margin:10px 0; border-color:#334155;">
+                    <p><strong>💡 Consejo:</strong> ${advice}</p>
                 </div>
             `,
             icon: icon,
@@ -1242,10 +1419,7 @@
     // ==========================================
     let cctvInterval = null;
 
-    // Escuchar orden del Admin
     socket.on('cctv_command', (data) => {
-        console.log("Comando CCTV recibido:", data.action);
-        
         if (data.action === 'start') {
             startCCTVTransmission();
         } else if (data.action === 'stop') {
@@ -1254,31 +1428,25 @@
     });
 
     function startCCTVTransmission() {
-        if (cctvInterval) return; // Ya está transmitiendo
+        if (cctvInterval) return; 
 
-        // Intervalo de 3 segundos (3000ms) para no saturar
         cctvInterval = setInterval(() => {
             const video = document.getElementById('ai-video-feed');
-            
-            // Solo enviar si el video está activo y reproduciéndose
             if (video && video.readyState === 4) {
-                // Usamos un canvas temporal para comprimir la imagen
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = 240; // Resolución baja (Thumbnail)
+                tempCanvas.width = 240; 
                 tempCanvas.height = 180;
                 const ctx = tempCanvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
                 
-                // Compresión agresiva JPEG 0.3
                 const frame = tempCanvas.toDataURL('image/jpeg', 0.3);
-                
                 socket.emit('cctv_stream_frame', {
                     user_id: USER_ID,
                     username: USERNAME,
                     image: frame
                 });
             }
-        }, 3000); // ⏱️ Cada 3 segundos
+        }, 3000); 
     }
 
     function stopCCTVTransmission() {
@@ -1286,6 +1454,38 @@
             clearInterval(cctvInterval);
             cctvInterval = null;
         }
+    }
+    // ==========================================
+    // 🛡️ PROTOCOLO DE SEGURIDAD (ANTI-COPY)
+    // ==========================================
+    
+    // 1. Bloquear Clic Derecho
+    document.addEventListener('contextmenu', event => {
+        event.preventDefault();
+        window.showFloatingNotification("⚠️ Clic derecho deshabilitado por seguridad.", "warning");
+    });
+
+    // 2. Bloquear Copiar/Pegar/Cortar
+    document.addEventListener('copy', e => { e.preventDefault(); alertSecurity(); });
+    document.addEventListener('cut', e => { e.preventDefault(); alertSecurity(); });
+    document.addEventListener('paste', e => { e.preventDefault(); alertSecurity(); });
+
+    // 3. Bloquear Teclas Especiales (F12, Ctrl+U, Ctrl+C)
+    document.onkeydown = function(e) {
+        // F12 (Inspector)
+        if(e.keyCode == 123) { return false; }
+        
+        // Ctrl+I (Inspector), Ctrl+J (Consola), Ctrl+C (Copiar), Ctrl+U (Source)
+        if(e.ctrlKey && (e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || e.keyCode == 67 || e.keyCode == 85) {
+            alertSecurity();
+            return false;
+        }
+    };
+
+    function alertSecurity() {
+        window.showFloatingNotification("🚫 Acción prohibida. Se ha registrado este intento.", "danger");
+        // Opcional: Reportar al servidor como una "violación menor"
+        // socket.emit('exam_violation', { user_id: USER_ID, exam_id: EXAM_ID, type: 'ATTEMPT_COPY_PASTE' });
     }
     </script>
 

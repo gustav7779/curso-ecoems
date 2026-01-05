@@ -1,184 +1,213 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de Preguntas: {{ exam.title }}{% endblock %}
+{% block title %}Ingeniería de Preguntas: {{ exam.title }}{% endblock %}
 
 {% block content %}
 
-{# ========================================================= #}
-{# 🎨 ESTILOS MANAGER (UI MODERNA + DARK MODE) 🎨 #}
-{# ========================================================= #}
-<style>
-    :root {
-        /* Paleta Base Light */
-        --bg-body: #f3f4f6;
-        --bg-card: #ffffff;
-        --bg-input: #f9fafb;
-        --text-main: #111827;
-        --text-sec: #6b7280;
-        --border: #e5e7eb;
-        
-        /* Colores Acción */
-        --primary: #2563eb;       /* Azul fuerte */
-        --primary-hover: #1d4ed8;
-        --success: #10b981;       /* Verde */
-        --warning: #f59e0b;       /* Naranja */
-        --danger: #ef4444;        /* Rojo */
-        
-        /* UI */
-        --radius: 12px;
-        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-    /* MODO OSCURO */
-    body.dark-mode {
-        --bg-body: #0f172a;
-        --bg-card: #1e293b;
-        --bg-input: #020617;
-        --text-main: #f3f4f6;
-        --text-sec: #94a3b8;
-        --border: #334155;
-        --primary: #3b82f6;
-        --primary-hover: #60a5fa;
+<style>
+    /* =========================================
+       🔥 ESTILO CYBER-LABORATORY V2 (GALERÍA) 🔥
+       ========================================= */
+    :root {
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(0, 0, 0, 0.3);
+        --neon-blue: #3b82f6;
+        --neon-purple: #8b5cf6;
+        --neon-green: #10b981;
+        --neon-red: #ef4444;
+        --neon-orange: #f97316;
+        --text-white: #f8fafc;
+        --text-grey: #94a3b8;
     }
 
     /* LAYOUT PRINCIPAL */
     .manager-wrapper {
         max-width: 1400px;
-        margin: 30px auto;
-        padding: 0 20px;
+        margin: 0 auto;
+        padding: 40px 20px;
         display: grid;
-        grid-template-columns: 1.2fr 0.8fr; /* Formulario más ancho */
-        gap: 30px;
+        grid-template-columns: 1.5fr 1fr; /* Formulario más ancho */
+        gap: 40px;
+        min-height: 90vh;
     }
 
-    /* HEADER DE PÁGINA (SOLUCIÓN AL BOTÓN) */
+    /* HEADER DE PÁGINA */
     .page-header-row {
         grid-column: 1 / -1;
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding-bottom: 20px;
-        border-bottom: 2px solid var(--border);
-        margin-bottom: 10px;
+        border-bottom: 1px solid var(--glass-border);
+        margin-bottom: 20px;
     }
 
-    .page-title h1 { margin: 0; color: var(--text-main); font-size: 1.8rem; }
-    .page-title span { color: var(--text-sec); font-size: 1rem; }
+    .page-title h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        color: white;
+        text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        margin: 0;
+    }
+    .page-title span { color: var(--neon-blue); font-size: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* Botón Volver (Estilo Sutil) */
+    /* BOTÓN VOLVER */
     .btn-back-panel {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        color: var(--text-sec);
-        padding: 10px 18px;
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        color: var(--text-grey);
+        padding: 10px 20px;
+        border-radius: 12px;
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        transition: all 0.3s;
+        display: flex; align-items: center; gap: 8px;
     }
     .btn-back-panel:hover {
-        background: var(--bg-input);
-        color: var(--text-main);
-        border-color: var(--text-sec);
-        transform: translateX(-2px);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: white;
     }
 
-    /* TARJETAS COMUNES */
+    /* TARJETAS DE CRISTAL (PANELES) */
     .card-panel {
-        background: var(--bg-card);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
+        background: var(--glass-bg);
+        border-radius: 24px;
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(16px);
         overflow: hidden;
-        margin-bottom: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
 
     .panel-header {
-        padding: 20px;
-        border-bottom: 1px solid var(--border);
-        background: linear-gradient(to right, rgba(37, 99, 235, 0.05), transparent);
+        padding: 20px 30px;
+        border-bottom: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.02);
+        display: flex; justify-content: space-between; align-items: center;
     }
-    .panel-header h3 { margin: 0; color: var(--text-main); font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
-    .header-badge { font-size: 0.8em; padding: 4px 10px; border-radius: 20px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-sec); }
+    .panel-header h3 { margin: 0; color: white; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; }
+    .header-badge { font-size: 0.7em; padding: 4px 10px; border-radius: 50px; background: rgba(59, 130, 246, 0.2); color: var(--neon-blue); border: 1px solid rgba(59, 130, 246, 0.3); }
 
     /* --- FORMULARIO (IZQUIERDA) --- */
-    .form-body { padding: 25px; }
+    .form-body { padding: 30px; }
     
-    .form-group { margin-bottom: 20px; }
-    .form-label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text-main); font-size: 0.95rem; }
+    .form-group { margin-bottom: 25px; }
+    .form-label { display: block; font-weight: 600; margin-bottom: 10px; color: var(--text-grey); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
     
     .modern-input, .modern-select, .modern-textarea {
-        width: 100%; padding: 12px;
-        background: var(--bg-input); border: 1px solid var(--border);
-        border-radius: 8px; color: var(--text-main);
-        font-family: inherit; font-size: 0.95rem;
-        box-sizing: border-box; transition: 0.2s;
+        width: 100%; padding: 15px;
+        background: var(--input-bg); border: 1px solid var(--glass-border);
+        border-radius: 12px; color: white;
+        font-family: 'Inter', sans-serif; font-size: 1rem;
+        transition: all 0.3s;
     }
-    .modern-input:focus, .modern-textarea:focus {
-        outline: none; border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    .modern-input:focus, .modern-textarea:focus, .modern-select:focus {
+        outline: none; border-color: var(--neon-blue);
+        background: rgba(0, 0, 0, 0.6);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+    }
+    .modern-input::placeholder { color: rgba(255,255,255,0.2); }
+
+    /* --- ZONA DE CARGA MULTIPLE --- */
+    .upload-zone {
+        border: 2px dashed var(--glass-border);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        background: rgba(0,0,0,0.2);
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+    }
+    .upload-zone:hover {
+        border-color: var(--neon-blue);
+        background: rgba(59, 130, 246, 0.05);
+    }
+    .upload-zone input[type="file"] {
+        position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-icon { font-size: 2rem; color: var(--text-grey); margin-bottom: 10px; display: block; }
+    .upload-text { color: var(--text-white); font-weight: 600; }
+    .upload-sub { font-size: 0.8rem; color: var(--text-grey); display: block; margin-top: 5px; }
+    
+    .file-counter {
+        margin-top: 10px; font-size: 0.9rem; color: var(--neon-green); font-weight: bold; display: none;
     }
 
     /* Grid de Opciones A,B,C,D */
     .options-grid {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-        margin-top: 10px;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        margin-top: 15px;
     }
     .option-box {
-        background: var(--bg-input); border: 1px solid var(--border);
-        padding: 15px; border-radius: 8px;
-        position: relative;
+        background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border);
+        padding: 20px; border-radius: 16px;
+        position: relative; transition: all 0.3s;
     }
+    .option-box:hover { border-color: var(--neon-purple); background: rgba(139, 92, 246, 0.05); }
+    
     .option-badge {
-        position: absolute; top: -10px; left: -10px;
-        width: 28px; height: 28px; background: var(--primary); color: white;
+        position: absolute; top: -12px; left: 20px;
+        width: 30px; height: 30px; background: var(--neon-purple); color: white;
         border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-weight: bold; box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4); font-size: 0.9rem;
     }
 
     /* Botón Guardar */
     .btn-save {
-        width: 100%; padding: 15px;
-        background: linear-gradient(135deg, var(--success), #059669);
-        color: white; border: none; border-radius: 10px;
-        font-weight: 700; font-size: 1.1rem; cursor: pointer;
-        transition: transform 0.1s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+        width: 100%; padding: 16px;
+        background: linear-gradient(135deg, var(--neon-green), #059669);
+        color: black; border: none; border-radius: 12px;
+        font-weight: 800; font-size: 1rem; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+        transition: all 0.3s; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        margin-top: 20px;
     }
-    .btn-save:active { transform: scale(0.98); }
+    .btn-save:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5); color: white; }
 
     /* --- SIDEBAR (DERECHA) --- */
     /* Importar CSV */
-    .import-area { padding: 20px; background: rgba(245, 158, 11, 0.05); border-bottom: 1px solid var(--border); }
+    .import-area { padding: 30px; background: rgba(249, 115, 22, 0.05); border-bottom: 1px solid var(--glass-border); text-align: center; }
     .csv-label { 
-        display: flex; align-items: center; justify-content: center; gap: 10px;
-        padding: 10px; border: 2px dashed var(--warning); border-radius: 8px;
-        cursor: pointer; transition: 0.2s; background: var(--bg-card); color: var(--text-sec);
+        display: flex; flex-direction: column; align-items: center; gap: 15px;
+        padding: 30px; border: 2px dashed var(--neon-orange); border-radius: 16px;
+        cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.2); color: var(--text-grey);
     }
-    .csv-label:hover { background: #fffbeb; color: var(--warning); border-color: var(--warning); }
-    .btn-import { background: var(--warning); color: #fff; border:none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; }
+    .csv-label:hover { background: rgba(249, 115, 22, 0.1); color: white; border-color: #fb923c; }
+    .btn-import { 
+        background: var(--neon-orange); color: black; border:none; padding: 12px; 
+        border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; 
+        text-transform: uppercase; font-size: 0.9rem;
+    }
+    .btn-import:hover { background: #fb923c; color: white; }
 
     /* Lista de Preguntas */
     .question-list-container { max-height: 600px; overflow-y: auto; padding: 0; }
+    .question-list-container::-webkit-scrollbar { width: 6px; }
+    .question-list-container::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+
     .q-item {
-        padding: 15px 20px; border-bottom: 1px solid var(--border);
-        display: flex; flex-direction: column; gap: 8px;
+        padding: 20px; border-bottom: 1px solid var(--glass-border);
+        display: flex; flex-direction: column; gap: 10px;
         transition: background 0.2s;
     }
-    .q-item:hover { background: var(--bg-input); }
-    .q-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .q-meta { font-size: 0.8rem; color: var(--text-sec); display: flex; gap: 8px; align-items: center; }
-    .tag { padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.1); color: var(--primary); font-weight: 600; }
+    .q-item:hover { background: rgba(255,255,255,0.03); }
     
-    .q-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 5px; }
-    .btn-mini { padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-    .btn-edit { background: var(--bg-input); color: var(--primary); border: 1px solid var(--border); }
-    .btn-edit:hover { border-color: var(--primary); }
-    .btn-delete { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid transparent; cursor: pointer; }
-    .btn-delete:hover { background: var(--danger); color: white; }
+    .q-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .q-meta { font-size: 0.75rem; color: var(--text-grey); display: flex; gap: 10px; align-items: center; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tag { padding: 4px 8px; border-radius: 6px; background: rgba(59, 130, 246, 0.1); color: var(--neon-blue); font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); }
+    
+    .q-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+    .btn-mini { padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; }
+    
+    .btn-edit { background: rgba(255,255,255,0.05); color: var(--text-white); border: 1px solid var(--glass-border); }
+    .btn-edit:hover { background: var(--neon-blue); border-color: var(--neon-blue); }
+    
+    .btn-delete { background: rgba(239, 68, 68, 0.1); color: var(--neon-red); border: 1px solid transparent; cursor: pointer; }
+    .btn-delete:hover { background: var(--neon-red); color: white; }
 
     /* RESPONSIVE */
     @media (max-width: 1024px) {
@@ -193,12 +222,12 @@
     
     <header class="page-header-row">
         <div class="page-title">
-            <h1>⚙️ Gestión de Contenido</h1>
-            <span>Editando: <strong>{{ exam.title }}</strong></span>
+            <h1>⚙️ INGENIERÍA DE EXAMEN</h1>
+            <span>Editando: <strong style="color: white;">{{ exam.title }}</strong></span>
         </div>
         
-        <a href="{{ url_for('admin_panel') }}" class="btn-back-panel">
-            ⬅ Volver al Panel
+        <a href="{{ url_for('admin_dashboard') }}" class="btn-back-panel">
+            <i class="fas fa-arrow-left"></i> Volver al Comando
         </a>
     </header>
 
@@ -206,7 +235,7 @@
         <div class="card-panel">
             <div class="panel-header">
                 <h3>
-                    {{ '✏️ Editando Pregunta' if question else '✨ Nueva Pregunta' }}
+                    {{ '✏️ EDITAR PREGUNTA' if question else '✨ NUEVA PREGUNTA' }}
                     {% if question %}<span class="header-badge">ID: {{ question.id }}</span>{% endif %}
                 </h3>
             </div>
@@ -217,71 +246,79 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-group">
-                    <label class="form-label">Materia / Tema</label>
-                    <input type="text" name="subject" class="modern-input" placeholder="Ej: Matemáticas" value="{{ question.subject if question else '' }}" required>
+                    <label class="form-label"><i class="fas fa-tag mr-2"></i> Materia / Tema</label>
+                    <input type="text" name="subject" class="modern-input" placeholder="Ej: Matemáticas Avanzadas" value="{{ question.subject if question else '' }}" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Texto de la Pregunta</label>
-                    <textarea name="text" rows="4" class="modern-textarea" placeholder="Escribe el planteamiento aquí..." required>{{ question.text if question else '' }}</textarea>
+                    <label class="form-label"><i class="fas fa-paragraph mr-2"></i> Planteamiento</label>
+                    <textarea name="text" rows="4" class="modern-textarea" placeholder="Escribe aquí la pregunta..." required>{{ question.text if question else '' }}</textarea>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">🖼️ Imagen de Apoyo (Opcional)</label>
-                    <input type="file" name="image_file" class="modern-input" style="padding: 8px;">
+                    <label class="form-label"><i class="fas fa-images mr-2"></i> Galería de Lectura / Gráficos</label>
+                    <div class="upload-zone">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <span class="upload-text">Clic para subir imágenes</span>
+                        <span class="upload-sub">Soporta múltiples archivos (Página 1, 2, 3...)</span>
+                        
+                        <input type="file" name="gallery" multiple accept="image/*" onchange="updateCounter(this)">
+                    </div>
+                    <div id="file-counter-display" class="file-counter"></div>
+
                     {% if question and question.image_filename %}
-                        <small style="color: var(--warning); display: block; margin-top: 5px;">
-                            <i class="fas fa-image"></i> Imagen actual cargada. Sube otra solo para reemplazar.
-                        </small>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: var(--neon-blue); background: rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 6px;">
+                            <i class="fas fa-check-circle"></i> Esta pregunta ya tiene imágenes cargadas. Las nuevas se agregarán al final.
+                        </div>
                     {% endif %}
                 </div>
 
-                <hr style="border: 0; border-top: 1px dashed var(--border); margin: 25px 0;">
+                <hr style="border: 0; border-top: 1px dashed var(--glass-border); margin: 30px 0;">
 
-                <label class="form-label">✅ Opciones de Respuesta</label>
+                <label class="form-label" style="font-size: 1rem; color: white;"><i class="fas fa-list-ul mr-2"></i> OPCIONES DE RESPUESTA</label>
+                
                 <div class="options-grid">
                     <div class="option-box">
                         <div class="option-badge">A</div>
-                        <input type="text" name="option_a" class="modern-input" placeholder="Texto respuesta A" value="{{ question.option_a if question else '' }}" required>
-                        <input type="file" name="image_a" style="margin-top: 8px; font-size: 0.8em; color: var(--text-sec);">
+                        <input type="text" name="option_a" class="modern-input" placeholder="Respuesta A" value="{{ question.option_a if question else '' }}" required>
+                        <input type="file" name="image_a" style="margin-top: 10px; font-size: 0.8em; color: var(--text-grey);">
                     </div>
-                    
                     <div class="option-box">
                         <div class="option-badge">B</div>
-                        <input type="text" name="option_b" class="modern-input" placeholder="Texto respuesta B" value="{{ question.option_b if question else '' }}" required>
-                        <input type="file" name="image_b" style="margin-top: 8px; font-size: 0.8em; color: var(--text-sec);">
+                        <input type="text" name="option_b" class="modern-input" placeholder="Respuesta B" value="{{ question.option_b if question else '' }}" required>
+                        <input type="file" name="image_b" style="margin-top: 10px; font-size: 0.8em; color: var(--text-grey);">
                     </div>
-
                     <div class="option-box">
                         <div class="option-badge">C</div>
-                        <input type="text" name="option_c" class="modern-input" placeholder="Texto respuesta C" value="{{ question.option_c if question else '' }}">
-                        <input type="file" name="image_c" style="margin-top: 8px; font-size: 0.8em; color: var(--text-sec);">
+                        <input type="text" name="option_c" class="modern-input" placeholder="Respuesta C" value="{{ question.option_c if question else '' }}">
+                        <input type="file" name="image_c" style="margin-top: 10px; font-size: 0.8em; color: var(--text-grey);">
                     </div>
-
                     <div class="option-box">
                         <div class="option-badge">D</div>
-                        <input type="text" name="option_d" class="modern-input" placeholder="Texto respuesta D" value="{{ question.option_d if question else '' }}">
-                        <input type="file" name="image_d" style="margin-top: 8px; font-size: 0.8em; color: var(--text-sec);">
+                        <input type="text" name="option_d" class="modern-input" placeholder="Respuesta D" value="{{ question.option_d if question else '' }}">
+                        <input type="file" name="image_d" style="margin-top: 10px; font-size: 0.8em; color: var(--text-grey);">
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-top: 25px;">
-                    <label class="form-label" style="color: var(--success);">🏆 Respuesta Correcta</label>
-                    <select name="correct_option" class="modern-select" style="border-color: var(--success);" required>
-                        <option value="">-- Seleccionar --</option>
-                        <option value="A" {% if question and question.correct_option == 'A' %}selected{% endif %}>Opción A</option>
-                        <option value="B" {% if question and question.correct_option == 'B' %}selected{% endif %}>Opción B</option>
-                        <option value="C" {% if question and question.correct_option == 'C' %}selected{% endif %}>Opción C</option>
-                        <option value="D" {% if question and question.correct_option == 'D' %}selected{% endif %}>Opción D</option>
+                <div class="form-group" style="margin-top: 30px;">
+                    <label class="form-label" style="color: var(--neon-green); font-size: 1rem;"><i class="fas fa-check-circle mr-2"></i> RESPUESTA CORRECTA</label>
+                    <select name="correct_option" class="modern-select" style="border-color: var(--neon-green); font-weight: bold; color: var(--neon-green);" required>
+                        <option value="" style="color: black;">-- SELECCIONAR --</option>
+                        <option value="A" style="color: black;" {% if question and question.correct_option == 'A' %}selected{% endif %}>Opción A</option>
+                        <option value="B" style="color: black;" {% if question and question.correct_option == 'B' %}selected{% endif %}>Opción B</option>
+                        <option value="C" style="color: black;" {% if question and question.correct_option == 'C' %}selected{% endif %}>Opción C</option>
+                        <option value="D" style="color: black;" {% if question and question.correct_option == 'D' %}selected{% endif %}>Opción D</option>
                     </select>
                 </div>
 
                 <button type="submit" class="btn-save">
-                    {{ '💾 Guardar Cambios' if question else '💾 Guardar Pregunta' }}
+                    <i class="fas fa-save mr-2"></i> {{ 'GUARDAR CAMBIOS' if question else 'AGREGAR AL BANCO' }}
                 </button>
                 
                 {% if question %}
-                    <a href="{{ url_for('add_question', exam_id=exam.id) }}" style="display:block; text-align:center; margin-top:15px; color:var(--text-sec); font-size:0.9rem;">Cancelar Edición</a>
+                    <a href="{{ url_for('add_question', exam_id=exam.id) }}" style="display:block; text-align:center; margin-top:20px; color:var(--text-grey); font-size:0.9rem; text-decoration: none;">
+                        <i class="fas fa-times mr-1"></i> Cancelar Edición
+                    </a>
                 {% endif %}
             </form>
         </div>
@@ -291,27 +328,27 @@
         
         <div class="card-panel">
             <div class="panel-header">
-                <h3>🚀 Importación Masiva</h3>
+                <h3><i class="fas fa-file-upload mr-2 text-orange-500"></i> IMPORTACIÓN MASIVA</h3>
             </div>
             <div class="import-area">
                 <form method="POST" action="{{ url_for('import_csv', exam_id=exam.id) }}" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <label class="csv-label">
-                        <i class="fas fa-file-csv" style="font-size: 1.5em;"></i>
-                        <input type="file" name="csv_file" accept=".csv" required style="display: none;" onchange="this.parentElement.style.borderColor = 'var(--success)'; this.parentElement.style.color = 'var(--success)';">
-                        <span>Seleccionar archivo CSV...</span>
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 3em; color: var(--neon-orange);"></i>
+                        <input type="file" name="csv_file" accept=".csv" required style="display: none;" onchange="document.getElementById('csv-text').innerText = this.files[0].name; this.parentElement.style.borderColor = 'var(--neon-green)';">
+                        <span id="csv-text">Click para subir CSV</span>
                     </label>
-                    <button type="submit" class="btn-import">Subir Preguntas</button>
+                    <button type="submit" class="btn-import">PROCESAR ARCHIVO</button>
                 </form>
-                <div style="font-size: 0.8rem; color: var(--text-sec); margin-top: 10px; line-height: 1.4;">
-                    <strong>Formato:</strong> subject, text, option_a, option_b, option_c, option_d, correct_option
+                <div style="font-size: 0.75rem; color: var(--text-grey); margin-top: 15px; font-family: monospace; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+                    subject, text, option_a, option_b, option_c, option_d, correct_option
                 </div>
             </div>
         </div>
 
         <div class="card-panel">
             <div class="panel-header">
-                <h3>📚 Banco de Preguntas <span class="header-badge">{{ questions|length }}</span></h3>
+                <h3><i class="fas fa-layer-group mr-2 text-blue-500"></i> BANCO DE PREGUNTAS <span class="header-badge">{{ questions|length }}</span></h3>
             </div>
             
             {% if questions %}
@@ -320,22 +357,22 @@
                 <div class="q-item">
                     <div class="q-header">
                         <div style="flex: 1;">
-                            <span style="font-weight: bold; color: var(--primary);">#{{ loop.index }}</span>
-                            <span style="color: var(--text-main);">{{ q.text | truncate(60) }}</span>
+                            <span style="font-weight: 800; color: var(--neon-blue); margin-right: 8px;">#{{ loop.index }}</span>
+                            <span style="color: var(--text-white); font-weight: 500;">{{ q.text | truncate(50) }}</span>
                         </div>
                     </div>
                     
                     <div class="q-meta">
-                        <span class="tag">{{ q.subject or 'General' }}</span>
-                        {% if q.image_filename %}<i class="fas fa-image" title="Tiene imagen"></i>{% endif %}
-                        <span>Correcta: <strong>{{ q.correct_option }}</strong></span>
+                        <span class="tag">{{ q.subject or 'GENERAL' }}</span>
+                        {% if q.images or q.image_filename %}<i class="fas fa-images text-purple-400" title="Galería"></i>{% endif %}
+                        <span style="color: var(--neon-green);">CORRECTA: {{ q.correct_option }}</span>
                     </div>
 
                     <div class="q-actions">
                         <a href="{{ url_for('edit_question', question_id=q.id) }}" class="btn-mini btn-edit">
-                            <i class="fas fa-pencil-alt"></i>
+                            <i class="fas fa-pencil-alt"></i> EDITAR
                         </a>
-                        <form method="POST" action="{{ url_for('delete_question', question_id=q.id) }}" style="display:inline;" onsubmit="return confirm('¿Borrar?');">
+                        <form method="POST" action="{{ url_for('delete_question', question_id=q.id) }}" style="display:inline;" onsubmit="return confirm('¿ELIMINAR DEFINITIVAMENTE?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-mini btn-delete"><i class="fas fa-trash"></i></button>
                         </form>
@@ -344,14 +381,26 @@
                 {% endfor %}
             </div>
             {% else %}
-            <div style="padding: 40px; text-align: center; color: var(--text-sec);">
-                <i class="fas fa-box-open" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                <p>No hay preguntas registradas.</p>
+            <div style="padding: 50px; text-align: center; color: var(--text-grey);">
+                <i class="fas fa-box-open" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p>BASE DE DATOS VACÍA</p>
             </div>
             {% endif %}
         </div>
 
     </section>
 </div>
+
+<script>
+    function updateCounter(input) {
+        const display = document.getElementById('file-counter-display');
+        if (input.files && input.files.length > 0) {
+            display.style.display = 'block';
+            display.innerText = `✅ ${input.files.length} archivo(s) seleccionado(s)`;
+        } else {
+            display.style.display = 'none';
+        }
+    }
+</script>
 
 {% endblock %}

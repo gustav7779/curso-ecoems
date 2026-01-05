@@ -7,338 +7,125 @@
 {# ========================================================= #}
 {# 🎨 ESTILOS PREMIUM (MODO OSCURO + UI MODERNA) 🎨 #}
 {# ========================================================= #}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
 <style>
     :root {
-        /* Paleta Light (Por defecto) */
-        --bg-body: #f3f4f6;
-        --bg-card: #ffffff;
-        --bg-input: #f9fafb;
-        --bg-sidebar: #ffffff;
-        --text-main: #111827;
-        --text-sec: #6b7280;
-        --border: #e5e7eb;
-        --primary: #4f46e5;
-        --primary-hover: #4338ca;
-        --accent: #f59e0b; /* Amber para destaques */
-        --success: #10b981;
-        --danger: #ef4444;
+        --bg-body: #020617; --bg-card: #0f172a; --bg-input: #1e293b;
+        --text-main: #f1f5f9; --text-sec: #94a3b8; --border: #334155;
+        --primary: #6366f1; --primary-hover: #818cf8;
+        --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
         --radius: 12px;
-        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
-    /* Paleta Dark (Automática con body.dark-mode) */
-    body.dark-mode {
-        --bg-body: #0f172a;       /* Slate 900 */
-        --bg-card: #1e293b;       /* Slate 800 */
-        --bg-input: #020617;      /* Slate 950 */
-        --bg-sidebar: #1e293b;
-        --text-main: #f3f4f6;     /* Slate 100 */
-        --text-sec: #94a3b8;      /* Slate 400 */
-        --border: #334155;        /* Slate 700 */
-        --primary: #6366f1;       /* Indigo 500 */
-        --primary-hover: #818cf8;
-    }
-
-    /* RESET BÁSICO */
-    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', system-ui, sans-serif; transition: background 0.3s ease; }
-    a { text-decoration: none; }
-
-    /* LAYOUT PRINCIPAL */
+    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; }
+    
     .layout-wrapper {
-        display: grid;
-        grid-template-columns: 1fr 300px;
-        gap: 30px;
-        max-width: 1300px;
-        margin: 30px auto;
-        padding: 0 20px;
-    }
-
-    /* TARJETAS */
-    .card-box {
-        background: var(--bg-card);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-        overflow: hidden;
-        transition: transform 0.2s ease, border-color 0.3s;
+        display: grid; grid-template-columns: 1fr 300px; gap: 30px;
+        max-width: 1300px; margin: 30px auto; padding: 0 20px;
     }
 
     /* HEADER */
     .card-header-custom {
-        padding: 20px 30px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: linear-gradient(to right, rgba(79, 70, 229, 0.05), transparent);
+        padding: 20px 30px; border-bottom: 1px solid var(--border);
+        background: linear-gradient(to right, rgba(79, 70, 229, 0.1), transparent);
+        display: flex; justify-content: space-between; align-items: center;
+        border-radius: 16px 16px 0 0;
+    }
+    .badge-id { background: var(--primary); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+    .header-text h1 { margin: 8px 0 0; font-size: 1.5rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+    .close-icon { font-size: 2rem; color: var(--text-sec); text-decoration: none; transition: 0.2s; }
+    .close-icon:hover { color: var(--danger); transform: rotate(90deg); }
+
+    /* CARD PRINCIPAL */
+    .card-box {
+        background: var(--bg-card); border-radius: var(--radius);
+        border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
-    .badge-id {
-        background: var(--primary);
-        color: white;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .header-text h1 {
-        margin: 8px 0 0;
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--text-main);
-    }
-
-    .close-icon {
-        font-size: 2rem;
-        color: var(--text-sec);
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .close-icon:hover { color: var(--danger); }
-
-    /* FORMULARIOS E INPUTS */
-    .form-section {
-        padding: 30px;
-        border-bottom: 1px solid var(--border);
-    }
-    .bg-accent { background-color: rgba(0,0,0,0.02); } /* Fondo sutil para sección de opciones */
-
-    .section-title {
-        font-size: 1.1rem;
-        color: var(--primary);
-        margin-bottom: 20px;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .label-bold {
-        display: block;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-bottom: 8px;
-        color: var(--text-main);
-    }
-
+    /* FORMULARIO */
+    .form-section { padding: 30px; border-bottom: 1px solid var(--border); }
+    .section-title { font-size: 1.1rem; color: var(--primary); margin-bottom: 20px; font-weight: 700; }
+    .label-bold { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; }
+    
     .styled-input, .styled-select, textarea.styled-input {
-        width: 100%;
-        padding: 12px 15px;
-        background: var(--bg-input);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: 0.95rem;
-        color: var(--text-main);
-        box-sizing: border-box;
-        transition: all 0.2s;
-        font-family: inherit;
+        width: 100%; padding: 12px 15px; background: var(--bg-input);
+        border: 1px solid var(--border); border-radius: 8px;
+        font-size: 0.95rem; color: var(--text-main); font-family: 'Inter', sans-serif;
+        box-sizing: border-box; transition: 0.2s;
     }
+    .styled-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
 
-    .styled-input:focus, .styled-select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    /* --- 📸 ZONA DE GALERÍA (NUEVO) --- */
+    .gallery-manager {
+        margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px;
     }
+    .gallery-item {
+        position: relative; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 1;
+        background: black; transition: transform 0.2s;
+    }
+    .gallery-item:hover { transform: scale(1.05); border-color: var(--primary); }
+    
+    .gallery-thumb { width: 100%; height: 100%; object-fit: cover; }
+    
+    .btn-delete-img {
+        position: absolute; top: 5px; right: 5px;
+        background: rgba(239, 68, 68, 0.9); color: white; border: none;
+        width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+        transition: 0.2s;
+    }
+    .btn-delete-img:hover { background: #ef4444; transform: scale(1.1); }
 
-    /* FILE UPLOADS */
     .upload-box {
-        border: 2px dashed var(--border);
-        background: var(--bg-input);
-        padding: 20px;
-        border-radius: 10px;
-        margin-top: 15px;
-        transition: border-color 0.2s;
+        border: 2px dashed var(--border); background: rgba(0,0,0,0.2);
+        padding: 20px; border-radius: 10px; margin-top: 15px; text-align: center;
+        transition: 0.2s; cursor: pointer; position: relative;
     }
-    .upload-box:hover { border-color: var(--primary); }
+    .upload-box:hover { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); }
+    .upload-box input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 
-    .upload-content { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-    
-    .preview-container { text-align: center; }
-    .preview-container img { height: 80px; border-radius: 6px; border: 1px solid var(--border); display: block; }
-    .badge-img { font-size: 0.7rem; color: var(--text-sec); font-weight: bold; }
-
-    .file-control { color: var(--text-sec); font-size: 0.9rem; }
-    /* Fix para input file en dark mode */
-    input[type="file"]::file-selector-button {
-        background: var(--bg-card);
-        color: var(--text-main);
-        border: 1px solid var(--border);
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-right: 10px;
-    }
-
-    .hint { font-size: 0.8rem; color: var(--text-sec); margin-top: 5px; display: block; }
-
-    /* OPCIONES GRID (A, B, C, D) */
-    .options-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-
-    .option-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 20px;
-        position: relative;
-        transition: box-shadow 0.2s;
-    }
-    .option-card:hover { box-shadow: var(--shadow); border-color: var(--primary); }
-
-    .option-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-    
+    /* GRID OPCIONES */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .option-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 15px; }
     .letter-badge {
-        width: 32px; height: 32px;
-        background: var(--bg-input);
-        border: 2px solid var(--border);
-        color: var(--text-main);
-        font-weight: 800;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
+        width: 28px; height: 28px; background: var(--border); color: white; font-weight: bold;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
     }
 
-    .mini-upload {
-        background: var(--bg-input);
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-    }
-    .mini-preview { height: 50px; border-radius: 4px; display: block; margin-bottom: 5px; }
-
-    /* SETTINGS FINALES */
-    .final-settings { background: var(--bg-card); }
-    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-
-    .success-border:focus { border-color: var(--success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
-
-    /* BOTONES DE ACCIÓN */
-    .action-buttons {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 15px;
-    }
-
+    /* BOTONES ACCIÓN */
+    .action-buttons { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-top: 30px; }
     .btn-primary-pulse {
         background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-        color: white;
-        border: none;
-        padding: 15px;
-        border-radius: 10px;
-        font-weight: 700;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: transform 0.1s;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        color: white; border: none; padding: 15px; border-radius: 10px; font-weight: 700; cursor: pointer;
+        transition: 0.2s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
     }
-    .btn-primary-pulse:active { transform: scale(0.98); }
-
+    .btn-primary-pulse:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5); }
     .btn-secondary {
-        background: var(--bg-input);
-        border: 1px solid var(--border);
-        color: var(--text-main);
-        text-align: center;
-        padding: 15px;
-        border-radius: 10px;
-        font-weight: 600;
-        transition: background 0.2s;
+        background: transparent; border: 1px solid var(--border); color: var(--text-sec);
+        padding: 15px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; text-decoration: none;
     }
-    .btn-secondary:hover { background: var(--border); }
+    .btn-secondary:hover { border-color: var(--text-main); color: var(--text-main); }
 
     /* SIDEBAR */
-    .sidebar-card {
-        position: sticky;
-        top: 20px;
-        max-height: calc(100vh - 40px);
-        display: flex;
-        flex-direction: column;
-    }
+    .sidebar-card { position: sticky; top: 20px; max-height: 90vh; display: flex; flex-direction: column; }
+    .question-list-wrapper { overflow-y: auto; flex-grow: 1; }
+    .list-item { padding: 12px 15px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; color: var(--text-sec); text-decoration: none; font-size: 0.9rem; transition: 0.2s; }
+    .list-item:hover { background: var(--bg-input); color: white; }
+    .list-item.active { background: rgba(99, 102, 241, 0.1); border-left: 3px solid var(--primary); color: white; }
+    .q-number { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
 
-    .sidebar-header {
-        background: var(--bg-sidebar);
-        padding: 15px 20px;
-        border-bottom: 1px solid var(--border);
-    }
-    .sidebar-header h5 { margin: 0; font-size: 1rem; color: var(--text-main); font-weight: 700; }
-    .sidebar-header small { color: var(--text-sec); font-size: 0.8rem; }
-
-    .question-list-wrapper {
-        overflow-y: auto;
-        flex-grow: 1;
-        /* Scrollbar bonito */
-        scrollbar-width: thin;
-        scrollbar-color: var(--border) transparent;
-    }
-    
-    .question-list { list-style: none; padding: 0; margin: 0; }
-    
-    .list-item { border-bottom: 1px solid var(--border); }
-    .list-item:last-child { border-bottom: none; }
-    
-    .list-item.active {
-        background: rgba(245, 158, 11, 0.1); /* Amber suave */
-        border-left: 4px solid var(--accent);
-    }
-    /* Estilo Active Dark Mode */
-    body.dark-mode .list-item.active { background: rgba(245, 158, 11, 0.15); }
-
-    .list-link {
-        display: flex;
-        align-items: center;
-        padding: 12px 15px;
-        color: var(--text-main);
-        transition: background 0.2s;
-        gap: 12px;
-    }
-    .list-link:hover { background: var(--bg-input); }
-
-    .q-number {
-        font-weight: 800;
-        font-size: 0.8rem;
-        color: var(--text-sec);
-        background: var(--bg-input);
-        padding: 2px 6px;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-    }
-    .list-item.active .q-number { color: var(--accent); border-color: var(--accent); }
-
-    .q-text {
-        font-size: 0.85rem;
-        flex-grow: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        opacity: 0.9;
-    }
-
-    .edit-icon { font-size: 0.8rem; opacity: 0.3; }
-    .list-link:hover .edit-icon { opacity: 1; }
-
-    /* RESPONSIVE */
     @media (max-width: 900px) {
         .layout-wrapper { grid-template-columns: 1fr; }
-        .sidebar-column { order: 2; margin-top: 20px; }
+        .sidebar-column { order: 2; margin-top: 30px; }
         .options-grid { grid-template-columns: 1fr; }
-        .settings-grid { grid-template-columns: 1fr; }
     }
-
-    /* Animación de entrada */
-    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .fade-in { animation: slideIn 0.4s ease-out forwards; }
-
 </style>
 
 <div class="layout-wrapper">
     
     <div class="main-column">
-        <div class="card-box fade-in">
+        <div class="card-box">
             
             <div class="card-header-custom">
                 <div class="header-text">
@@ -348,112 +135,103 @@
                 <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="close-icon" title="Cerrar">&times;</a>
             </div>
 
-            <form method="POST" enctype="multipart/form-data" class="modern-form">
+            <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-section">
-                    <h3 class="section-title">📝 Planteamiento de la Pregunta</h3>
+                    <h3 class="section-title">📝 Planteamiento</h3>
                     
-                    <div class="input-row" style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 20px;">
                         <label class="label-bold">Materia / Tema</label>
-                        <input type="text" name="subject" class="styled-input" value="{{ question.subject }}" required placeholder="Ej: Biología Celular">
+                        <input type="text" name="subject" class="styled-input" value="{{ question.subject }}" required>
                     </div>
 
-                    <div class="input-row" style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 20px;">
                         <label class="label-bold">Texto de la Pregunta</label>
-                        <textarea name="text" class="styled-input" rows="4" required placeholder="Escribe aquí la pregunta...">{{ question.text }}</textarea>
+                        <textarea name="text" class="styled-input" rows="4" required>{{ question.text }}</textarea>
                     </div>
 
-                    <div class="upload-box main-upload">
-                        <label class="label-bold">🖼️ Imagen Principal (Opcional)</label>
-                        <div class="upload-content">
-                            {% if question.image_filename %}
-                            <div class="preview-container">
-                                <span class="badge-img">Actual</span>
-                                <img src="{{ question.image_filename }}" alt="Imagen Pregunta">
+                    <div style="margin-top: 25px;">
+                        <label class="label-bold">🖼️ Galería de Lectura ({{ gallery_images|length }} imágenes)</label>
+                        
+                        {% if gallery_images %}
+                        <div class="gallery-manager">
+                            {% for img in gallery_images %}
+                            <div class="gallery-item" id="img-{{ loop.index0 }}">
+                                <img src="{{ img }}" class="gallery-thumb">
+                                <button type="button" class="btn-delete-img" onclick="deleteGalleryImage('{{ question.id }}', '{{ img }}', '{{ loop.index0 }}')" title="Eliminar foto">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
-                            {% endif %}
-                            <input type="file" name="image_file" class="file-control">
+                            {% endfor %}
                         </div>
-                        <small class="hint">Sube una nueva solo si deseas reemplazar la actual.</small>
+                        {% else %}
+                            <p style="font-size:0.85rem; color:var(--text-sec); font-style:italic; margin-bottom:10px;">No hay imágenes cargadas.</p>
+                        {% endif %}
+
+                        <div class="upload-box">
+                            <i class="fas fa-plus-circle" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 5px;"></i>
+                            <div style="font-weight:600; color:white;">Agregar más fotos</div>
+                            <small style="color:var(--text-sec);">Arrastra o haz clic aquí (Soporta múltiples)</small>
+                            <input type="file" name="gallery" multiple accept="image/*">
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-section bg-accent">
+                <div class="form-section" style="background: rgba(0,0,0,0.1);">
                     <h3 class="section-title">✅ Opciones de Respuesta</h3>
                     
                     <div class="options-grid">
                         <div class="option-card">
-                            <div class="option-header">
-                                <span class="letter-badge">A</span>
-                                <input type="text" name="option_a" class="styled-input" value="{{ question.option_a }}" required placeholder="Texto opción A">
-                            </div>
-                            <div class="mini-upload">
-                                <label class="label-bold" style="font-size: 0.8rem;">📷 Img Inciso A:</label>
-                                {% if question.image_a %}
-                                    <img src="{{ question.image_a }}" class="mini-preview">
-                                {% endif %}
-                                <input type="file" name="image_a" class="file-control" style="font-size: 0.8rem;">
+                            <div class="letter-badge">A</div>
+                            <input type="text" name="option_a" class="styled-input" value="{{ question.option_a }}" required>
+                            <div style="margin-top:10px;">
+                                {% if question.image_a %}<img src="{{ question.image_a }}" style="height:40px; border-radius:4px; margin-bottom:5px; display:block;">{% endif %}
+                                <input type="file" name="image_a" style="font-size:0.8rem; color:var(--text-sec);">
                             </div>
                         </div>
 
                         <div class="option-card">
-                            <div class="option-header">
-                                <span class="letter-badge">B</span>
-                                <input type="text" name="option_b" class="styled-input" value="{{ question.option_b }}" required placeholder="Texto opción B">
-                            </div>
-                            <div class="mini-upload">
-                                <label class="label-bold" style="font-size: 0.8rem;">📷 Img Inciso B:</label>
-                                {% if question.image_b %}
-                                    <img src="{{ question.image_b }}" class="mini-preview">
-                                {% endif %}
-                                <input type="file" name="image_b" class="file-control" style="font-size: 0.8rem;">
+                            <div class="letter-badge">B</div>
+                            <input type="text" name="option_b" class="styled-input" value="{{ question.option_b }}" required>
+                            <div style="margin-top:10px;">
+                                {% if question.image_b %}<img src="{{ question.image_b }}" style="height:40px; border-radius:4px; margin-bottom:5px; display:block;">{% endif %}
+                                <input type="file" name="image_b" style="font-size:0.8rem; color:var(--text-sec);">
                             </div>
                         </div>
 
                         <div class="option-card">
-                            <div class="option-header">
-                                <span class="letter-badge">C</span>
-                                <input type="text" name="option_c" class="styled-input" value="{{ question.option_c }}" required placeholder="Texto opción C">
-                            </div>
-                            <div class="mini-upload">
-                                <label class="label-bold" style="font-size: 0.8rem;">📷 Img Inciso C:</label>
-                                {% if question.image_c %}
-                                    <img src="{{ question.image_c }}" class="mini-preview">
-                                {% endif %}
-                                <input type="file" name="image_c" class="file-control" style="font-size: 0.8rem;">
+                            <div class="letter-badge">C</div>
+                            <input type="text" name="option_c" class="styled-input" value="{{ question.option_c }}">
+                            <div style="margin-top:10px;">
+                                {% if question.image_c %}<img src="{{ question.image_c }}" style="height:40px; border-radius:4px; margin-bottom:5px; display:block;">{% endif %}
+                                <input type="file" name="image_c" style="font-size:0.8rem; color:var(--text-sec);">
                             </div>
                         </div>
 
                         <div class="option-card">
-                            <div class="option-header">
-                                <span class="letter-badge">D</span>
-                                <input type="text" name="option_d" class="styled-input" value="{{ question.option_d }}" required placeholder="Texto opción D">
-                            </div>
-                            <div class="mini-upload">
-                                <label class="label-bold" style="font-size: 0.8rem;">📷 Img Inciso D:</label>
-                                {% if question.image_d %}
-                                    <img src="{{ question.image_d }}" class="mini-preview">
-                                {% endif %}
-                                <input type="file" name="image_d" class="file-control" style="font-size: 0.8rem;">
+                            <div class="letter-badge">D</div>
+                            <input type="text" name="option_d" class="styled-input" value="{{ question.option_d }}">
+                            <div style="margin-top:10px;">
+                                {% if question.image_d %}<img src="{{ question.image_d }}" style="height:40px; border-radius:4px; margin-bottom:5px; display:block;">{% endif %}
+                                <input type="file" name="image_d" style="font-size:0.8rem; color:var(--text-sec);">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-section final-settings">
-                    <div class="settings-grid">
-                        <div class="setting-item">
-                            <label class="label-bold text-success" style="color: var(--success);">Respuesta Correcta</label>
-                            <select name="correct_option" class="styled-select success-border" required>
+                <div class="form-section">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <label class="label-bold" style="color: var(--success);">Respuesta Correcta</label>
+                            <select name="correct_option" class="styled-select" style="border-color: var(--success);" required>
                                 <option value="A" {% if question.correct_option == 'A' %}selected{% endif %}>Opción A</option>
                                 <option value="B" {% if question.correct_option == 'B' %}selected{% endif %}>Opción B</option>
                                 <option value="C" {% if question.correct_option == 'C' %}selected{% endif %}>Opción C</option>
                                 <option value="D" {% if question.correct_option == 'D' %}selected{% endif %}>Opción D</option>
                             </select>
                         </div>
-
-                        <div class="setting-item">
+                        <div>
                             <label class="label-bold">Dificultad</label>
                             <select name="manual_difficulty" class="styled-select">
                                 <option value="Easy" {% if question.manual_difficulty == 'Easy' %}selected{% endif %}>🟢 Fácil</option>
@@ -478,29 +256,71 @@
 
     <div class="sidebar-column">
         <div class="card-box sidebar-card">
-            <div class="sidebar-header">
-                <h5>Navegación del Examen</h5>
-                <small>{{ questions|length }} preguntas totales</small>
+            <div class="card-header-custom" style="padding: 15px 20px; background: var(--bg-input);">
+                <h5 style="margin:0; color:var(--text-main);">Índice del Examen</h5>
             </div>
             <div class="question-list-wrapper">
-                <ul class="question-list">
-                    {% for q in questions %}
-                    <li class="list-item {% if q.id == question.id %}active{% endif %}">
-                        <a href="{{ url_for('edit_question', question_id=q.id) }}" class="list-link">
-                            <span class="q-number">#{{ loop.index }}</span>
-                            <span class="q-text">{{ q.text | truncate(35) }}</span>
-                            {% if q.id != question.id %}
-                                <span class="edit-icon">✏️</span>
-                            {% else %}
-                                <span style="font-size: 0.8rem;">👀</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
+                {% for q in questions %}
+                <a href="{{ url_for('edit_question', question_id=q.id) }}" class="list-item {% if q.id == question.id %}active{% endif %}">
+                    <span class="q-number">#{{ loop.index }}</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ q.text }}</span>
+                </a>
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    async function deleteGalleryImage(questionId, imageUrl, index) {
+        const result = await Swal.fire({
+            title: '¿Eliminar imagen?',
+            text: "Se borrará de la galería permanentemente.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#334155',
+            confirmButtonText: 'Sí, borrar',
+            background: '#0f172a', color: '#fff'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`/admin/api/delete_question_image`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': "{{ csrf_token() }}" // Asegúrate de tener el token CSRF disponible
+                    },
+                    body: JSON.stringify({ 
+                        question_id: questionId, 
+                        image_url: imageUrl,
+                        index: index
+                    })
+                });
+
+                if (response.ok) {
+                    // Eliminar visualmente el cuadrito
+                    const item = document.getElementById('img-' + index);
+                    item.style.transform = 'scale(0)';
+                    setTimeout(() => item.remove(), 300);
+                    
+                    Swal.fire({
+                        title: 'Eliminada', icon: 'success', 
+                        toast: true, position: 'top-end', 
+                        showConfirmButton: false, timer: 2000,
+                        background: '#0f172a', color: '#fff'
+                    });
+                } else {
+                    Swal.fire("Error", "No se pudo borrar la imagen.", "error");
+                }
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error de Red", "Revisa tu conexión.", "error");
+            }
+        }
+    }
+</script>
 
 {% endblock %}

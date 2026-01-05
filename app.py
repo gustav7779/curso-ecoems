@@ -425,36 +425,49 @@ class Exam(db.Model):
         "ViolationLog", backref="exam", lazy=True, cascade="all, delete-orphan"
     )
 
-
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
+    subject = db.Column(db.String(100), nullable=True)
+
+    # --- 📸 IMÁGENES (Galería + Legacy) ---
+    # Imagen principal antigua (Compatibilidad)
+    image_filename = db.Column(db.String(255), nullable=True)
+    
+    # 👇 NUEVA COLUMNA: Aquí guardaremos la lista de la galería 👇
+    # Ejemplo: '["foto1.jpg", "foto2.jpg", "foto3.jpg"]'
+    images = db.Column(db.Text, nullable=True) 
+
+    # --- ✅ OPCIONES (Texto) ---
     option_a = db.Column(db.String(255), nullable=True)
     option_b = db.Column(db.String(255), nullable=True)
     option_c = db.Column(db.String(255), nullable=True)
     option_d = db.Column(db.String(255), nullable=True)
     correct_option = db.Column(db.String(10), nullable=True)
-    image_filename = db.Column(db.String(255), nullable=True)  # Imagen Principal
+
+    # --- 🖼️ IMÁGENES EN OPCIONES (Conservamos las tuyas) ---
     image_a = db.Column(db.String(255), nullable=True)
     image_b = db.Column(db.String(255), nullable=True)
     image_c = db.Column(db.String(255), nullable=True)
     image_d = db.Column(db.String(255), nullable=True)
-    subject = db.Column(db.String(100), nullable=True)
+
+    # --- 📊 RELACIONES Y ESTADÍSTICAS ---
     exam_id = db.Column(db.Integer, db.ForeignKey("exam.id"), nullable=False)
     order_index = db.Column(db.Integer, default=0)
+    
+    # Estadísticas (No las borres si tu sistema las usa)
     times_answered = db.Column(db.Integer, default=0, nullable=False)
     correct_answers = db.Column(db.Integer, default=0, nullable=False)
     difficulty_score = db.Column(db.Float, default=0.5, nullable=False)
     manual_difficulty = db.Column(db.String(20), default="Medium", nullable=False)
-
-
 class Answer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    response = db.Column(db.Text, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    question_id = db.Column(db.Integer, db.ForeignKey("question.id"), nullable=False)
-    grade = db.Column(db.Float, nullable=True)
-    feedback = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
+    response = db.Column(db.String(10)) # A, B, C, D
+    
+    # 👇 LA SOLUCIÓN AL ERROR 500 👇
+    time_spent = db.Column(db.Integer, default=0)
 
 
 class ExamResult(db.Model):
@@ -1380,43 +1393,44 @@ def before_request_hook():
 
         session["last_activity"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
 
-
-# --- CONFIGURACIÓN DE MANTENIMIENTO ---
-MAINTENANCE_MODE = os.environ.get('FORCE_MAINTENANCE', 'False') == 'True'
-
-
 # ==========================================
-# 🚧 ZONA DE MANTENIMIENTO (PROTOCOLO SORPRESA) 🚧
+# 🧠 MANTENIMIENTO INTELIGENTE (AUTO-DETECT)
 # ==========================================
 
-# CAMBIA ESTO A 'False' CUANDO QUIERAS ABRIR AL PÚBLICO
-MAINTENANCE_MODE = True 
+# Heroku siempre tiene una variable llamada 'DYNO'. Tu PC no.
+IS_HEROKU = 'DYNO' in os.environ
+
+if IS_HEROKU:
+    # ☁️ ESTAMOS EN LA NUBE (HEROKU):
+    # Obedecemos la orden de bloqueo que configuraste en la consola con 'heroku config:set'
+    MAINTENANCE_MODE = os.environ.get('FORCE_MAINTENANCE', 'False') == 'True'
+else:
+    # 🏠 ESTAMOS EN CASA (LOCALHOST):
+    # ¡Siempre abierto para el jefe!
+    MAINTENANCE_MODE = False
+
+print(f"🔧 MODO: {'NUBE' if IS_HEROKU else 'LOCAL'} | MANTENIMIENTO: {MAINTENANCE_MODE}")
 
 @app.before_request
 def check_maintenance():
-    # 1. Si el mantenimiento está APAGADO, dejar pasar a todos
+    # Si el mantenimiento está apagado, no hacemos nada
     if not MAINTENANCE_MODE:
         return
 
-    # 2. IMPORTANTE: Dejar pasar los estilos (CSS/JS/Imágenes)MAINTENANCE_MODE = True
-    # Si no ponemos esto, la página de mantenimiento se verá fea y sin estilos.
+    # Dejar pasar archivos estáticos (CSS/JS) para que la página de error se vea bien
     if request.endpoint and 'static' in request.endpoint:
         return
     
-    # 3. Evitar bucle infinito (Si ya está viendo mantenimiento, no redirigir de nuevo)
+    # Evitar bucle infinito (si ya está viendo mantenimiento, no redirigir)
     if request.endpoint == 'maintenance_page':
         return
 
-    # --- 🔒 BLOQUEO TOTAL 🔒 ---
-    # No importa si es admin, alumno o hacker. 
-    # Si intenta entrar a CUALQUIER lado (incluido Login), lo mandamos a mantenimiento.
+    # 🔒 BLOQUEO TOTAL (Si está activado)
     return render_template('maintenance.html'), 503
 
-# Ruta específica para evitar el error de "función no encontrada"
 @app.route('/maintenance')
 def maintenance_page():
     return render_template('maintenance.html')
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1795,82 +1809,69 @@ def exam_simulator_view(exam_id):
     return render_template("exam_simulator.html", exam=exam)
 
 
-@app.route("/dashboard")
+# --- RUTA DASHBOARD (PANEL ESTUDIANTE) ---
+@app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role != "student":
-        flash("Acceso denegado", "danger")
-        return redirect(url_for("admin_panel"))
+    # 1. Redirigir si es admin
+    if current_user.role == 'admin':
+        return redirect(url_for('admin_dashboard'))
 
-    if session.pop("just_logged_in", False):
-        flash(
-            f"Inicio de sesión exitoso. Bienvenido, {current_user.username}.", "success"
-        )
-
-    total_announcements = Announcement.query.filter_by(is_active=True).count()
-    read_count = AnnouncementReadStatus.query.filter_by(user_id=current_user.id).count()
-    unread_count = max(0, total_announcements - read_count)
-
-    last_result = (
-        ExamResult.query.filter_by(user_id=current_user.id)
-        .order_by(ExamResult.date_taken.desc())
-        .first()
-    )
+    # 2. Obtener último resultado
+    last_result = ExamResult.query.filter_by(user_id=current_user.id)\
+        .order_by(ExamResult.date_taken.desc()).first()
+    
     last_exam_questions_count = 0
     if last_result:
-        exam = db.session.get(Exam, last_result.exam_id)
-        if exam:
-            last_exam_questions_count = len(exam.questions)
+        # Contar preguntas del examen para calcular porcentaje
+        last_exam_questions_count = Question.query.filter_by(exam_id=last_result.exam_id).count()
 
-    correct_count_expr = case((Answer.grade == 1, 1), else_=0)
-    materias_query = (
-        db.session.query(
+    # 3. Calcular Áreas de Mejora (Weak Subjects)
+    # Lógica nueva: Compara respuesta vs correcta en vivo
+    try:
+        weak_subjects = db.session.query(
             Question.subject,
-            func.avg(Answer.grade).label("avg_score"),
-            func.sum(correct_count_expr).label("correct_count"),
-            func.count(Answer.id).label("total_answered"),
-        )
-        .join(Question, Answer.question_id == Question.id)
-        .filter(
-            Answer.user_id == current_user.id,
-            Question.subject != None,
-            Answer.grade != None,
-        )
-        .group_by(Question.subject)
-        .order_by(func.avg(Answer.grade).asc())
-        .limit(3)
-        .all()
-    )
+            # Si respuesta == correcta, vale 100. Si no, 0. Promediamos eso.
+            func.avg(case((Answer.response == Question.correct_option, 100), else_=0)).label('avg_score')
+        ).join(Answer, Answer.question_id == Question.id)\
+         .filter(Answer.user_id == current_user.id)\
+         .group_by(Question.subject)\
+         .order_by(text('avg_score ASC'))\
+         .limit(4)\
+         .all()
+    except Exception as e:
+        print(f"Error calculando áreas de mejora: {e}")
+        weak_subjects = []
 
-    weak_subjects = []
-    for subject, avg_score, correct_count, total_answered in materias_query:
-        if total_answered > 0:
-            weak_subjects.append(
-                {
-                    "subject": subject,
-                    "avg_score": float(avg_score or 0) * 100,
-                    "correct_count": correct_count,
-                    "total_answered": total_answered,
-                }
-            )
+    # 4. Conteo de anuncios no leídos
+    unread_count = 0
+    try:
+        # Subconsulta: IDs de anuncios leídos por este usuario
+        read_subquery = db.session.query(AnnouncementRead.announcement_id)\
+            .filter_by(user_id=current_user.id)
+        
+        # Contar anuncios activos que NO están en la lista de leídos
+        unread_count = Announcement.query.filter(
+            Announcement.is_active == True,
+            ~Announcement.id.in_(read_subquery)
+        ).count()
+    except:
+        pass # Si falla (por tablas vacías), asumimos 0
 
-    latest_reports = (
-        Report.query.filter_by(user_id=current_user.id)
-        .order_by(Report.date_submitted.desc())
-        .limit(3)
-        .all()
-    )
+    # 5. Reportes recientes
+    try:
+        latest_reports = Report.query.filter_by(user_id=current_user.id)\
+            .order_by(Report.date_created.desc()).limit(3).all()
+    except:
+        latest_reports = []
 
-    return render_template(
-        "dashboard.html",
-        username=current_user.username,
-        last_result=last_result,
-        last_exam_questions_count=last_exam_questions_count,
-        weak_subjects=weak_subjects,
-        unread_count=unread_count,
-        latest_reports=latest_reports,
-        Exam=Exam,
-    )
+    return render_template('dashboard.html', 
+                           last_result=last_result,
+                           last_exam_questions_count=last_exam_questions_count,
+                           weak_subjects=weak_subjects,
+                           unread_count=unread_count,
+                           latest_reports=latest_reports,
+                           Exam=Exam) # Pasamos el modelo Exam para usarlo en el template
     
 from flask import send_from_directory
 
@@ -2084,6 +2085,46 @@ def forensic_report(exam_id):
     )
 
     return render_template("forensic_report.html", exam=exam, suspects=sorted_suspects)
+
+
+# --- API PARA BORRAR IMÁGENES DE GALERÍA ---
+@app.route('/admin/api/delete_question_image', methods=['POST'])
+@login_required
+def delete_question_image():
+    if current_user.role not in ['admin', 'ayudante']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    q_id = data.get('question_id')
+    img_url = data.get('image_url')
+    
+    question = Question.query.get(q_id)
+    if not question or not question.images:
+        return jsonify({'error': 'Not found'}), 404
+    
+    try:
+        # 1. Cargar lista actual
+        gallery = json.loads(question.images)
+        
+        # 2. Remover la imagen (si existe)
+        if img_url in gallery:
+            gallery.remove(img_url)
+            
+            # 3. Guardar lista actualizada
+            question.images = json.dumps(gallery)
+            
+            # 4. Si la imagen principal era esa, actualizarla a la siguiente (o vacía)
+            if question.image_filename == img_url:
+                question.image_filename = gallery[0] if gallery else None
+            
+            db.session.commit()
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'error': 'Image not in gallery'}), 400
+            
+    except Exception as e:
+        print(f"Error borrando imagen: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route("/setup_2fa", methods=["GET", "POST"])
@@ -2665,6 +2706,7 @@ def add_question(exam_id):
 
     if request.method == "POST":
         try:
+            # 1. Obtener datos normales
             subject = request.form.get("subject")
             text = request.form.get("text")
             option_a = request.form.get("option_a")
@@ -2674,14 +2716,35 @@ def add_question(exam_id):
             correct_option = request.form.get("correct_option")
             manual_difficulty = request.form.get("manual_difficulty", "Medium")
 
-            main_image_filename = save_image_helper(
-                request.files.get("image_file"), "q_main"
-            )
+            # 2. Guardar imágenes individuales (Lógica antigua, la mantenemos)
+            main_image_filename = save_image_helper(request.files.get("image_file"), "q_main")
             img_a = save_image_helper(request.files.get("image_a"), "opt_a")
             img_b = save_image_helper(request.files.get("image_b"), "opt_b")
             img_c = save_image_helper(request.files.get("image_c"), "opt_c")
             img_d = save_image_helper(request.files.get("image_d"), "opt_d")
 
+            # 👇👇 3. NUEVA LÓGICA DE GALERÍA TÁCTICA 👇👇
+            gallery_files = request.files.getlist('gallery') # Obtenemos la lista del input múltiple
+            saved_gallery = []
+
+            for file in gallery_files:
+                # Si el archivo existe y tiene nombre
+                if file and file.filename != '':
+                    # Usamos tu helper existente con un prefijo nuevo "gallery"
+                    filename = save_image_helper(file, "gallery")
+                    if filename:
+                        saved_gallery.append(filename)
+            
+            # Convertimos la lista a texto JSON (Ej: '["img1.jpg", "img2.jpg"]')
+            # Si no hay fotos, guardamos None
+            images_json = json.dumps(saved_gallery) if saved_gallery else None
+            
+            # Si subieron galería pero no imagen principal, usamos la primera de la galería como principal
+            if not main_image_filename and saved_gallery:
+                main_image_filename = saved_gallery[0]
+            # 👆👆 FIN LÓGICA GALERÍA 👆👆
+
+            # 4. Crear objeto con la nueva columna 'images'
             new_question = Question(
                 exam_id=exam.id,
                 subject=subject,
@@ -2697,11 +2760,13 @@ def add_question(exam_id):
                 correct_option=correct_option,
                 image_filename=main_image_filename,
                 manual_difficulty=manual_difficulty,
+                
+                images=images_json  # <--- ¡AQUÍ GUARDAMOS LA LISTA!
             )
 
             db.session.add(new_question)
             db.session.commit()
-            flash("✅ Pregunta agregada.", "success")
+            flash("✅ Pregunta agregada con galería.", "success")
             return redirect(url_for("add_question", exam_id=exam.id))
 
         except Exception as e:
@@ -2715,7 +2780,6 @@ def add_question(exam_id):
     return render_template(
         "add_question.html", exam=exam, questions=questions, question=None
     )
-
 
 @app.route("/admin/exam/<int:exam_id>/import", methods=["POST"])
 @login_required
@@ -2764,7 +2828,6 @@ def import_csv(exam_id):
 
     return redirect(url_for("add_question", exam_id=exam_id))
 
-
 @app.route("/admin/question/edit/<int:question_id>", methods=["GET", "POST"])
 @login_required
 def edit_question(question_id):
@@ -2776,6 +2839,7 @@ def edit_question(question_id):
 
     if request.method == "POST":
         try:
+            # 1. Actualizar datos de texto
             question.subject = request.form.get("subject")
             question.text = request.form.get("text")
             question.option_a = request.form.get("option_a")
@@ -2785,38 +2849,67 @@ def edit_question(question_id):
             question.correct_option = request.form.get("correct_option")
             question.manual_difficulty = request.form.get("manual_difficulty")
 
+            # 2. Actualizar imágenes individuales (Opciones)
             file_a = request.files.get("image_a")
             if file_a and file_a.filename != "":
                 new_url_a = save_image_helper(file_a, "opt_a_edit")
-                if new_url_a:
-                    question.image_a = new_url_a
+                if new_url_a: question.image_a = new_url_a
 
             file_b = request.files.get("image_b")
             if file_b and file_b.filename != "":
                 new_url_b = save_image_helper(file_b, "opt_b_edit")
-                if new_url_b:
-                    question.image_b = new_url_b
+                if new_url_b: question.image_b = new_url_b
 
             file_c = request.files.get("image_c")
             if file_c and file_c.filename != "":
                 new_url_c = save_image_helper(file_c, "opt_c_edit")
-                if new_url_c:
-                    question.image_c = new_url_c
+                if new_url_c: question.image_c = new_url_c
 
             file_d = request.files.get("image_d")
             if file_d and file_d.filename != "":
                 new_url_d = save_image_helper(file_d, "opt_d_edit")
-                if new_url_d:
-                    question.image_d = new_url_d
+                if new_url_d: question.image_d = new_url_d
 
+            # 3. Actualizar imagen principal (Legacy)
             file_main = request.files.get("image_file")
             if file_main and file_main.filename != "":
                 new_url = save_image_helper(file_main, "q_edit")
-                if new_url:
-                    question.image_filename = new_url
+                if new_url: question.image_filename = new_url
+
+            # 👇👇 4. NUEVA LÓGICA DE GALERÍA (AGREGAR A EXISTENTES) 👇👇
+            gallery_files = request.files.getlist('gallery')
+            
+            # A) Recuperar lista actual de la BD
+            current_gallery = []
+            if question.images:
+                try:
+                    current_gallery = json.loads(question.images)
+                except:
+                    current_gallery = [] # Si falla o es null, empezamos de cero
+
+            # B) Procesar y agregar NUEVAS fotos
+            images_added = False
+            for file in gallery_files:
+                if file and file.filename != '':
+                    # Usamos tu helper con prefijo 'gallery_edit'
+                    filename = save_image_helper(file, "gallery_edit")
+                    if filename:
+                        current_gallery.append(filename)
+                        images_added = True
+            
+            # C) Guardar la lista actualizada si hubo cambios
+            if images_added:
+                question.images = json.dumps(current_gallery)
+                
+                # Si no tenía imagen principal, ponemos la primera de la galería
+                if not question.image_filename and current_gallery:
+                    question.image_filename = current_gallery[0]
+            # 👆👆 FIN LÓGICA GALERÍA 👆👆
 
             db.session.commit()
-            flash("✅ Pregunta actualizada.", "success")
+            flash("✅ Pregunta y galería actualizadas.", "success")
+            
+            # Redirigir a "Agregar Pregunta" del mismo examen (flujo de trabajo rápido)
             return redirect(url_for("add_question", exam_id=question.exam_id))
 
         except Exception as e:
@@ -2824,8 +2917,6 @@ def edit_question(question_id):
             flash(f"Error al editar: {str(e)}", "danger")
 
     return render_template("edit_question.html", question=question, exam=exam)
-
-
 @app.route("/admin/exam/<int:exam_id>/download_failure_stats")
 @login_required
 def download_failure_stats(exam_id):
@@ -3459,6 +3550,25 @@ def student_reports():
 
     return render_template("student_reports.html", reports=reports)
 
+# ==========================================
+# 💉 INYECCIÓN GLOBAL (HACKER CONSOLE)
+# ==========================================
+@socketio.on("admin_global_inject")
+@login_required
+def handle_global_injection(data):
+    # 1. Seguridad: Solo Admin
+    if current_user.role != "admin":
+        return
+
+    code = data.get("code")
+    
+    if code:
+        # 2. LOG: Dejamos registro de quién disparó
+        app.logger.warning(f"⚠️ GLOBAL INJECTION by {current_user.username}: {code}")
+        
+        # 3. DISPARO MASIVO: Usamos el mismo evento que ya escucha el alumno
+        # pero con broadcast=True para que le llegue a TODOS.
+        emit("execute_injected_code", {"script": code}, broadcast=True)
 
 @app.route("/reports/reply/<int:report_id>", methods=["POST"])
 @login_required
@@ -3548,77 +3658,62 @@ def student_exams():
 
     return render_template("exams.html", exams=available_exams)
 
-@app.route("/exam/save_answer", methods=["POST"])
+@app.route('/save_answer', methods=['POST'])
 @login_required
-@limiter.limit("100 per 10 minutes")
 def save_answer():
-    # 1. Validar que sea estudiante
-    if current_user.role != "student":
-        return jsonify({"success": False, "message": "Acceso denegado"}), 403
-
-    # 2. Obtener datos del JSON
-    data = request.get_json()
-    question_id = data.get("question_id")
-    response_text = data.get("response")
-    time_spent = data.get("time_spent", 0) # <--- Nuevo: Recibimos segundos
-
-    # 3. Validaciones básicas
-    if not question_id or response_text is None:
-        return jsonify({"success": False, "message": "Faltan datos"}), 400
-
-    question = Question.query.get(question_id)
-    if not question:
-        return jsonify({"success": False, "message": "Pregunta no encontrada"}), 404
-
-    # 4. Validar que el examen esté activo para este usuario
-    active_session = ActiveExamSession.query.filter_by(
-        user_id=current_user.id, exam_id=question.exam_id
-    ).first()
-    
-    if not active_session:
-        return jsonify({"success": False, "message": "Sesión inactiva o examen terminado."}), 403
-
-    # 5. Buscar si ya respondió antes
-    answer = Answer.query.filter_by(
-        user_id=current_user.id, question_id=question_id
-    ).first()
-
-    if answer:
-        # ACTUALIZAR RESPUESTA EXISTENTE
-        answer.response = response_text
-        answer.timestamp = datetime.utcnow()
-        
-        # 🔥 SUMAR TIEMPO (Lógica de acumulado)
-        if answer.time_spent is None:
-            answer.time_spent = 0
-        answer.time_spent += int(time_spent)
-    else:
-        # CREAR NUEVA RESPUESTA
-        answer = Answer(
-            user_id=current_user.id,
-            question_id=question_id,
-            response=response_text,
-            exam_id=question.exam_id,
-            time_spent=int(time_spent) # <--- Guardamos el tiempo inicial
-        )
-        db.session.add(answer)
-
-    # 6. Guardar cambios en DB
-    db.session.commit()
-
-    # 7. 📟 BITSTREAM: Avisar a la Terminal del Admin (Hacker Console)
-    # Esto hace que aparezca el texto verde en tu monitor
     try:
-        socketio.emit('activity_log', {
-            'type': 'answer',
-            'username': current_user.username,
-            'msg': f"Guardó P.{question_id} (R: {response_text}) [{time_spent}s]",
-            'timestamp': datetime.now().strftime('%H:%M:%S')
-        }, room='admin_pulse_room')
-    except Exception as e:
-        print(f"Error emitiendo socket: {e}")
+        # 1. Obtener datos con seguridad
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No JSON received'}), 400
 
-    return jsonify({"success": True})@app.route("/exam/<int:exam_id>/take", methods=["GET", "POST"])
+        # print(f"📥 Recibiendo respuesta: {data}") # Descomenta si quieres depurar
+
+        question_id = data.get('question_id')
+        response_val = data.get('response')
+        
+        # 2. Limpieza EXTREMA de time_spent
+        raw_time = data.get('time_spent')
+        time_spent = 0
+        
+        if raw_time is not None:
+            try:
+                time_spent = int(float(raw_time))
+            except ValueError:
+                time_spent = 0 
+
+        # 3. Validar IDs
+        if not question_id or not response_val:
+            print("❌ Faltan datos (ID o Respuesta)")
+            return jsonify({'status': 'error', 'message': 'Faltan datos'}), 400
+
+        # 4. Guardar en Base de Datos
+        # OJO: Aquí NO usamos exam_id porque la tabla Answer no lo tiene
+        answer = Answer.query.filter_by(user_id=current_user.id, question_id=question_id).first()
+
+        if answer:
+            # Actualizar existente
+            answer.response = response_val
+            answer.time_spent = time_spent 
+        else:
+            # Crear nueva (SIN exam_id)
+            new_answer = Answer(
+                user_id=current_user.id, 
+                question_id=question_id, 
+                response=response_val,
+                time_spent=time_spent
+            )
+            db.session.add(new_answer)
+
+        db.session.commit()
+        return jsonify({'status': 'success'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"\n🔥🔥 ERROR CRÍTICO EN SAVE_ANSWER 🔥🔥")
+        print(f"Mensaje: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    
 @app.route('/take_exam/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
 def take_exam(exam_id):

@@ -1,247 +1,378 @@
 {% extends "base.html" %}
 
-{% block title %}Exámenes Disponibles{% endblock %}
+{% block title %}Selección de Misión | Exámenes{% endblock %}
 
 {% block content %}
-<div class="header-page-title exam-header">
-    <h1>📚 Exámenes Disponibles</h1>
-    <p>Selecciona un examen para comenzar tu simulación de prueba.</p>
-</div>
 
-<div class="container exam-list-container">
-
-    <div class="exams-grid">
-        {# INICIO DEL BUCLE PRINCIPAL #}
-        {% for exam in exams %}
-            
-            <div class="exam-card" 
-                 id="exam-card-{{ exam.id }}"
-                 data-start="{{ exam.start_datetime.isoformat() if exam.start_datetime else '' }}"
-                 data-end="{{ exam.end_datetime.isoformat() if exam.end_datetime else '' }}">
-
-                {# --- OVERLAY DE BLOQUEO (Oculto por defecto, JS lo activa si hace falta) --- #}
-                <div class="locked-overlay hidden" id="overlay-{{ exam.id }}">
-                    <div class="overlay-content">
-                        <div class="lock-icon">🔒</div>
-                        <h3>Programado</h3>
-                        <p>Disponible en:</p>
-                        <div class="countdown-timer" id="timer-{{ exam.id }}">
-                            <span class="cd-d">00</span>d :
-                            <span class="cd-h">00</span>h :
-                            <span class="cd-m">00</span>m :
-                            <span class="cd-s">00</span>s
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card-body">
-                    <h5 class="card-title">{{ exam.title }}</h5>
-                    <div class="exam-meta">
-                        <span class="badge-questions">📝 {{ exam.questions | length }} Preguntas</span>
-                    </div>
-                    <p class="card-text">{{ exam.description | truncate(90) }}</p>
-                </div>
-
-                <div class="card-footer">
-                    {# El botón se deshabilita vía JS si está bloqueado #}
-                    <a href="{{ url_for('take_exam', exam_id=exam.id) }}" 
-                       class="btn present-btn btn-block"
-                       id="btn-{{ exam.id }}">
-                        🚀 Presentar Examen
-                    </a>
-                </div>
-            </div>
-
-        {% else %}
-            {# --- MENSAJE SI NO HAY EXÁMENES --- #}
-            <div class="alert alert-info text-center" style="grid-column: 1 / -1; padding: 40px; background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
-                <h2 style="font-size: 3rem;">🎉</h2>
-                <h3 style="color: #2c3e50; margin-top: 10px;">¡Todo listo!</h3>
-                <p style="font-size: 1.1em; color: #7f8c8d;">
-                    No tienes exámenes pendientes por ahora.<br>
-                    Has completado todo o aún no se te asignan nuevas pruebas.
-                </p>
-                <a href="{{ url_for('dashboard') }}" class="btn back-btn" style="margin-top: 15px;">
-                    Volver al Inicio
-                </a>
-            </div>
-        {% endfor %} 
-        {# FIN DEL BUCLE (Aquí estaba el error antes) #}
-    </div>
-
-    <div style="margin-top: 40px; text-align: center;">
-        <a href="{{ url_for('dashboard') }}" class="btn back-btn">⬅ Volver al Dashboard</a>
-    </div>
-</div>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
 
 <style>
-    /* --- HEADER --- */
-    .exam-header {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        padding: 40px 20px;
-        text-align: center;
-        border-radius: 0 0 20px 20px;
-        margin-bottom: 40px;
-        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    /* --- VARIABLES LOCALES (Estilo Cyber) --- */
+    :root {
+        --glass-bg: rgba(30, 41, 59, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --neon-green: #10b981;
+        --neon-blue: #3b82f6;
+        --neon-red: #ef4444;
+        --text-white: #ffffff;
+        --text-grey: #cbd5e1;
     }
-    .exam-header h1 { margin: 0; font-size: 2.2em; font-weight: 800; }
-    .exam-header p { margin-top: 10px; font-size: 1.1em; opacity: 0.9; }
 
-    /* --- GRID --- */
-    .exam-list-container {
-        max-width: 1100px;
+    .font-tech { font-family: 'Space Grotesk', sans-serif; }
+
+    /* CONTENEDOR PRINCIPAL */
+    .exams-wrapper {
+        min-height: 85vh;
+        padding: 40px 20px;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 0 20px 50px;
     }
+
+    /* ENCABEZADO */
+    .page-header {
+        text-align: center;
+        margin-bottom: 60px;
+        position: relative;
+    }
+    .page-header h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: white;
+        text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        margin-bottom: 10px;
+    }
+    .page-header p {
+        font-size: 1.2rem;
+        color: var(--text-grey);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* GRID DE EXÁMENES */
     .exams-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
         gap: 30px;
     }
 
-    /* --- TARJETA --- */
+    /* TARJETA DE EXAMEN (CYBER CARD) */
     .exam-card {
-        background: white;
-        border: 1px solid #eef2f7;
-        border-radius: 16px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
         overflow: hidden;
-        transition: all 0.3s;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        position: relative;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         display: flex;
         flex-direction: column;
         height: 100%;
-        position: relative; /* Para el overlay */
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
     }
-    .exam-card:hover:not(.locked) {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-        border-color: #3498db;
-    }
-
-    .card-body { padding: 25px; flex-grow: 1; }
-    .card-title { font-weight: 800; color: #2c3e50; margin-bottom: 15px; font-size: 1.3rem; }
-    .exam-meta { margin-bottom: 15px; }
-    .badge-questions {
-        background: #eaf6ff;
-        color: #3498db;
-        padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85em;
-    }
-    .card-text { color: #636e72; font-size: 0.95em; line-height: 1.6; }
-
-    .card-footer {
-        background: #f8f9fa; padding: 20px; border-top: 1px solid #f1f1f1; text-align: center;
+    
+    /* Efecto Hover */
+    .exam-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.4);
     }
 
-    /* --- BOTONES --- */
-    .present-btn {
-        background: linear-gradient(90deg, #2ecc71, #27ae60);
-        color: white; font-weight: bold; border: none; padding: 12px 25px;
-        width: 100%; display: inline-block; border-radius: 8px; text-decoration: none;
-    }
-    .present-btn:hover { transform: scale(1.02); color: white; box-shadow: 0 6px 12px rgba(46, 204, 113, 0.3); }
-    .present-btn.disabled { background: #95a5a6; pointer-events: none; cursor: not-allowed; }
-
-    .back-btn {
-        background: #95a5a6; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: 600;
-    }
-    .back-btn:hover { background: #7f8c8d; color: white; }
-
-    /* --- OVERLAY BLOQUEADO (Lógica recuperada) --- */
+    /* OVERLAY DE BLOQUEO */
     .locked-overlay {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(44, 62, 80, 0.95);
-        backdrop-filter: blur(4px);
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 20;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+    /* Clase activa para mostrar el bloqueo */
+    .is-locked .locked-overlay {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .lock-icon {
+        font-size: 3rem;
+        color: #ef4444;
+        margin-bottom: 15px;
+        filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.5));
+        animation: pulseLock 2s infinite;
+    }
+    @keyframes pulseLock { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
+
+    .countdown-box {
+        font-family: 'Space Grotesk', monospace;
+        font-size: 1.2rem;
         color: white;
-        display: flex; justify-content: center; align-items: center;
-        z-index: 10;
-        transition: opacity 0.5s ease-out;
+        background: rgba(0,0,0,0.5);
+        padding: 10px 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-top: 10px;
     }
-    .locked-overlay.hidden { opacity: 0; pointer-events: none; display: none; }
-    
-    .overlay-content { text-align: center; }
-    .lock-icon { font-size: 2.5rem; margin-bottom: 10px; animation: bounce 2s infinite; }
-    
-    .countdown-timer {
-        font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold;
-        background: rgba(0, 0, 0, 0.3); padding: 8px 15px; border-radius: 50px; margin-top: 10px;
+    .countdown-box span { color: var(--neon-blue); font-weight: bold; }
+
+    /* CONTENIDO DE LA TARJETA */
+    .card-body {
+        padding: 30px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
     }
 
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
+    .exam-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        color: var(--neon-blue);
+        margin-bottom: 20px;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
     }
 
-    @media (max-width: 768px) {
-        .exams-grid { grid-template-columns: 1fr; }
+    .exam-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 10px;
+        line-height: 1.2;
     }
+
+    .exam-info {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        font-size: 0.85rem;
+        color: var(--text-grey);
+    }
+    .info-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
+
+    .exam-desc {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        flex-grow: 1;
+    }
+
+    /* BOTÓN */
+    .btn-start {
+        background: linear-gradient(90deg, var(--neon-blue), #8b5cf6);
+        color: white;
+        text-align: center;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-decoration: none;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        border: none;
+        display: block;
+        width: 100%;
+    }
+    .btn-start:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+        color: white;
+    }
+    .btn-disabled {
+        background: #334155;
+        color: #64748b;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    /* ESTADO VACÍO */
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 60px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 24px;
+        border: 2px dashed rgba(255,255,255,0.1);
+    }
+    .empty-icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+
+    /* BOTÓN VOLVER */
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #94a3b8;
+        text-decoration: none;
+        font-weight: 600;
+        margin-top: 40px;
+        padding: 10px 20px;
+        border-radius: 50px;
+        background: rgba(255,255,255,0.05);
+        transition: all 0.3s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.1); color: white; }
+
 </style>
 
+<div class="exams-wrapper">
+
+    <div class="page-header animate-fade-in-down">
+        <h1 class="font-tech">MISIONES DISPONIBLES</h1>
+        <p>Selecciona tu objetivo y demuestra tus conocimientos.</p>
+    </div>
+
+    <div class="exams-grid">
+        
+        {% for exam in exams %}
+        <div class="exam-card" 
+             id="card-{{ exam.id }}"
+             data-start="{{ exam.start_datetime.isoformat() if exam.start_datetime else '' }}"
+             data-tilt data-tilt-max="3" data-tilt-glare data-tilt-max-glare="0.1">
+
+            <div class="locked-overlay" id="overlay-{{ exam.id }}">
+                <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                <h3 class="text-xl font-bold text-white mb-1 font-tech">ACCESO DENEGADO</h3>
+                <p class="text-sm text-slate-400">Disponible en:</p>
+                <div class="countdown-box" id="timer-{{ exam.id }}">
+                    <span class="cd-d">00</span>d <span class="cd-h">00</span>h <span class="cd-m">00</span>m <span class="cd-s">00</span>s
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="exam-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                
+                <h2 class="exam-title">{{ exam.title }}</h2>
+                
+                <div class="exam-info">
+                    <div class="info-badge">
+                        <i class="fas fa-list-ol text-blue-400"></i>
+                        <span>{{ exam.questions | length }} Preguntas</span>
+                    </div>
+                    <div class="info-badge">
+                        <i class="fas fa-clock text-purple-400"></i>
+                        <span>3 Horas</span>
+                    </div>
+                </div>
+
+                <p class="exam-desc">
+                    {{ exam.description | default('Simulación oficial de examen. Pon a prueba tus habilidades en un entorno real.', true) | truncate(100) }}
+                </p>
+
+                <a href="{{ url_for('take_exam', exam_id=exam.id) }}" 
+                   class="btn-start" 
+                   id="btn-{{ exam.id }}">
+                   <i class="fas fa-play mr-2"></i> INICIAR MISIÓN
+                </a>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📂</div>
+            <h3 class="text-2xl font-bold text-white mb-2 font-tech">NO HAY MISIONES</h3>
+            <p class="text-slate-400 mb-6">Actualmente no tienes exámenes asignados.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn-neon" style="display:inline-block; width:auto;">
+                VOLVER AL PANEL
+            </a>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <div class="text-center">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> REGRESAR AL CENTRO DE MANDO
+        </a>
+    </div>
+
+</div>
+
 <script>
+    // EFECTO TILT
+    VanillaTilt.init(document.querySelectorAll("[data-tilt]"), {
+        max: 5, speed: 400, glare: true, "max-glare": 0.1
+    });
+
+    // LÓGICA DE BLOQUEO POR FECHA
     document.addEventListener('DOMContentLoaded', function () {
         const cards = document.querySelectorAll('.exam-card');
-        const now = new Date();
-
+        
         cards.forEach(card => {
             const startStr = card.dataset.start;
-            // Si no tiene fecha de inicio, no hacemos nada (está abierto)
-            if (!startStr) return;
+            if (!startStr) return; // Si no tiene fecha, está abierto
 
-            // Convertir fecha del servidor (ISO) a objeto Date local
-            // Nota: El backend envía UTC o local, el navegador se ajusta
-            let startTime = new Date(startStr);
-            
-            // Si la fecha es inválida, ignoramos
+            const startTime = new Date(startStr);
             if (isNaN(startTime.getTime())) return;
 
-            const examId = card.id.split('-')[2];
+            const examId = card.id.split('-')[1];
             const overlay = document.getElementById('overlay-' + examId);
             const btn = document.getElementById('btn-' + examId);
             const timerDisplay = document.getElementById('timer-' + examId);
 
             function updateTimer() {
-                const currentTime = new Date();
-                const diff = startTime - currentTime;
+                const now = new Date();
+                const diff = startTime - now;
 
                 if (diff <= 0) {
                     // YA EMPEZÓ: Desbloquear
-                    if (overlay) overlay.classList.add('hidden');
+                    card.classList.remove('is-locked');
                     if (btn) {
-                        btn.classList.remove('disabled');
-                        btn.textContent = "🚀 Presentar Examen";
+                        btn.classList.remove('btn-disabled');
+                        btn.style.pointerEvents = 'auto';
+                        btn.innerHTML = '<i class="fas fa-play mr-2"></i> INICIAR MISIÓN';
                     }
-                    clearInterval(interval);
+                    clearInterval(interval); // Detener reloj
                 } else {
                     // FALTA TIEMPO: Bloquear
-                    if (overlay) {
-                        overlay.classList.remove('hidden');
-                        overlay.style.display = 'flex'; // Forzar display flex
-                    }
+                    card.classList.add('is-locked');
                     if (btn) {
-                        btn.classList.add('disabled');
-                        btn.textContent = "⏳ Esperando inicio...";
+                        btn.classList.add('btn-disabled');
+                        btn.style.pointerEvents = 'none'; // Deshabilitar clic
+                        btn.innerHTML = '<i class="fas fa-lock mr-2"></i> BLOQUEADO';
                     }
 
-                    // Calcular días, horas, minutos, segundos
+                    // Calcular tiempo
                     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     const s = Math.floor((diff % (1000 * 60)) / 1000);
 
-                    // Actualizar HTML del contador
                     if (timerDisplay) {
-                        timerDisplay.querySelector('.cd-d').textContent = d < 10 ? '0' + d : d;
-                        timerDisplay.querySelector('.cd-h').textContent = h < 10 ? '0' + h : h;
-                        timerDisplay.querySelector('.cd-m').textContent = m < 10 ? '0' + m : m;
-                        timerDisplay.querySelector('.cd-s').textContent = s < 10 ? '0' + s : s;
+                        timerDisplay.querySelector('.cd-d').textContent = d < 10 ? '0'+d : d;
+                        timerDisplay.querySelector('.cd-h').textContent = h < 10 ? '0'+h : h;
+                        timerDisplay.querySelector('.cd-m').textContent = m < 10 ? '0'+m : m;
+                        timerDisplay.querySelector('.cd-s').textContent = s < 10 ? '0'+s : s;
                     }
                 }
             }
 
-            // Ejecutar inmediatamente y luego cada segundo
+            // Ejecutar y repetir
             updateTimer();
             const interval = setInterval(updateTimer, 1000);
         });
     });
 </script>
+
 {% endblock %}

@@ -4,29 +4,316 @@
 
 {% block content %}
 
-<div class="main-admin-wrapper">
+{# ========================================================= #}
+{# 🎨 ESTILOS CYBERPUNK / DARK FORCE (USUARIOS) 🎨 #}
+{# ========================================================= #}
+<style>
+    :root {
+        /* Paleta Dark Force */
+        --bg-body: #020617;       /* Slate 950 */
+        --bg-card: #0f172a;       /* Slate 900 */
+        --bg-input: #1e293b;      /* Slate 800 */
+        --border-color: #334155;  /* Slate 700 */
+        
+        --text-main: #f1f5f9;     /* Slate 100 */
+        --text-sec: #94a3b8;      /* Slate 400 */
+        
+        /* Neones & Roles */
+        --primary: #06b6d4;       /* Cyan */
+        --accent: #8b5cf6;        /* Violet */
+        --role-admin: #f43f5e;    /* Rose (Admin) */
+        --role-student: #0ea5e9;  /* Sky (Student) */
+        --role-helper: #10b981;   /* Emerald (Ayudante) */
+        
+        --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        --shadow-neon: 0 0 15px rgba(6, 182, 212, 0.15);
+    }
+
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        min-height: 100vh;
+    }
+
+    .manage-users-container {
+        max-width: 1400px;
+        margin: 30px auto;
+        padding: 0 20px 60px 20px;
+    }
+
+    /* HEADER */
+    .page-title-bar {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: var(--shadow-card);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-title-bar::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+        background: linear-gradient(to bottom, var(--primary), var(--accent));
+    }
+
+    .header-content { display: flex; align-items: center; gap: 20px; z-index: 1; width: 100%; justify-content: space-between; }
+    
+    .title-group { display: flex; align-items: center; gap: 20px; }
+    
+    .icon-box-header {
+        width: 60px; height: 60px;
+        background: rgba(6, 182, 212, 0.1);
+        border: 1px solid var(--primary);
+        border-radius: 15px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; color: var(--primary);
+        box-shadow: 0 0 15px var(--shadow-neon);
+    }
+
+    .header-text h1 {
+        margin: 0; font-size: 2rem; font-weight: 900;
+        background: linear-gradient(to right, #fff, #94a3b8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .header-text p { margin: 5px 0 0; color: var(--text-sec); font-size: 1rem; }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-sec);
+        padding: 10px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .btn-back:hover { border-color: var(--primary); color: var(--text-main); background: rgba(6, 182, 212, 0.1); }
+
+    /* LAYOUT GRID */
+    .admin-grid {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 30px;
+    }
+
+    /* CARD STYLES */
+    .glass-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+    }
+
+    /* CREATE FORM (LEFT PANEL) */
+    .create-card {
+        padding: 30px;
+        position: sticky;
+        top: 20px;
+        height: fit-content;
+    }
+
+    .card-header-modern {
+        display: flex; align-items: center; gap: 12px; margin-bottom: 25px;
+        color: var(--text-main); font-size: 1.2rem; font-weight: 700;
+        padding-bottom: 15px; border-bottom: 1px dashed var(--border-color);
+    }
+    .card-header-modern i { color: var(--accent); }
+
+    .input-group-modern { position: relative; margin-bottom: 20px; }
+    .input-icon {
+        position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+        color: var(--text-sec); z-index: 2; pointer-events: none;
+    }
+
+    .modern-form input, .modern-select {
+        width: 100%;
+        padding: 14px 14px 14px 45px; /* Padding left for icon */
+        background: var(--bg-input);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        color: var(--text-main);
+        font-size: 0.95rem;
+        transition: all 0.3s;
+        box-sizing: border-box;
+    }
+    .modern-form input:focus, .modern-select:focus {
+        outline: none; border-color: var(--primary);
+        box-shadow: 0 0 15px var(--shadow-neon); background: #020617;
+    }
+
+    .select-wrapper { position: relative; }
+    .select-arrow {
+        position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+        color: var(--text-sec); pointer-events: none;
+    }
+    .modern-select { appearance: none; cursor: pointer; padding-left: 15px; } /* Reset padding for select if no icon */
+
+    .btn-create {
+        width: 100%; padding: 16px;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white; border: none; border-radius: 12px;
+        font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+        cursor: pointer; transition: all 0.3s;
+        display: flex; justify-content: center; align-items: center; gap: 10px;
+        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+    }
+    .btn-create:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5); }
+
+    /* LIST CARD (RIGHT PANEL) */
+    .list-card { min-height: 600px; display: flex; flex-direction: column; }
+
+    .list-header-row {
+        padding: 20px 30px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+        background: rgba(2, 6, 23, 0.3);
+    }
+
+    .list-title-group { display: flex; align-items: center; gap: 15px; }
+    .list-title-group h2 { margin: 0; font-size: 1.2rem; color: var(--text-main); }
+    .count-badge {
+        background: rgba(139, 92, 246, 0.1); color: var(--accent);
+        padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;
+        border: 1px solid var(--accent);
+    }
+
+    .filter-pills { display: flex; gap: 10px; background: var(--bg-body); padding: 5px; border-radius: 10px; border: 1px solid var(--border-color); }
+    .filter-pill {
+        text-decoration: none; padding: 6px 15px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+        color: var(--text-sec); transition: all 0.2s;
+    }
+    .filter-pill:hover { color: var(--text-main); }
+    .filter-pill.active { background: var(--bg-hover); color: var(--primary); border: 1px solid var(--border-color); }
+
+    /* TABLE */
+    .table-container { padding: 0; overflow-x: auto; flex-grow: 1; }
+    .modern-table { width: 100%; border-collapse: collapse; color: var(--text-main); }
+    
+    .modern-table th {
+        text-align: left; padding: 15px 30px;
+        color: var(--text-sec); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(2, 6, 23, 0.2);
+    }
+    
+    .modern-table td { padding: 15px 30px; border-bottom: 1px solid rgba(51, 65, 85, 0.3); vertical-align: middle; }
+    .row-card:hover td { background: var(--bg-hover); }
+    .row-inactive td { opacity: 0.5; }
+
+    /* User Info Cell */
+    .user-info-flex { display: flex; align-items: center; gap: 15px; }
+    .avatar-circle {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--bg-input), var(--border-color));
+        color: var(--text-main);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1.1rem;
+        border: 1px solid var(--border-color);
+    }
+    .username-text { display: block; font-weight: 700; color: var(--text-main); font-size: 0.95rem; }
+    .user-id-sub { font-size: 0.75rem; color: var(--text-sec); font-family: monospace; }
+
+    /* Badges & Status */
+    .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; border: 1px solid transparent; }
+    .badge-admin { background: rgba(244, 63, 94, 0.1); color: var(--role-admin); border-color: var(--role-admin); }
+    .badge-student { background: rgba(14, 165, 233, 0.1); color: var(--role-student); border-color: var(--role-student); }
+    .badge-ayudante { background: rgba(16, 185, 129, 0.1); color: var(--role-helper); border-color: var(--role-helper); }
+
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: block; box-shadow: 0 0 10px currentColor; }
+    .status-dot.active { background: #10b981; color: #10b981; }
+    .status-dot.inactive { background: #64748b; color: transparent; box-shadow: none; border: 2px solid #475569; }
+
+    /* Actions */
+    .action-dock { display: flex; gap: 8px; justify-content: flex-end; }
+    .dock-btn {
+        width: 34px; height: 34px; border-radius: 8px; border: 1px solid transparent;
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        transition: all 0.2s; color: white; font-size: 0.9rem; background: var(--bg-body);
+        border-color: var(--border-color);
+    }
+    .dock-btn:hover { transform: translateY(-2px); }
+    
+    .btn-spy { color: var(--primary); }
+    .btn-spy:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary); }
+    
+    .btn-disable { color: var(--warning); }
+    .btn-disable:hover { background: var(--warning); color: #000; box-shadow: 0 0 10px var(--warning); }
+    
+    .btn-enable { color: var(--success); }
+    .btn-enable:hover { background: var(--success); color: #000; box-shadow: 0 0 10px var(--success); }
+    
+    .btn-delete { color: var(--danger); }
+    .btn-delete:hover { background: var(--danger); color: white; box-shadow: 0 0 10px var(--danger); }
+
+    .inline-form { display: inline; }
+    .protected-badge { font-size: 0.75rem; color: var(--text-sec); font-style: italic; opacity: 0.6; padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 6px; }
+
+    /* SKELETON LOADING */
+    .skeleton { background: linear-gradient(90deg, var(--bg-hover) 25%, var(--border-color) 50%, var(--bg-hover) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 4px; }
+    @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-text { height: 16px; margin-bottom: 5px; }
+    .sk-avatar { width: 40px; height: 40px; border-radius: 10px; }
+    .sk-badge { width: 60px; height: 20px; border-radius: 6px; }
+    .sk-btn { width: 34px; height: 34px; border-radius: 8px; }
+
+    .real-content { display: none; animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+        .admin-grid { grid-template-columns: 1fr; }
+        .create-card { position: relative; top: 0; margin-bottom: 30px; }
+        .list-card { min-height: auto; }
+    }
+    @media (max-width: 600px) {
+        .page-title-bar { flex-direction: column; text-align: center; padding: 20px; }
+        .header-content { flex-direction: column; align-items: center; width: 100%; }
+        .title-group { flex-direction: column; text-align: center; }
+        .btn-back { margin-top: 15px; width: 100%; justify-content: center; }
+        
+        .modern-table thead { display: none; }
+        .modern-table tr { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding: 15px; background: var(--bg-hover); border-radius: 12px; border: 1px solid var(--border-color); }
+        .modern-table td { padding: 5px 0; border: none; }
+        .text-right { text-align: left; margin-top: 10px; display: flex; justify-content: flex-end; }
+        .action-dock { width: 100%; justify-content: space-between; }
+        .dock-btn { flex: 1; }
+    }
+</style>
+
+<div class="manage-users-container">
 
     {# --- HEADER --- #}
-    <div class="admin-header-modern">
+    <div class="page-title-bar">
         <div class="header-content">
             <div class="title-group">
                 <div class="icon-box-header">
                     <i class="fas fa-users-cog"></i>
                 </div>
-                <div>
+                <div class="header-text">
                     <h1>Comando de Usuarios</h1>
-                    <p>Administración de identidad y accesos</p>
+                    <p>Gestión centralizada de identidad y accesos</p>
                 </div>
             </div>
-            <a href="{{ url_for('admin_panel') }}" class="btn-glass-back">
-                <i class="fas fa-arrow-left"></i> Volver
+            <a href="{{ url_for('admin_panel') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
             </a>
         </div>
     </div>
 
     <div class="admin-grid">
 
-        {# --- COLUMNA 1: CREAR --- #}
+        {# --- COLUMNA 1: CREAR (PANEL FIJO) --- #}
         <div class="sidebar-column">
             <div class="glass-card create-card">
                 <div class="card-header-modern">
@@ -39,51 +326,48 @@
 
                     <div class="input-group-modern">
                         <i class="fas fa-signature input-icon"></i>
-                        <input type="text" name="username" placeholder="Usuario" required>
+                        <input type="text" name="username" placeholder="Nombre de Usuario" required autocomplete="off">
                     </div>
 
                     <div class="input-group-modern">
                         <i class="fas fa-key input-icon"></i>
-                        <input type="password" name="password" placeholder="Contraseña" required>
+                        <input type="password" name="password" placeholder="Contraseña de Acceso" required>
                     </div>
 
                     <div class="select-wrapper">
                         <select name="role" class="modern-select">
-                            <option value="student">🎓 Alumno</option>
-                            <option value="ayudante">🤝 Ayudante</option>
-                            <option value="admin">👑 Admin</option>
+                            <option value="student">🎓 Alumno (Nivel Base)</option>
+                            <option value="ayudante">🤝 Ayudante (Soporte)</option>
+                            <option value="admin">👑 Administrador (Root)</option>
                         </select>
                         <i class="fas fa-chevron-down select-arrow"></i>
                     </div>
 
-                    <button type="submit" class="btn-gradient-primary">
-                        <span>Registrar</span>
-                        <i class="fas fa-paper-plane"></i>
+                    <button type="submit" class="btn-create">
+                        <i class="fas fa-paper-plane"></i> Registrar Usuario
                     </button>
                 </form>
             </div>
         </div>
 
-        {# --- COLUMNA 2: LISTA --- #}
+        {# --- COLUMNA 2: LISTA DE USUARIOS --- #}
         <div class="content-column">
             <div class="glass-card list-card">
 
                 <div class="list-header-row">
                     <div class="list-title-group">
                         <h2>Base de Datos</h2>
-                        <span class="count-badge">{{ users | length }}</span>
+                        <span class="count-badge">{{ users | length }} Total</span>
                     </div>
 
                     <div class="filter-pills">
-                        <a href="{{ url_for('print_credentials') }}" target="_blank" class="filter-pill"
-                           style="color: var(--primary); background: rgba(79, 70, 229, 0.1);">
+                        <a href="{{ url_for('print_credentials') }}" target="_blank" class="filter-pill" style="color: var(--primary);">
                             <i class="fas fa-print"></i> Credenciales
                         </a>
                         <a href="{{ url_for('manage_users') }}" class="filter-pill {{ 'active' if not show_inactive }}">
                             Activos
                         </a>
-                        <a href="{{ url_for('manage_users', show_inactive=1) }}"
-                           class="filter-pill {{ 'active' if show_inactive }}">
+                        <a href="{{ url_for('manage_users', show_inactive=1) }}" class="filter-pill {{ 'active' if show_inactive }}">
                             Todos
                         </a>
                     </div>
@@ -91,8 +375,8 @@
 
                 <div class="table-container">
                     
-                    {# 🔥 SKELETON (CARGA FALSA) - GESTIONADO POR BASE.HTML 🔥 #}
-                    <div class="skeleton-container" data-target="real-table-content">
+                    {# 🔥 SKELETON LOADER (Efecto de Carga) 🔥 #}
+                    <div class="skeleton-container" id="skeleton-loader">
                         <table class="modern-table">
                             <thead>
                                 <tr>
@@ -104,7 +388,7 @@
                             </thead>
                             <tbody>
                                 {% for i in range(5) %}
-                                <tr class="row-card">
+                                <tr>
                                     <td>
                                         <div style="display:flex; align-items:center; gap:15px;">
                                             <div class="skeleton sk-avatar"></div>
@@ -115,7 +399,7 @@
                                         </div>
                                     </td>
                                     <td><div class="skeleton sk-badge"></div></td>
-                                    <td><div class="skeleton sk-badge" style="width: 20px; border-radius: 50%;"></div></td>
+                                    <td><div class="skeleton sk-badge" style="width: 20px; border-radius: 50%; height:10px;"></div></td>
                                     <td class="text-right">
                                         <div style="display: flex; gap: 8px; justify-content: flex-end;">
                                             <div class="skeleton sk-btn"></div>
@@ -128,15 +412,15 @@
                         </table>
                     </div>
 
-                    {# 🔥 CONTENIDO REAL (OCULTO INICIALMENTE) 🔥 #}
+                    {# 🔥 CONTENIDO REAL 🔥 #}
                     <div id="real-table-content" class="real-content">
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th>Perfil</th>
-                                    <th>Rol</th>
-                                    <th>Estado</th>
-                                    <th class="text-right">Operaciones</th>
+                                    <th width="40%">Perfil</th>
+                                    <th width="20%">Rol</th>
+                                    <th width="15%">Estado</th>
+                                    <th width="25%" class="text-right">Operaciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -159,35 +443,37 @@
                                     </td>
                                     <td>
                                         {% if u.is_active %}
-                                        <span class="status-dot active" title="Activo"></span>
+                                            <span class="status-dot active" title="Cuenta Activa"></span>
                                         {% else %}
-                                        <span class="status-dot inactive" title="Inactivo"></span>
+                                            <span class="status-dot inactive" title="Cuenta Inactiva"></span>
                                         {% endif %}
                                     </td>
                                     <td class="text-right">
                                         {% if u.username != "admin" %}
                                         <div class="action-dock">
                                             <a href="{{ url_for('impersonate_user', user_id=u.id) }}"
-                                                class="dock-btn btn-spy" title="Espiar"
-                                                onclick="return confirm('¿Entrar como {{ u.username }}?');">
+                                               class="dock-btn btn-spy" title="Ingresar como este usuario"
+                                               onclick="return confirm('¿Iniciar sesión simulada como {{ u.username }}?');">
                                                 <i class="fas fa-user-secret"></i>
                                             </a>
+                                            
                                             <form method="POST" action="{{ url_for('toggle_user_status', user_id=u.id) }}" class="inline-form">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 {% if u.is_active %}
-                                                <button class="dock-btn btn-disable"><i class="fas fa-power-off"></i></button>
+                                                <button class="dock-btn btn-disable" title="Desactivar Cuenta"><i class="fas fa-power-off"></i></button>
                                                 {% else %}
-                                                <button class="dock-btn btn-enable"><i class="fas fa-redo-alt"></i></button>
+                                                <button class="dock-btn btn-enable" title="Reactivar Cuenta"><i class="fas fa-redo-alt"></i></button>
                                                 {% endif %}
                                             </form>
+                                            
                                             <form method="POST" action="{{ url_for('delete_user', user_id=u.id) }}" class="inline-form"
-                                                onsubmit="return confirm('¿Eliminar permanentemente?');">
+                                                  onsubmit="return confirm('¿Eliminar permanentemente a {{ u.username }}? Esta acción no se puede deshacer.');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button class="dock-btn btn-delete"><i class="fas fa-trash"></i></button>
+                                                <button class="dock-btn btn-delete" title="Eliminar Usuario"><i class="fas fa-trash-alt"></i></button>
                                             </form>
                                         </div>
                                         {% else %}
-                                        <span class="protected-badge"><i class="fas fa-shield-alt"></i> Root</span>
+                                            <span class="protected-badge"><i class="fas fa-shield-alt"></i> Protegido</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -203,127 +489,18 @@
     </div>
 </div>
 
-{# 
-   NOTA: Aquí solo queda el CSS de diseño de la página (Glassmorphism).
-   El CSS/JS del Skeleton ya NO está aquí, lo toma de base.html.
-#}
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+<script>
+    // Simular carga para mostrar el Skeleton (Mejora UX)
+    document.addEventListener('DOMContentLoaded', function() {
+        const skeleton = document.getElementById('skeleton-loader');
+        const content = document.getElementById('real-table-content');
+        
+        // Simular un pequeño delay de red o procesamiento
+        setTimeout(() => {
+            skeleton.style.display = 'none';
+            content.style.display = 'block';
+        }, 600); // 600ms de skeleton
+    });
+</script>
 
-    :root {
-        --primary: #4f46e5;
-        --primary-dark: #4338ca;
-        --accent: #8b5cf6;
-        --bg-page: #f8fafc;
-        --glass-bg: rgba(255, 255, 255, 0.9);
-        --glass-border: rgba(255, 255, 255, 0.5);
-        --text-main: #1e293b;
-        --text-light: #64748b;
-        --danger: #ef4444;
-        --success: #10b981;
-        --shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
-        --radius-xl: 20px;
-    }
-
-    body.dark-mode {
-        --bg-page: #0f172a;
-        --glass-bg: rgba(30, 41, 59, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.08);
-        --text-main: #f1f5f9;
-        --text-light: #94a3b8;
-        --primary: #6366f1;
-        --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-    }
-
-    body { background-color: var(--bg-page); font-family: 'Inter', sans-serif; }
-    .main-admin-wrapper { max-width: 1300px; margin: 0 auto; padding: 20px; animation: fadeIn 0.6s ease-out; }
-
-    /* HEADER */
-    .admin-header-modern { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); border-radius: var(--radius-xl); padding: 30px 40px; color: white; box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.3); margin-bottom: 30px; position: relative; overflow: hidden; }
-    .admin-header-modern::before { content: ''; position: absolute; top: -50%; left: -20%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 60%); pointer-events: none; }
-    .header-content { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
-    .title-group { display: flex; align-items: center; gap: 20px; }
-    .icon-box-header { font-size: 2rem; background: rgba(255, 255, 255, 0.2); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 16px; backdrop-filter: blur(5px); }
-    .admin-header-modern h1 { margin: 0; font-weight: 700; font-size: 1.8rem; letter-spacing: -0.5px; }
-    .admin-header-modern p { margin: 5px 0 0; opacity: 0.9; font-weight: 400; }
-
-    .btn-glass-back { background: rgba(255, 255, 255, 0.15); color: white; padding: 10px 20px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 0.9rem; backdrop-filter: blur(5px); transition: 0.3s; border: 1px solid rgba(255, 255, 255, 0.2); }
-    .btn-glass-back:hover { background: white; color: var(--primary); transform: translateX(-5px); }
-
-    /* LAYOUT */
-    .admin-grid { display: grid; grid-template-columns: 320px 1fr; gap: 30px; }
-    .glass-card { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-soft); overflow: hidden; }
-
-    /* CREATE FORM */
-    .create-card { padding: 30px; position: sticky; top: 20px; }
-    .card-header-modern { display: flex; align-items: center; gap: 12px; margin-bottom: 25px; color: var(--text-main); }
-    .card-header-modern i { color: var(--primary); font-size: 1.2rem; }
-    .card-header-modern h3 { margin: 0; font-weight: 700; font-size: 1.1rem; }
-
-    .input-group-modern { position: relative; margin-bottom: 20px; }
-    .input-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 1.1rem; z-index: 10; pointer-events: none; }
-    .modern-form input, .modern-select { width: 100%; padding: 16px 20px 16px 55px !important; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 12px; color: var(--text-main); font-family: inherit; font-size: 0.95rem; transition: all 0.3s ease; box-sizing: border-box; }
-    body.dark-mode .modern-form input, body.dark-mode .modern-select { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.15); color: #fff; }
-    .modern-form input::placeholder { color: rgba(150, 150, 150, 0.7); }
-    .modern-select { padding-left: 15px; appearance: none; cursor: pointer; }
-    .modern-form input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); background: transparent; }
-    .select-wrapper { position: relative; margin-bottom: 25px; }
-    .modern-select { padding: 14px 15px 14px 45px; }
-    .select-arrow { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-light); }
-    .btn-gradient-primary { width: 100%; padding: 14px; border: none; border-radius: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 10px; transition: 0.3s; box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4); }
-    .btn-gradient-primary:hover { transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.5); filter: brightness(1.1); }
-
-    /* LIST & TABLE */
-    .list-card { padding: 0; min-height: 500px; display: flex; flex-direction: column; }
-    .list-header-row { padding: 25px 30px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
-    .list-title-group h2 { margin: 0; font-size: 1.2rem; color: var(--text-main); display: inline-block; margin-right: 10px; }
-    .count-badge { background: rgba(99, 102, 241, 0.1); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
-    .filter-pills { background: rgba(0, 0, 0, 0.05); padding: 4px; border-radius: 10px; display: flex; gap: 5px; }
-    body.dark-mode .filter-pills { background: rgba(255, 255, 255, 0.05); }
-    .filter-pill { text-decoration: none; padding: 6px 15px; border-radius: 8px; font-size: 0.85rem; color: var(--text-light); font-weight: 600; transition: 0.3s; }
-    .filter-pill.active { background: white; color: var(--text-main); }
-    body.dark-mode .filter-pill.active { background: #334155; color: white; }
-
-    .table-container { padding: 20px; overflow-x: auto; }
-    .modern-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-    .modern-table th { text-align: left; padding: 0 20px 10px 20px; color: var(--text-light); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-    .row-card td { background: white; border: 1px solid transparent; padding: 15px 20px; vertical-align: middle; transition: 0.2s; }
-    body.dark-mode .row-card td { background: rgba(255, 255, 255, 0.03); }
-    .row-card td:first-child { border-radius: 12px 0 0 12px; }
-    .row-card td:last-child { border-radius: 0 12px 12px 0; }
-    .row-card:hover td { transform: scale(1.01); background: white; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05); z-index: 1; position: relative; border-color: rgba(99, 102, 241, 0.2); }
-    body.dark-mode .row-card:hover td { background: #1e293b; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
-
-    .user-info-flex { display: flex; align-items: center; gap: 15px; }
-    .avatar-circle { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; }
-    body.dark-mode .avatar-circle { background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); color: #a5b4fc; }
-    .username-text { display: block; font-weight: 600; color: var(--text-main); font-size: 0.95rem; }
-    .user-id-sub { font-size: 0.75rem; color: var(--text-light); }
-    .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: capitalize; }
-    .badge-student { background: rgba(56, 189, 248, 0.15); color: #0ea5e9; }
-    .badge-ayudante { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .badge-admin { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: block; }
-    .status-dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; }
-    .status-dot.inactive { background: #cbd5e1; }
-    body.dark-mode .status-dot.inactive { background: #475569; }
-    .row-inactive { opacity: 0.6; }
-    .action-dock { display: flex; gap: 8px; justify-content: flex-end; }
-    .dock-btn { width: 36px; height: 36px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer; transition: 0.2s; color: white; }
-    .dock-btn:hover { transform: translateY(-3px) scale(1.1); }
-    .btn-spy { background: #1f2937; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); }
-    .btn-spy:hover { background: #000; color: #00ff9d; box-shadow: 0 0 15px rgba(0, 255, 157, 0.4); }
-    body.dark-mode .btn-spy { background: #f8fafc; color: #0f172a; }
-    body.dark-mode .btn-spy:hover { background: #fff; color: var(--primary); box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); }
-    .btn-disable { background: #f59e0b; }
-    .btn-enable { background: #10b981; }
-    .btn-delete { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-    .btn-delete:hover { background: var(--danger); color: white; }
-    .protected-badge { font-size: 0.8rem; color: var(--text-light); font-style: italic; opacity: 0.7; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Responsive */
-    @media (max-width: 1024px) { .admin-grid { grid-template-columns: 1fr; } .create-card { position: relative; top: 0; margin-bottom: 30px; } }
-    @media (max-width: 600px) { .modern-table thead { display: none; } .modern-table tr { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding: 15px !important; border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass-bg); } .row-card td { padding: 5px 0; border: none !important; background: transparent !important; } .row-card:hover td { transform: none; box-shadow: none; } .text-right { text-align: left; margin-top: 10px; } }
-</style>
 {% endblock %}

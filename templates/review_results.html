@@ -4,297 +4,252 @@
 
 {% block content %}
 
-{# ========================================================= #}
-{# 🎨 ESTILOS RESULTADOS (MODO OSCURO + TABLE PREMIUM) 🎨 #}
-{# ========================================================= #}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <style>
+    /* =========================================
+       🔥 ESTILO CYBER-RESULTS 🔥
+       ========================================= */
     :root {
-        --bg-body: #f3f4f6;
-        --bg-card: #ffffff;
-        --text-main: #111827;
-        --text-sec: #6b7280;
-        --border: #e5e7eb;
-        --primary: #2563eb;
-        --success: #10b981;
-        --danger: #ef4444;
-        --warning: #f59e0b;
-        --table-stripe: #f9fafb;
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --neon-cyan: #06b6d4;
+        --neon-purple: #8b5cf6;
+        --neon-green: #10b981;
+        --neon-red: #ef4444;
+        --text-white: #f8fafc;
+        --text-grey: #94a3b8;
     }
 
-    body.dark-mode {
-        --bg-body: #0f172a;
-        --bg-card: #1e293b;
-        --text-main: #f3f4f6;
-        --text-sec: #94a3b8;
-        --border: #334155;
-        --primary: #3b82f6;
-        --table-stripe: #263344;
-    }
+    .font-tech { font-family: 'Space Grotesk', sans-serif; }
 
-    .results-container {
-        max-width: 1200px;
-        margin: 30px auto;
-        padding: 0 20px;
-        animation: fadeIn 0.5s ease-out;
+    /* LAYOUT PRINCIPAL */
+    .results-wrapper {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        min-height: 90vh;
     }
 
     /* HEADER */
-    .results-header {
-        background: var(--bg-card);
+    .page-header {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
         padding: 30px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        margin-bottom: 30px;
+        backdrop-filter: blur(12px);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
     }
 
     .header-info h1 {
-        margin: 0;
-        font-size: 1.8rem;
-        color: var(--text-main);
-        background: linear-gradient(90deg, var(--primary), #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800;
+        margin: 0; font-size: 2rem; font-weight: 800; color: white;
+        text-transform: uppercase; letter-spacing: 1px;
     }
-    .header-info p { margin: 5px 0 0; color: var(--text-sec); }
+    .header-info p { margin: 5px 0 0; color: var(--text-grey); }
+    .highlight { color: var(--neon-cyan); }
 
-    .header-stats {
-        display: flex;
-        gap: 15px;
-    }
     .stat-box {
-        background: var(--bg-body);
+        background: rgba(0,0,0,0.3);
+        border: 1px solid var(--glass-border);
         padding: 10px 20px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
+        border-radius: 12px;
         text-align: center;
     }
-    .stat-number { display: block; font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
-    .stat-label { font-size: 0.8rem; color: var(--text-sec); text-transform: uppercase; }
+    .stat-number { display: block; font-size: 1.8rem; font-weight: 800; color: white; }
+    .stat-label { font-size: 0.75rem; color: var(--text-grey); text-transform: uppercase; letter-spacing: 1px; }
 
-    /* CARD DE LIBERACIÓN */
-    .release-card {
-        background: var(--bg-card);
-        padding: 25px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        margin-bottom: 25px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 20px;
+    /* PANEL DE CONTROL (LIBERACIÓN) */
+    .control-panel {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 30px;
+        display: flex; justify-content: space-between; align-items: center;
+        flex-wrap: wrap; gap: 20px;
     }
-    .release-info h3 { margin: 0 0 5px 0; color: var(--text-main); font-size: 1.1rem; }
-    .release-info p { margin: 0; color: var(--text-sec); font-size: 0.9rem; }
     
-    .status-badge { padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
-    .badge-locked { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid var(--warning); }
-    .badge-released { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success); }
+    .status-badge {
+        padding: 6px 12px; border-radius: 8px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .status-locked { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-open { background: rgba(16, 185, 129, 0.1); color: var(--neon-green); border: 1px solid rgba(16, 185, 129, 0.3); }
 
     .btn-release {
-        background: linear-gradient(135deg, #9b59b6, #8e44ad);
-        color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
-        transition: transform 0.1s;
+        background: linear-gradient(135deg, var(--neon-purple), #7c3aed);
+        color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; cursor: pointer;
+        transition: all 0.3s; box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        display: flex; align-items: center; gap: 8px;
     }
-    .btn-release:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(155, 89, 182, 0.3); }
+    .btn-release:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(139, 92, 246, 0.5); }
 
     /* TABLA */
     .table-card {
-        background: var(--bg-card);
-        border-radius: 12px;
-        border: 1px solid var(--border);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
-
-    .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        color: var(--text-main);
-    }
-
-    .custom-table th {
-        background: rgba(59, 130, 246, 0.08);
-        padding: 15px 20px;
-        text-align: left;
-        font-weight: 700;
-        color: var(--primary);
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        border-bottom: 2px solid var(--border);
-    }
-
-    .custom-table td {
-        padding: 15px 20px;
-        border-bottom: 1px solid var(--border);
-        vertical-align: middle;
-    }
-
-    .custom-table tr:hover { background-color: var(--table-stripe); }
-    .custom-table tr:last-child td { border-bottom: none; }
-
-    /* Estilos Celdas */
-    .user-cell { display: flex; align-items: center; gap: 10px; font-weight: 600; }
-    .avatar-mini {
-        width: 32px; height: 32px;
-        background: var(--bg-body); border: 1px solid var(--border);
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        font-size: 0.9rem; color: var(--text-sec); font-weight: bold;
-    }
-
-    .score-tag { font-family: monospace; font-size: 1.1em; font-weight: bold; color: var(--primary); }
-    .score-cancel { color: var(--danger); font-weight: bold; }
-
-    /* Botones de Acción */
-    .action-group { display: flex; gap: 8px; justify-content: flex-end; }
     
-    .btn-action {
-        padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-decoration: none;
-        display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent; transition: all 0.2s;
+    .cyber-table { width: 100%; border-collapse: collapse; color: var(--text-white); }
+    
+    .cyber-table th {
+        background: rgba(0,0,0,0.3);
+        padding: 18px 25px; text-align: left;
+        font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;
+        color: var(--text-grey); border-bottom: 1px solid var(--glass-border);
     }
-    .btn-review { background: rgba(59, 130, 246, 0.1); color: var(--primary); border-color: rgba(59, 130, 246, 0.2); }
-    .btn-review:hover { background: var(--primary); color: white; }
-
-    .btn-reset { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.2); cursor: pointer; }
-    .btn-reset:hover { background: var(--danger); color: white; }
-
-    .btn-back {
-        display: inline-block; margin-top: 25px; color: var(--text-sec);
-        text-decoration: none; font-weight: 600; transition: color 0.2s;
+    
+    .cyber-table td {
+        padding: 18px 25px; border-bottom: 1px solid var(--glass-border); vertical-align: middle;
     }
-    .btn-back:hover { color: var(--primary); }
+    .cyber-table tr:last-child td { border-bottom: none; }
+    .cyber-table tr:hover { background: rgba(255,255,255,0.02); }
 
-    /* Animación */
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    /* CELDAS */
+    .user-info { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+    .avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        border: 1px solid var(--glass-border);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.9rem; color: white;
+    }
 
-    /* RESPONSIVE TABLE */
+    .score-badge {
+        font-family: 'Courier New', monospace; font-weight: 800; font-size: 1.1rem;
+        background: rgba(6, 182, 212, 0.1); color: var(--neon-cyan);
+        padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+    .score-cancel { color: var(--neon-red); text-decoration: line-through; opacity: 0.7; font-weight: bold; }
+
+    /* ACCIONES */
+    .action-group { display: flex; gap: 10px; justify-content: flex-end; }
+    
+    .btn-icon {
+        width: 36px; height: 36px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
+        text-decoration: none;
+    }
+    
+    .btn-view { background: rgba(6, 182, 212, 0.1); color: var(--neon-cyan); border-color: rgba(6, 182, 212, 0.3); }
+    .btn-view:hover { background: var(--neon-cyan); color: black; }
+    
+    .btn-reset { background: rgba(239, 68, 68, 0.1); color: var(--neon-red); border-color: rgba(239, 68, 68, 0.3); }
+    .btn-reset:hover { background: var(--neon-red); color: white; }
+
+    /* RESPONSIVE */
     @media (max-width: 768px) {
-        .header-stats { display: none; }
-        .custom-table thead { display: none; }
-        .custom-table tr { display: block; border-bottom: 2px solid var(--border); margin-bottom: 10px; padding: 10px; }
-        .custom-table td { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border: none; }
-        .custom-table td::before { content: attr(data-label); font-weight: bold; color: var(--text-sec); font-size: 0.85rem; }
-        .action-group { width: 100%; justify-content: flex-end; margin-top: 10px; }
+        .page-header { flex-direction: column; text-align: center; gap: 20px; }
+        .cyber-table th { display: none; }
+        .cyber-table tr { display: block; border-bottom: 2px solid var(--glass-border); padding: 15px; }
+        .cyber-table td { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border: none; }
+        .cyber-table td::before { content: attr(data-label); font-weight: 700; color: var(--text-grey); font-size: 0.8rem; }
     }
 </style>
 
-<div class="results-container">
+<div class="results-wrapper">
     
-    <div class="results-header">
+    <div class="page-header">
         <div class="header-info">
-            <h1>📊 Resultados del Examen</h1>
-            <p><strong>{{ exam.title }}</strong> | Gestión de calificaciones</p>
+            <h1 class="font-tech">📊 RESULTADOS DE MISIÓN</h1>
+            <p><strong>{{ exam.title }}</strong> | <span class="highlight">Base de Datos de Calificaciones</span></p>
         </div>
-        
-        <div class="header-stats">
-            <div class="stat-box">
-                <span class="stat-number">{{ results|length }}</span>
-                <span class="stat-label">Envíos</span>
-            </div>
+        <div class="stat-box">
+            <span class="stat-number">{{ results|length }}</span>
+            <span class="stat-label">Registros</span>
         </div>
     </div>
 
-    <div class="release-card">
-        <div class="release-info">
-            <h3>Control de Respuestas</h3>
+    <div class="control-panel">
+        <div class="status-info">
+            <h3 style="margin:0 0 5px 0; color:white; font-size:1.1rem;">Visibilidad de Respuestas</h3>
             {% if exam.answers_released %}
-                <span class="status-badge badge-released"><i class="fas fa-check-circle"></i> Liberadas</span>
-                <p style="margin-top:5px;">Los alumnos ya pueden ver la corrección completa.</p>
+                <span class="status-badge status-open"><i class="fas fa-eye"></i> PÚBLICO</span>
+                <p style="margin:5px 0 0; font-size:0.9rem; color:var(--text-grey);">Los alumnos pueden ver sus errores.</p>
             {% else %}
-                <span class="status-badge badge-locked"><i class="fas fa-lock"></i> Ocultas</span>
-                <p style="margin-top:5px;">Revisión "ciega": Solo ven el puntaje final.</p>
+                <span class="status-badge status-locked"><i class="fas fa-lock"></i> OCULTO</span>
+                <p style="margin:5px 0 0; font-size:0.9rem; color:var(--text-grey);">Revisión ciega (Solo ven puntaje).</p>
             {% endif %}
         </div>
 
         {% if not exam.answers_released %}
         <form method="POST" action="{{ url_for('release_answers', exam_id=exam.id) }}" 
-              onsubmit="return confirm('¿Liberar respuestas? Todos los alumnos verán la corrección. Es irreversible.');">
+              onsubmit="return confirm('¿LIBERAR RESPUESTAS? Esto permitirá a todos los alumnos ver la corrección.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn-release">
-                <i class="fas fa-lock-open"></i> Liberar Ahora
+                <i class="fas fa-unlock"></i> LIBERAR AHORA
             </button>
         </form>
         {% endif %}
     </div>
 
     <div class="table-card">
-        <table class="custom-table">
+        <table class="cyber-table">
             <thead>
                 <tr>
-                    <th>Alumno</th>
+                    <th>Agente (Alumno)</th>
                     <th>Puntaje</th>
-                    <th>Envío</th>
+                    <th>Modalidad</th>
                     <th>Fecha</th>
-                    <th style="text-align: right;">Acciones</th>
+                    <th style="text-align: right;">Protocolos</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="results-body">
                 {% if results %}
                     {% for result in results %}
-                    <tr style="{% if result.score == -1.0 %}opacity: 0.6; text-decoration: line-through;{% endif %}">
-                        
+                    <tr id="row-{{ result.user_id }}">
                         <td data-label="Alumno">
-                            <div class="user-cell">
-                                <div class="avatar-mini">{{ result.username[0]|upper }}</div>
+                            <div class="user-info">
+                                <div class="avatar">{{ result.username[0]|upper }}</div>
                                 {{ result.username }}
                             </div>
                         </td>
-                        
                         <td data-label="Puntaje">
                             {% if result.score == -1.0 %}
                                 <span class="score-cancel">CANCELADO</span>
                             {% else %}
-                                <span class="score-tag">{{ result.score|int }} / {{ exam.questions|length }}</span>
+                                <span class="score-badge">{{ result.score|int }} / {{ exam.questions|length }}</span>
                             {% endif %}
                         </td>
-                        
-                        <td data-label="Envío">
+                        <td data-label="Modalidad">
                             {% if result.submission_type == 'auto' %}
-                                <span style="color: var(--warning); font-size: 0.85em;"><i class="fas fa-clock"></i> Auto</span>
+                                <span style="color:var(--neon-purple);"><i class="fas fa-robot"></i> Auto</span>
                             {% else %}
-                                <span style="color: var(--success); font-size: 0.85em;"><i class="fas fa-check"></i> Manual</span>
+                                <span style="color:var(--neon-green);"><i class="fas fa-hand-pointer"></i> Manual</span>
                             {% endif %}
                         </td>
-                        
-                        <td data-label="Fecha">
-                            {% if result.date_taken %}
-                                {{ result.date_taken.strftime('%d/%m/%Y %H:%M') }}
-                            {% else %}
-                                <span style="color: var(--text-sec); font-style: italic;">Sin registro</span>
-                            {% endif %}
+                        <td data-label="Fecha" style="font-family:monospace; color:var(--text-grey);">
+                            {{ result.date_taken.strftime('%d/%m/%Y %H:%M') if result.date_taken else '--' }}
                         </td>
-                        
                         <td data-label="Acciones">
                             <div class="action-group">
                                 {% if result.score != -1.0 %}
-                                <a href="{{ url_for('review_student_exam', exam_id=exam.id, user_id=result.user_id) }}" class="btn-action btn-review">
-                                    <i class="fas fa-eye"></i> Ver
+                                <a href="{{ url_for('review_student_exam', exam_id=exam.id, user_id=result.user_id) }}" class="btn-icon btn-view" title="Ver Examen">
+                                    <i class="fas fa-eye"></i>
                                 </a>
                                 {% endif %}
                                 
-                                <form method="POST" action="{{ url_for('reset_attempt_by_user', exam_id=exam.id, user_id=result.user_id) }}" 
-                                      onsubmit="return confirm('¿REINICIAR intento de {{ result.username }}? Se borrará todo.');">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn-action btn-reset" title="Reiniciar Intento">
-                                        <i class="fas fa-undo"></i>
-                                    </button>
-                                </form>
+                                <button onclick="resetAttempt('{{ exam.id }}', '{{ result.user_id }}', '{{ result.username }}')" class="btn-icon btn-reset" title="Reiniciar Intento">
+                                    <i class="fas fa-trash-restore"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-sec);">
-                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                            <p>Aún no hay resultados para este examen.</p>
+                        <td colspan="5">
+                            <div style="text-align:center; padding:50px; color:var(--text-grey);">
+                                <i class="fas fa-inbox" style="font-size:3rem; opacity:0.3; margin-bottom:15px;"></i>
+                                <p>SIN DATOS REGISTRADOS</p>
+                            </div>
                         </td>
                     </tr>
                 {% endif %}
@@ -302,10 +257,63 @@
         </table>
     </div>
 
-    <a href="{{ url_for('admin_panel') }}" class="btn-back">
-        <i class="fas fa-arrow-left"></i> Volver al Panel Admin
-    </a>
+    <div style="text-align:center; margin-top:40px;">
+        <a href="{{ url_for('admin_panel') }}" style="color:var(--text-grey); text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:8px;">
+            <i class="fas fa-arrow-left"></i> VOLVER AL COMANDO
+        </a>
+    </div>
 
 </div>
+
+<script>
+    function resetAttempt(examId, userId, username) {
+        Swal.fire({
+            title: `¿Reiniciar a ${username}?`,
+            text: "Se borrará todo su progreso y podrá volver a hacer el examen.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#334155',
+            confirmButtonText: 'Sí, borrar',
+            background: '#0f172a',
+            color: 'white'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // LLAMADA AJAX PARA NO RECARGAR Y EVITAR EL ERROR DE JSON
+                fetch(`/admin/reset_attempt/${examId}/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': "{{ csrf_token() }}"
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Eliminar fila de la tabla con animación
+                        const row = document.getElementById(`row-${userId}`);
+                        row.style.transition = 'all 0.5s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 500);
+                        
+                        Swal.fire({
+                            title: 'Reiniciado',
+                            text: 'El alumno puede volver a entrar.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false,
+                            background: '#0f172a', color: 'white'
+                        });
+                    } else {
+                        Swal.fire('Error', 'No se pudo reiniciar.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Fallo de conexión.', 'error');
+                });
+            }
+        });
+    }
+</script>
 
 {% endblock %}

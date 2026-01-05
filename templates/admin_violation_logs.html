@@ -3,98 +3,346 @@
 {% block title %}Logs de {{ student.username }}: {{ exam.title }}{% endblock %}
 
 {% block content %}
-<div class="container logs-container monitor-container">
+
+{# ========================================================= #}
+{# 🎨 ESTILOS CYBERPUNK / DARK FORCE 🎨 #}
+{# ========================================================= #}
+<style>
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+    :root {
+        --bg-body: #020617;       /* Slate 950 */
+        --bg-card: #0f172a;       /* Slate 900 */
+        --bg-hover: #1e293b;      /* Slate 800 */
+        --text-main: #f1f5f9;     /* Slate 100 */
+        --text-sec: #94a3b8;      /* Slate 400 */
+        --border: #334155;        /* Slate 700 */
+        
+        --primary: #06b6d4;       /* Cyan 500 */
+        --primary-glow: rgba(6, 182, 212, 0.2);
+        
+        --danger: #ef4444;        /* Red 500 */
+        --warning: #f59e0b;       /* Amber 500 */
+        --success: #10b981;       /* Emerald 500 */
+    }
+
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .monitor-container {
+        max-width: 1400px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    /* ENCABEZADO */
+    .monitor-header {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+        border: 1px solid var(--border);
+        border-bottom: 4px solid var(--danger);
+        padding: 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        text-align: center;
+    }
+
+    .header-title {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(to right, #ef4444, #f87171);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .exam-info-header {
+        margin-top: 10px;
+        color: var(--text-sec);
+        font-size: 1.1rem;
+        font-weight: 400;
+    }
+    .exam-info-header strong { color: var(--primary); }
+
+    /* BOTÓN VOLVER */
+    .back-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        color: var(--text-sec);
+        margin-bottom: 25px;
+    }
+    .back-nav-btn:hover {
+        border-color: var(--primary);
+        color: var(--text-main);
+        transform: translateX(-5px);
+        box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    /* TARJETA DE LOGS */
+    .logs-card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-subtitle {
+        padding: 20px;
+        background: rgba(2, 6, 23, 0.5);
+        border-bottom: 1px solid var(--border);
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
     
-    <header class="page-header monitor-header">
-        <h1 class="header-title">📜 Logs de Seguridad</h1>
+    .timezone-info {
+        padding: 15px 20px;
+        background: rgba(6, 182, 212, 0.05);
+        border-bottom: 1px solid var(--border);
+        color: var(--primary);
+        font-size: 0.9em;
+        border-left: 4px solid var(--primary);
+    }
+
+    /* TABLA OSCURA */
+    .table-responsive { overflow-x: auto; width: 100%; }
+    
+    .logs-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-main);
+    }
+
+    .logs-table th {
+        background: var(--bg-hover);
+        color: var(--text-sec);
+        text-align: left;
+        padding: 15px;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 2px solid var(--border);
+    }
+
+    .logs-table td {
+        padding: 15px;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        vertical-align: middle;
+    }
+
+    .row-log:hover { background-color: var(--bg-hover); }
+
+    /* FILAS DE VIOLACIÓN */
+    .violation-grave {
+        background: rgba(239, 68, 68, 0.05) !important;
+        border-left: 4px solid var(--danger);
+    }
+    .violation-normal {
+        border-left: 4px solid var(--primary);
+    }
+
+    /* BADGES PERSONALIZADOS */
+    .violation-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.85em;
+        border: 1px solid transparent;
+    }
+    
+    .badge-phone { background: rgba(168, 85, 247, 0.15); color: #a855f7; border-color: #a855f7; } /* Purple */
+    .badge-noise { background: rgba(249, 115, 22, 0.15); color: #f97316; border-color: #f97316; } /* Orange */
+    .badge-face { background: rgba(234, 179, 8, 0.15); color: #eab308; border-color: #eab308; } /* Yellow */
+    .badge-multiple { background: rgba(236, 72, 153, 0.15); color: #ec4899; border-color: #ec4899; } /* Pink */
+    .badge-gaze { background: rgba(20, 184, 166, 0.15); color: #14b8a6; border-color: #14b8a6; } /* Teal */
+    .badge-tab { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-color: #3b82f6; } /* Blue */
+    .badge-window { background: rgba(6, 182, 212, 0.15); color: #06b6d4; border-color: #06b6d4; } /* Cyan */
+    .badge-blocked { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3); } /* Red */
+    .badge-default { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border-color: #94a3b8; } /* Gray */
+
+    /* TEXTOS Y DETALLES */
+    .log-details { 
+        font-family: 'Courier New', monospace; 
+        font-size: 0.9em; 
+        color: var(--text-sec); 
+        display: block; 
+        max-width: 400px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .time-text { font-weight: 700; color: var(--text-main); display: block; font-size: 1.1em; }
+    .date-text { color: var(--text-sec); font-size: 0.85em; }
+
+    /* BOTÓN VER CAPTURA */
+    .view-capture-btn {
+        background: transparent;
+        color: var(--primary);
+        padding: 6px 12px;
+        font-size: 0.85em;
+        border-radius: 6px;
+        text-decoration: none;
+        border: 1px solid var(--primary);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .view-capture-btn:hover {
+        background: var(--primary);
+        color: #000;
+        box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    /* MODAL DE IMAGEN */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+        display: none; justify-content: center; align-items: center; z-index: 2000;
+    }
+    .modal-content {
+        background: var(--bg-card);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        max-width: 90vw;
+        max-height: 90vh;
+        text-align: center;
+        animation: zoomIn 0.3s;
+    }
+    .modal-title { color: var(--text-main); margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .screenshot-image { max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid var(--border); }
+    .close-modal-btn {
+        margin-top: 15px; background: var(--bg-hover); color: var(--text-main);
+        border: 1px solid var(--border); padding: 10px 25px; border-radius: 8px; cursor: pointer;
+    }
+    .close-modal-btn:hover { background: var(--danger); border-color: var(--danger); color: white; }
+
+    .no-items-message { 
+        padding: 40px; text-align: center; font-size: 1.2em; color: var(--success); 
+        background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); margin: 20px; border-radius: 10px;
+    }
+
+    @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+        .logs-table, .logs-table thead, .logs-table tbody, .logs-table tr, .logs-table td { 
+            display: block; width: 100%; 
+        }
+        .logs-table thead { display: none; }
+        .logs-table tr { 
+            margin-bottom: 15px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px;
+        }
+        .logs-table td { 
+            text-align: right; padding-left: 45%; position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;
+        }
+        .logs-table td:before { 
+            content: attr(data-label); font-weight: 700; color: var(--text-sec); text-transform: uppercase; font-size: 0.75em;
+        }
+        .violation-grave { border-left: none; border-top: 4px solid var(--danger); }
+        .violation-normal { border-left: none; border-top: 4px solid var(--primary); }
+    }
+</style>
+
+<div class="monitor-container">
+    
+    <header class="monitor-header">
+        <h1 class="header-title"><i class="fas fa-user-secret"></i> Logs de Seguridad</h1>
         <h2 class="exam-info-header">
-            Alumno: <strong>{{ student.username }}</strong> | Examen: <strong>{{ exam.title }}</strong>
+            Alumno: <strong>{{ student.username }}</strong> &nbsp;|&nbsp; Examen: <strong>{{ exam.title }}</strong>
         </h2>
     </header>
 
-    <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn back-nav-btn">
-        ← Volver al Monitoreo del Examen
+    <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="back-nav-btn">
+        <i class="fas fa-arrow-left"></i> Volver al Monitoreo
     </a>
 
-    <div class="card logs-card">
-        <h3 class="card-subtitle">Historial de Eventos de Seguridad ({{ logs | length }} Eventos)</h3>
+    <div class="logs-card">
+        <h3 class="card-subtitle">
+            <i class="fas fa-history"></i> Historial de Eventos ({{ logs | length }})
+        </h3>
         
-        <p class="timezone-info">
-            Historial detallado de anomalías (cambio de pestaña, IA, bloqueos).
-            La hora se muestra en la zona horaria de <strong>America/Mexico_City</strong>.
-        </p>
+        <div class="timezone-info">
+            <i class="fas fa-clock"></i> Hora mostrada: <strong>America/Mexico_City</strong>. Registros de anomalías detectadas.
+        </div>
 
         {% if logs %}
         <div class="table-responsive">
-            <table class="logs-table monitor-table">
+            <table class="logs-table">
                 <thead>
                     <tr>
-                        <th>ID Log</th>
-                        <th>Tipo de Violación</th>
-                        <th>Evidencia / Detalles</th>
-                        <th>Fecha y Hora (America/Mexico_City)</th>
+                        <th width="10%">ID</th>
+                        <th width="25%">Infracción</th>
+                        <th width="45%">Evidencia / Detalle</th>
+                        <th width="20%">Hora</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr class="row-log {% if log.violation_type in ['HERRAMIENTAS_DEV', 'COPIAR_PEGAR', 'INTENTO_IMPRESION', 'CLIC_DERECHO', 'AI_VOICE_DETECTED', 'AI_NO_FACE', 'AI_MULTIPLE_FACES', 'AI_GAZE_DESVIATED', 'EXAM_CANCELED_AUTO_BLOCK', 'AI_PROHIBITED_OBJECT_PHONE'] %}violation-grave{% else %}violation-normal{% endif %}">
                         
-                        <td data-label="ID Log"><strong>#{{ log.id }}</strong></td>
+                        <td data-label="ID Log" style="font-family: monospace; color: var(--text-sec);">
+                            #{{ log.id }}
+                        </td>
                         
-                        <td data-label="Tipo de Violación">
+                        <td data-label="Infracción">
                             {% if log.violation_type == 'AI_PROHIBITED_OBJECT_PHONE' %}
-                                <span class="violation-badge badge-phone">
-                                    <i class="fas fa-mobile-alt"></i> Uso de Celular
-                                </span>
+                                <span class="violation-badge badge-phone"><i class="fas fa-mobile-alt"></i> Celular</span>
                             {% elif log.violation_type == 'AI_VOICE_DETECTED' %}
-                                <span class="violation-badge badge-noise">
-                                    <i class="fas fa-volume-up"></i> Ruido Fuerte
-                                </span>
+                                <span class="violation-badge badge-noise"><i class="fas fa-volume-up"></i> Ruido</span>
                             {% elif log.violation_type == 'AI_NO_FACE' %}
-                                <span class="violation-badge badge-face">
-                                    <i class="fas fa-user-slash"></i> Fuera de Rango
-                                </span>
+                                <span class="violation-badge badge-face"><i class="fas fa-user-slash"></i> Sin Rostro</span>
                             {% elif log.violation_type == 'AI_MULTIPLE_FACES' %}
-                                <span class="violation-badge badge-multiple">
-                                    <i class="fas fa-users"></i> Múltiples Personas
-                                </span>
+                                <span class="violation-badge badge-multiple"><i class="fas fa-users"></i> Múltiples</span>
                             {% elif log.violation_type == 'AI_GAZE_DESVIATED' %}
-                                <span class="violation-badge badge-gaze">
-                                    <i class="fas fa-eye"></i> Mirada Desviada
-                                </span>
+                                <span class="violation-badge badge-gaze"><i class="fas fa-eye"></i> Mirada</span>
                             {% elif log.violation_type == 'TAB_CHANGE' %}
-                                <span class="violation-badge badge-tab">
-                                    <i class="fas fa-exchange-alt"></i> Cambio de Pestaña
-                                </span>
+                                <span class="violation-badge badge-tab"><i class="fas fa-exchange-alt"></i> Pestaña</span>
                             {% elif log.violation_type == 'WINDOW_BLUR' %}
-                                <span class="violation-badge badge-window">
-                                    <i class="fas fa-window-restore"></i> Cambio de Ventana
-                                </span>
+                                <span class="violation-badge badge-window"><i class="fas fa-window-restore"></i> Ventana</span>
                             {% elif log.violation_type == 'EXAM_CANCELED_AUTO_BLOCK' %}
-                                <span class="violation-badge badge-blocked">
-                                    <i class="fas fa-ban"></i> BLOQUEO AUTOMÁTICO
-                                </span>
+                                <span class="violation-badge badge-blocked"><i class="fas fa-ban"></i> BLOQUEO</span>
                             {% else %}
-                                <span class="violation-badge badge-default">
-                                    <i class="fas fa-exclamation-circle"></i> {{ log.violation_type }}
-                                </span>
+                                <span class="violation-badge badge-default"><i class="fas fa-exclamation-circle"></i> {{ log.violation_type }}</span>
                             {% endif %}
                         </td>
                         
                         <td data-label="Detalles">
                             {% if log.details and log.details.startswith('data:image/jpeg;base64,') %}
-                                <button onclick="viewCapture('{{ log.details }}')" 
-                                    class="button action-btn view-capture-btn">
-                                    <i class="fas fa-camera"></i> Ver Captura
+                                <button onclick="viewCapture('{{ log.details }}')" class="view-capture-btn">
+                                    <i class="fas fa-camera"></i> Ver Evidencia
                                 </button>
                             {% else %}
-                                <span class="log-details">{{ log.details or 'Sin detalles adicionales' }}</span>
+                                <span class="log-details" title="{{ log.details }}">{{ log.details or '---' }}</span>
                             {% endif %}
                         </td>
                         
-                        <td data-label="Fecha y Hora">
+                        <td data-label="Hora">
                             <span class="time-text">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
-                            <small class="date-text">{{ log.timestamp.strftime('%d/%m/%Y') }}</small>
+                            <span class="date-text">{{ log.timestamp.strftime('%d/%m/%Y') }}</span>
                         </td>
                     </tr>
                     {% endfor %}
@@ -102,25 +350,28 @@
             </table>
         </div>
         {% else %}
-        <p class="no-items-message">¡Excelente! Este alumno no tiene ningún registro de violación de seguridad para este examen.</p>
+        <div class="no-items-message">
+            <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+            Este alumno no tiene infracciones registradas. ¡Limpio!
+        </div>
         {% endif %}
     </div>
 </div>
 
-<div id="screenshot-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content screenshot-modal-content">
-        <h3 class="modal-title" style="color: #34495e;">Captura de Evidencia</h3>
-        <img id="screenshot-image" src="" alt="Evidencia del Reporte">
-        <button onclick="closeScreenshotModal()" class="button close-modal-btn" style="margin-top: 15px; background: #7f8c8d;">Cerrar</button>
+<!-- MODAL DE CAPTURA -->
+<div id="screenshot-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 class="modal-title">📸 Evidencia Capturada</h3>
+        <img id="screenshot-image" class="screenshot-image" src="" alt="Evidencia">
+        <br>
+        <button onclick="closeScreenshotModal()" class="close-modal-btn">Cerrar Visualizador</button>
     </div>
 </div>
 
 <script>
-    // 🔥 FUNCIONES JS COMBINADAS
     function viewCapture(base64Data) {
         const modal = document.getElementById('screenshot-modal');
         const img = document.getElementById('screenshot-image');
-        
         img.src = base64Data;
         modal.style.display = 'flex';
     }
@@ -128,15 +379,12 @@
     function closeScreenshotModal() {
         const modal = document.getElementById('screenshot-modal');
         modal.style.display = 'none';
-        document.getElementById('screenshot-image').src = ''; // Limpiar la imagen
+        document.getElementById('screenshot-image').src = '';
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('screenshot-modal');
-        
-        // 🔥 ESCUCHA CLICKS EN EL FONDO GRIS (Funcionalidad del Código 1)
         modal.addEventListener('click', function(e) {
-            // Cierra si se hace click directamente en el overlay, no en el contenido interno
             if (e.target === modal) {
                 closeScreenshotModal();
             }
@@ -144,307 +392,4 @@
     });
 </script>
 
-<style>
-    /* Aseguramos que se cargue la librería de íconos para la interfaz */
-    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
-
-    /* ==========================================================================
-       ESTILOS DEL CÓDIGO 1 (Monitor y Estructura General)
-       ========================================================================== */
-    .monitor-container {
-        max-width: 1600px;
-        margin: 30px auto;
-        padding: 20px;
-    }
-    .monitor-header {
-        text-align: center;
-        border-bottom: 2px solid #eee;
-        padding-bottom: 15px;
-        margin-bottom: 20px;
-    }
-    .header-title { 
-        color: #e74c3c; 
-        font-size: 2.5em;
-        margin-bottom: 5px;
-    }
-    .exam-info-header { 
-        color: #3498db; 
-        font-size: 1.4em;
-        font-weight: 400;
-    }
-
-    .student-list-card {
-        padding: 0;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .card h3 {
-        padding: 20px;
-        background-color: #f5f5f5;
-        border-bottom: 1px solid #eee;
-        margin: 0;
-        font-size: 1.2em;
-        color: #34495e;
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-        width: 100%;
-    }
-
-    /* Estilos de Tabla Base (Monitor) */
-    .monitor-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-    }
-    .monitor-table th {
-        background-color: #34495e;
-        color: white;
-        text-align: center;
-        padding: 12px;
-        text-transform: uppercase;
-        font-size: 0.9em;
-    }
-    .monitor-table td {
-        padding: 10px;
-        border: 1px solid #eee;
-        text-align: center;
-        vertical-align: middle;
-        font-size: 1em;
-    }
-    .monitor-table tr:nth-child(even) { background-color: #f9f9f9; }
-
-    /* Etiquetas de Estado (Del Código 1) */
-    .status-tag {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 0.85em;
-        display: inline-block;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .status-no-ha-iniciado { background: #e0e0e0; color: #555; }
-    .status-examen-terminado { background: #d4edda; color: #1a7d3f; }
-    .status-haciendo-examen { background: #fff3cd; color: #956504; }
-    .status-exam-cancelado, .status-cancelado-bloqueado { background: #f8d7da; color: #721c24; } 
-
-    /* Botones */
-    .chat-btn, .logs-btn {
-        background: #3498db;
-        padding: 8px 12px;
-        font-size: 0.9em;
-        white-space: nowrap;
-        text-decoration: none;
-        color: white;
-        border-radius: 6px;
-        transition: background 0.2s;
-        display: inline-block;
-    }
-    .chat-btn:hover, .logs-btn:hover { background: #2980b9; }
-    .logs-btn { background: #9b59b6; }
-    .logs-btn:hover { background: #8e44ad; }
-    
-    .cancel-exam-btn {
-        background-color: #e74c3c;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        font-size: 0.9em;
-        white-space: nowrap;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 0.2s;
-        font-weight: bold;
-    }
-    .cancel-exam-btn:hover { background-color: #c0392b; }
-
-    /* Estilos de Tiempo y Control (Conservados del Código 1) */
-    .time-controls, .custom-time-group {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-    }
-    .time-btn {
-        color: white;
-        border: none;
-        padding: 6px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.8em;
-        transition: background 0.2s;
-        font-weight: bold;
-    }
-    .quick-add-btn { background: #2ecc71; }
-    .quick-sub-btn { background: #3498db; order: 4; }
-    .custom-btn { background: #f39c12; order: 3; }
-    .confirm-btn { background: #3498db; }
-    .custom-time-input {
-        width: 80px;
-        padding: 5px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        text-align: center;
-    }
-
-    /* MODAL OVERLAY */
-    .modal-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-    .modal-content {
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        max-width: 450px;
-        width: 90%;
-        text-align: center;
-        animation: fadeIn 0.3s ease-out;
-    }
-    .screenshot-modal-content {
-        max-width: 1000px !important;
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: 15px;
-    }
-    .screenshot-modal-content img {
-        max-width: 100%;
-        height: auto;
-    }
-    .modal-title {
-        color: #e74c3c;
-        border-bottom: 2px solid #e74c3c;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    .close-modal-btn {
-        background-color: #95a5a6;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        flex-grow: 1;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.9); }
-        to { opacity: 1; transform: scale(1); }
-    }
-
-    /* ==========================================================================
-       ESTILOS DEL CÓDIGO 2 (Logs, Badges y Detalles Visuales)
-       ========================================================================== */
-    
-    .logs-container { max-width: 1200px; margin: 20px auto; }
-    
-    .back-nav-btn {
-        background: #7f8c8d; padding: 10px 15px; margin-bottom: 20px; transition: background 0.3s;
-        text-decoration: none; color: white; border-radius: 5px; display: inline-block;
-    }
-    .back-nav-btn:hover { background: #5c6a74; }
-
-    .logs-card {
-        padding: 0;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
-        overflow: hidden;
-        background: white;
-    }
-    .card-subtitle {
-        padding: 20px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #eee;
-        margin: 0;
-        font-size: 1.2em;
-        color: #34495e;
-    }
-    .timezone-info { padding: 15px 20px; background: #eaf6ff; border-bottom: 1px solid #eee; color: #34495e; font-size: 0.95em; }
-
-    /* Merge de estilos de tabla */
-    .logs-table { width: 100%; border-collapse: collapse; }
-    .logs-table th {
-        background-color: #34495e; color: white; text-align: left; padding: 15px; font-size: 0.95em; text-transform: uppercase;
-    }
-    .logs-table td { padding: 15px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-    .row-log:hover { background-color: #fafafa; }
-
-    /* 🔥 ESTILO PARA FILA GRAVE (Combinado del Código 1) */
-    .violation-grave {
-        background-color: #fff5f5 !important; /* Fondo rojizo suave */
-        border-left: 5px solid #e74c3c;
-    }
-    .violation-normal {
-        border-left: 5px solid #3498db;
-    }
-
-    /* 🔥🔥 ESTILOS DE BADGES PERSONALIZADOS (Del Código 2) 🔥🔥 */
-    .violation-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 12px;
-        border-radius: 50px;
-        font-weight: 700;
-        font-size: 0.9em;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        white-space: nowrap;
-    }
-    
-    /* Colores específicos para cada tipo */
-    .badge-phone { background-color: #6f42c1; color: white; } /* Morado */
-    .badge-noise { background-color: #fd7e14; color: white; } /* Naranja */
-    .badge-face { background-color: #ffc107; color: var(--color-texto); } /* Amarillo */
-    .badge-multiple { background-color: #d63384; color: white; } /* Rosa fuerte */
-    .badge-gaze { background-color: #20c997; color: white; } /* Verde agua */
-    .badge-tab { background-color: #0d6efd; color: white; } /* Azul */
-    .badge-window { background-color: #17a2b8; color: white; } /* Cian */
-    .badge-blocked { background-color: #dc3545; color: white; border: 2px solid #8b0000; } /* Rojo oscuro */
-    .badge-default { background-color: #6c757d; color: white; } /* Gris */
-
-    .log-details { font-family: monospace; font-size: 0.9em; color: #555; display: block; max-width: 400px; }
-    .time-text { font-weight: bold; color: var(--color-texto); display: block; }
-    .date-text { color: #888; font-size: 0.85em; }
-
-    .view-capture-btn {
-        background: #3498db; color: white; padding: 6px 12px; font-size: 0.85em; border-radius: 4px; text-decoration: none; border: none; cursor: pointer;
-    }
-    .view-capture-btn:hover { background: #2980b9; }
-
-    .no-items-message { padding: 30px; text-align: center; font-size: 1.1em; color: #27ae60; background: #d4edda; }
-
-    /* RESPONSIVE (Combinado) */
-    @media (max-width: 768px) {
-        .monitor-container, .logs-container { padding: 10px; }
-        
-        .logs-table, .logs-table tbody, .logs-table tr, .logs-table td,
-        .monitor-table, .monitor-table tbody, .monitor-table tr, .monitor-table td { 
-            display: block; width: 100%; 
-        }
-        
-        .logs-table thead, .monitor-table thead { display: none; }
-        
-        .logs-table tr, .monitor-table tr { 
-            margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-        }
-        
-        .logs-table td, .monitor-table td { 
-            text-align: right; padding-left: 50%; position: relative; border-bottom: 1px solid #eee;
-        }
-        
-        .logs-table td:before, .monitor-table td:before { 
-            content: attr(data-label); position: absolute; left: 15px; width: 40%; font-weight: bold; text-align: left; color: #555; 
-        }
-    }
-</style>
 {% endblock %}

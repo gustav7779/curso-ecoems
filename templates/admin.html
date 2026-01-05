@@ -5,294 +5,390 @@
 {% block content %}
 
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
 
 <style>
-    /* --- PROTOCOLO OSCURIDAD TOTAL --- */
+    /* =========================================
+       🔥 ESTILO COMANDO CENTRAL (CSS PURO) 🔥
+       ========================================= */
     :root {
-        --neon-purple: #bc13fe;
-        --neon-blue: #00f3ff;
-        --neon-green: #0aff60;
-        --neon-red: #ff0055;
-        --bg-dark: #020617;
-        --card-bg: rgba(15, 23, 42, 0.75);
-        --border-color: rgba(255, 255, 255, 0.08);
+        --bg-deep: #020617;
+        --bg-panel: #0f172a;
+        --input-bg: #1e293b;
+        --border-glass: rgba(255, 255, 255, 0.1);
+        --neon-blue: #3b82f6;
+        --neon-purple: #8b5cf6;
+        --neon-green: #10b981;
+        --neon-red: #ef4444;
+        --neon-orange: #f97316;
+        --text-white: #f8fafc;
+        --text-grey: #94a3b8;
     }
 
-    /* Ocultar botón de tema y forzar oscuro */
-    #theme-toggle, .theme-switch, .toggle-theme { display: none !important; }
-    input, textarea, select { color-scheme: dark; }
+    body { background-color: var(--bg-deep); font-family: 'Inter', sans-serif; color: var(--text-white); }
 
-    body {
-        background-color: var(--bg-dark) !important;
-        color: #e2e8f0 !important;
-        font-family: 'Inter', sans-serif;
-        background-image: 
-            radial-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px),
-            radial-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px);
-        background-size: 40px 40px;
+    .dashboard-container {
+        max-width: 1400px; margin: 0 auto; padding: 40px 20px;
     }
 
-    h1, h2, h3, .font-tech { font-family: 'Space Grotesk', sans-serif; }
-
-    /* HUD CARD */
-    .hud-card {
-        background: var(--card-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* GRID PRINCIPAL (ARRIBA) */
+    .top-section-grid {
+        display: grid; grid-template-columns: 1fr 300px; gap: 30px; margin-bottom: 30px;
     }
 
-    /* BOTÓN TORRE DE CONTROL */
-    .tower-btn {
-        background: rgba(0, 243, 255, 0.05);
-        border: 1px solid rgba(0, 243, 255, 0.3);
-        color: var(--neon-blue);
-        transition: all 0.3s;
+    /* GRID DE CONSOLAS (ABAJO - NUEVO) */
+    .consoles-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
     }
-    .tower-btn:hover {
-        background: rgba(0, 243, 255, 0.15);
-        box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
-        transform: translateY(-2px);
+
+    /* HEADER */
+    .command-header {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+        border: 1px solid var(--border-glass); border-radius: 20px; padding: 30px;
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+        margin-bottom: 30px;
     }
     
-    /* INPUTS */
-    .input-tech {
-        background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); color: white;
-        font-family: 'Space Grotesk', monospace; transition: all 0.3s;
+    .welcome-text h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 2.2rem; margin: 0;
+        background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .input-tech:focus {
-        border-color: var(--neon-blue); background: rgba(0, 0, 0, 0.8); outline: none;
-        box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.1);
+    .level-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);
+        color: var(--neon-blue); padding: 4px 12px; border-radius: 50px;
+        font-size: 0.7rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px;
     }
+    .pulse-dot { width: 6px; height: 6px; background: var(--neon-blue); border-radius: 50%; box-shadow: 0 0 8px var(--neon-blue); animation: pulse 2s infinite; }
 
-    /* TERMINAL LOGS REAL */
-    .terminal-window {
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 0.7rem;
-        color: #ff3333; /* Rojo para alertas */
-        height: 140px;
-        overflow-y: hidden;
-        position: relative;
-        text-shadow: 0 0 2px rgba(255, 51, 51, 0.5);
+    /* TARJETAS GENERALES */
+    .panel-box {
+        background: var(--bg-panel); border: 1px solid var(--border-glass); border-radius: 20px;
+        overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px;
+        display: flex; flex-direction: column;
     }
-    .terminal-line { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+    .panel-header {
+        padding: 20px 30px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-glass);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .panel-title { margin: 0; color: white; font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+
+    /* FORMULARIO SETTINGS */
+    .settings-form { padding: 30px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     
+    .input-label { display: block; color: var(--neon-purple); font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+    .tech-input {
+        width: 100%; padding: 12px 15px; background: var(--input-bg); border: 1px solid var(--border-glass);
+        color: white; border-radius: 10px; font-family: 'Inter', sans-serif; box-sizing: border-box;
+    }
+    .tech-input:focus { outline: none; border-color: var(--neon-purple); }
+
+    .btn-save {
+        background: var(--neon-purple); color: white; border: none; padding: 12px 30px;
+        border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .btn-save:hover { background: #9333ea; transform: translateY(-2px); box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+
+    /* TERMINAL LOGS Y HACKER CONSOLE */
+    .terminal-box {
+        background: black; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.85rem;
+        height: 250px; overflow-y: auto; border-top: 1px solid var(--border-glass);
+    }
+    .log-line { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+
+    /* TABLA DE EXÁMENES */
+    .exam-list { width: 100%; border-collapse: collapse; }
+    .exam-list th {
+        text-align: left; padding: 15px 25px; color: var(--text-grey); font-size: 0.75rem; text-transform: uppercase;
+        border-bottom: 1px solid var(--border-glass); background: rgba(0,0,0,0.2);
+    }
+    .exam-list td { padding: 15px 25px; border-bottom: 1px solid var(--border-glass); color: var(--text-white); font-size: 0.9rem; }
+    .exam-list tr:hover { background: rgba(255,255,255,0.02); }
+
+    .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+    .st-active { background: rgba(16, 185, 129, 0.1); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .st-inactive { background: rgba(148, 163, 184, 0.1); color: var(--text-grey); border: 1px solid var(--text-grey); }
+
     /* BOTONES ACCIÓN */
-    .btn-action { transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); }
-    .btn-action:hover { transform: translateY(-2px); background: rgba(255,255,255,0.1); }
+    .action-row { display: flex; gap: 5px; }
+    .btn-icon {
+        width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+        text-decoration: none; transition: 0.2s; border: 1px solid transparent; color: white; font-size: 0.9rem;
+    }
+    .btn-tower { background: rgba(249, 115, 22, 0.1); color: var(--neon-orange); border-color: var(--neon-orange); }
+    .btn-tower:hover { background: var(--neon-orange); color: black; box-shadow: 0 0 15px rgba(249, 115, 22, 0.4); }
+    .btn-edit { background: rgba(59, 130, 246, 0.1); color: var(--neon-blue); border-color: var(--neon-blue); }
+    .btn-edit:hover { background: var(--neon-blue); color: black; }
+    .btn-results { background: rgba(139, 92, 246, 0.1); color: var(--neon-purple); border-color: var(--neon-purple); }
+    .btn-results:hover { background: var(--neon-purple); color: black; }
+
+    /* SIDEBAR */
+    .quick-actions { display: flex; flex-direction: column; gap: 15px; }
+    .btn-quick {
+        background: var(--bg-panel); border: 1px solid var(--border-glass); padding: 20px;
+        border-radius: 16px; text-decoration: none; color: var(--text-white);
+        display: flex; align-items: center; gap: 15px; transition: 0.2s; font-weight: 600;
+    }
+    .btn-quick:hover { transform: translateX(5px); border-color: var(--neon-blue); background: rgba(59, 130, 246, 0.05); }
+    .icon-box {
+        width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.05);
+        display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+
+    /* BOTONES RÁPIDOS HACKER */
+    .btn-quick-action {
+        background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass);
+        color: var(--text-grey); padding: 6px 12px; border-radius: 5px; font-size: 0.75rem;
+        cursor: pointer; transition: 0.2s; font-family: monospace;
+    }
+    .btn-quick-action:hover { background: var(--input-bg); color: white; border-color: white; }
+
+    @media (max-width: 1024px) { 
+        .top-section-grid { grid-template-columns: 1fr; } 
+        .consoles-grid { grid-template-columns: 1fr; }
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } }
 </style>
 
-<div class="min-h-screen pb-20 pt-8 px-4 md:px-8">
-
-    <div class="max-w-[1400px] mx-auto mb-10 border-b border-white/5 pb-6 flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="dashboard-container">
+    
+    <div class="command-header">
         <div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-mono tracking-widest uppercase mb-3">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                </span>
-                ADMINISTRADOR NIVEL 5
+            <div class="level-badge"><span class="pulse-dot"></span> ADMIN NIVEL 5</div>
+            <div class="welcome-text">
+                <h1>Panel de Control</h1>
+                <p>> SISTEMA OPERATIVO Y LISTO PARA LA MISIÓN</p>
             </div>
-            <h1 class="text-4xl md:text-5xl font-bold text-white font-tech tracking-tight">
-                PANEL DE <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">CONTROL</span>
-            </h1>
         </div>
-        
-        <a href="{{ url_for('admin_dashboard') }}" class="tower-btn px-6 py-3 rounded-xl flex items-center gap-4 group text-decoration-none">
-            <div class="relative">
-                <i class="fas fa-broadcast-tower text-2xl group-hover:animate-pulse"></i>
-                <div class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
-            </div>
-            <div class="text-left">
-                <div class="text-xs font-bold tracking-widest">TORRE DE CONTROL</div>
-                <div class="text-[10px] opacity-70 font-mono">LIVE DASHBOARD</div>
-            </div>
+        <a href="{{ url_for('new_exam') }}" class="btn-save" style="background: var(--neon-green); text-decoration: none;">
+            <i class="fas fa-plus"></i> NUEVO EXAMEN
         </a>
     </div>
 
-    <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-        <div class="lg:col-span-8 space-y-8">
-
-            <div class="hud-card p-8 relative overflow-hidden group" data-tilt data-tilt-max="1">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] pointer-events-none"></div>
-                <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3 font-tech border-b border-white/5 pb-4">
-                    <i class="fas fa-sliders-h text-purple-400"></i> CONTROL DE PAGINA DE INICIO
-                </h3>
-                <form action="{{ url_for('update_settings') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+    <div class="top-section-grid">
+        
+        <div class="main-column">
+            
+            <div class="panel-box">
+                <div class="panel-header">
+                    <h3 class="panel-title"><i class="fas fa-sliders-h text-purple-400"></i> Configuración Global</h3>
+                </div>
+                <form action="{{ url_for('update_settings') }}" method="POST" class="settings-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div>
-                        <label class="block text-xs font-bold text-purple-300 uppercase tracking-wider mb-3"><i class="far fa-calendar-alt mr-1"></i> Fecha Contador</label>
-                        <input type="datetime-local" name="exam_date" class="input-tech w-full p-4 rounded-xl text-sm block" required>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-3">
-                            <label class="block text-xs font-bold text-purple-300 uppercase tracking-wider"><i class="fas fa-bullhorn mr-1"></i> Noticia Cintillo</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="news_active" class="sr-only peer" checked>
-                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
-                            </label>
+                    <div class="form-grid">
+                        <div>
+                            <label class="input-label"><i class="far fa-calendar-alt"></i> Fecha del Contador</label>
+                            <input type="datetime-local" name="exam_date" class="tech-input" required>
                         </div>
-                        <textarea name="news_text" rows="1" class="input-tech w-full p-4 rounded-xl text-sm resize-none" placeholder="Escribe el mensaje aquí..."></textarea>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <label class="input-label"><i class="fas fa-bullhorn"></i> Noticia Cintillo</label>
+                                <label style="font-size:0.7rem; color:var(--text-grey);">
+                                    <input type="checkbox" name="news_active" checked> Activar
+                                </label>
+                            </div>
+                            <input type="text" name="news_text" class="tech-input" placeholder="Mensaje para los alumnos...">
+                        </div>
                     </div>
-                    <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" class="bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold py-3 px-8 rounded-xl shadow-lg transition transform hover:scale-105 flex items-center gap-2">
-                            <i class="fas fa-save"></i> GUARDAR
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button type="submit" class="btn-save" style="display: inline-flex;">
+                            <i class="fas fa-save"></i> ACTUALIZAR SISTEMA
                         </button>
                     </div>
                 </form>
             </div>
 
-            <div class="hud-card p-0 overflow-hidden">
-                <div class="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
-                    <h3 class="text-lg font-bold text-white flex items-center gap-2 font-tech">
-                        <i class="fas fa-database text-cyan-400"></i> BASE DE DATOS: EXÁMENES
+            <div class="panel-box">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <i class="fas fa-database" style="color:var(--neon-blue);"></i> Base de Datos: Exámenes
                     </h3>
-                    <a href="{{ url_for('new_exam') }}" class="text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-500 hover:text-black px-4 py-2 rounded-lg font-bold transition uppercase tracking-wider">+ Nuevo Examen</a>
                 </div>
-                <div class="divide-y divide-white/5">
-                    {% if exams %}
-                        {% for exam in exams %}
-                        {% set active_count = 0 %}
-                        {% for ex_id, ex_title, count in active_exams_summary %}
-                            {% if ex_id == exam.id %}{% set active_count = count %}{% endif %}
-                        {% endfor %}
-                        <div class="p-5 hover:bg-white/5 transition flex flex-col xl:flex-row justify-between items-center gap-4 group">
-                            <div class="w-full xl:w-auto">
-                                <div class="flex items-center gap-3">
-                                    <h4 class="text-lg font-bold text-white group-hover:text-cyan-400 transition font-tech">{{ exam.title }}</h4>
-                                    {% if active_count > 0 %}
-                                    <span class="px-2 py-0.5 rounded bg-green-500/10 text-green-400 text-[10px] font-bold border border-green-500/20 animate-pulse">{{ active_count }} ONLINE</span>
-                                    {% endif %}
-                                </div>
-                                <div class="text-[11px] text-slate-500 font-mono mt-1 flex gap-4 uppercase tracking-wider">
-                                    <span>ID: {{ exam.id }}</span><span>PREGS: {{ exam.questions | list | length }}</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-orange-400" title="Monitor"><i class="fas fa-eye"></i></a>
-                                <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-blue-400" title="Configurar"><i class="fas fa-cog"></i></a>
-                                <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-purple-400" title="Preguntas"><i class="fas fa-pencil-alt"></i></a>
-                                <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-green-400" title="Resultados"><i class="fas fa-table"></i></a>
-                                <a href="{{ url_for('forensic_report', exam_id=exam.id) }}" class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-white bg-white/10" title="IA Forense"><i class="fas fa-user-secret"></i></a>
-                                <div class="w-[1px] h-6 bg-white/10 mx-2"></div>
-                                <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" class="inline" onsubmit="return confirm('¿ELIMINAR {{ exam.title }}?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-action w-9 h-9 rounded-lg flex items-center justify-center text-red-500 hover:bg-red-500/20" title="Eliminar"><i class="fas fa-trash"></i></button></form>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="p-10 text-center text-slate-600 font-mono text-sm">// NO DATA FOUND //</div>
-                    {% endif %}
+                <div style="overflow-x: auto;">
+                    <table class="exam-list">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Misión (Título)</th>
+                                <th>Código</th>
+                                <th>Estado</th>
+                                <th>Protocolos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if exams %}
+                                {% for exam in exams %}
+                                <tr>
+                                    <td style="font-family: monospace; color: var(--text-grey);">#{{ exam.id }}</td>
+                                    <td style="font-weight: 600;">{{ exam.title }}</td>
+                                    <td style="font-family: monospace; color: var(--neon-blue);">{{ exam.access_code }}</td>
+                                    <td>
+                                        {% if exam.is_active %}
+                                            <span class="status-badge st-active">Activo</span>
+                                        {% else %}
+                                            <span class="status-badge st-inactive">Inactivo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="action-row">
+                                            <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn-icon btn-tower" title="Torre de Control (CCTV)">
+                                                <i class="fas fa-video"></i>
+                                            </a>
+                                            <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn-icon btn-results" title="Resultados">
+                                                <i class="fas fa-poll"></i>
+                                            </a>
+                                            <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn-icon btn-edit" title="Editar Preguntas">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" style="display:inline;" onsubmit="return confirm('¿ELIMINAR {{ exam.title }}?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn-icon" style="color:var(--neon-red); border-color:var(--neon-red);" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-grey);">
+                                        <i class="fas fa-folder-open" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                                        <p>No hay operaciones iniciadas.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <div class="lg:col-span-4 space-y-6">
-
-            <div class="grid grid-cols-2 gap-4">
-                {% if current_user.role == 'admin' %}
-                <a href="{{ url_for('manage_users') }}" class="hud-card p-4 flex flex-col items-center justify-center text-center hover:border-blue-500 group transition">
-                    <i class="fas fa-users text-2xl text-blue-500 mb-2 group-hover:scale-110 transition"></i><span class="text-[10px] font-bold text-slate-300 font-tech tracking-widest">USUARIOS</span>
+        <div class="sidebar-column">
+            <div class="quick-actions">
+                <h4 style="color: var(--text-grey); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 5px;">Accesos Directos</h4>
+                <a href="{{ url_for('manage_users') }}" class="btn-quick">
+                    <div class="icon-box" style="color: var(--neon-green);"><i class="fas fa-user-plus"></i></div>
+                    <div><div>Reclutar Agente</div><div style="font-size: 0.75rem; color: var(--text-grey);">Crear Usuario</div></div>
                 </a>
-                <a href="{{ url_for('export_results') }}" class="hud-card p-4 flex flex-col items-center justify-center text-center hover:border-green-500 group transition">
-                    <i class="fas fa-file-csv text-2xl text-green-500 mb-2 group-hover:scale-110 transition"></i><span class="text-[10px] font-bold text-slate-300 font-tech tracking-widest">CSV</span>
+                <a href="{{ url_for('new_exam') }}" class="btn-quick">
+                    <div class="icon-box" style="color: var(--neon-blue);"><i class="fas fa-file-signature"></i></div>
+                    <div><div>Nueva Operación</div><div style="font-size: 0.75rem; color: var(--text-grey);">Crear Examen</div></div>
                 </a>
-                {% endif %}
-                <a href="{{ url_for('cctv_matrix') }}" class="hud-card p-4 flex flex-col items-center justify-center text-center hover:border-yellow-500 group col-span-2 bg-yellow-500/5 relative overflow-hidden transition">
-                    <i class="fas fa-video text-2xl text-yellow-500 mb-2 relative z-10"></i><span class="text-xs font-bold text-yellow-100 relative z-10 font-tech tracking-widest">CCTV MATRIX</span>
+                <a href="{{ url_for('admin_reports') }}" class="btn-quick">
+                    <div class="icon-box" style="color: var(--neon-red);"><i class="fas fa-bug"></i></div>
+                    <div><div>Reportes de Falla</div><div style="font-size: 0.75rem; color: var(--text-grey);">Soporte Técnico</div></div>
+                </a>
+                <a href="{{ url_for('new_announcement') }}" class="btn-quick">
+                    <div class="icon-box" style="color: var(--neon-orange);"><i class="fas fa-bullhorn"></i></div>
+                    <div><div>Comunicaciones</div><div style="font-size: 0.75rem; color: var(--text-grey);">Publicar Anuncio</div></div>
+                </a>
+                <a href="{{ url_for('cctv_matrix') }}" class="btn-quick">
+                    <div class="icon-box" style="color: #facc15;"><i class="fas fa-th"></i></div>
+                    <div><div>CCTV Matrix</div><div style="font-size: 0.75rem; color: var(--text-grey);">Video Wall</div></div>
+                </a>
+                <a href="{{ url_for('evidence_gallery') }}" class="btn-quick">
+                    <div class="icon-box" style="color: #f472b6;"><i class="fas fa-images"></i></div>
+                    <div><div>Evidencias</div><div style="font-size: 0.75rem; color: var(--text-grey);">Galería Forense</div></div>
                 </a>
             </div>
-
-            <a href="{{ url_for('evidence_gallery') }}" class="hud-card p-5 flex items-center justify-between group hover:border-red-500 transition relative overflow-hidden">
-                <div class="flex items-center gap-4 relative z-10">
-                    <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center text-red-500"><i class="fas fa-camera-retro"></i></div>
-                    <div>
-                        <h4 class="font-bold text-white text-sm font-tech">GALERÍA DE EVIDENCIA</h4>
-                        <p class="text-[10px] text-red-400 uppercase tracking-wider">Infracciones Detectadas</p>
-                    </div>
-                </div>
-                <i class="fas fa-chevron-right text-slate-500 group-hover:text-white transition relative z-10"></i>
-                <div class="absolute inset-0 bg-red-500/5 transform translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-            </a>
-
-            <div class="hud-card p-4 border-t-2 border-red-500/50 bg-black/40">
-                <div class="flex justify-between mb-2 border-b border-white/5 pb-2">
-                    <span class="text-[10px] font-bold text-red-500 font-mono tracking-widest">⚠️ ALERTAS DEL SISTEMA</span>
-                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                </div>
-                <div class="terminal-window" id="terminal-logs">
-                    <div class="terminal-line">Conectando a feed de errores...</div>
-                </div>
-            </div>
-
-            <div class="hud-card p-5">
-                <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-3">
-                    <h4 class="font-bold text-white text-xs font-tech tracking-widest">COMUNICADOS</h4>
-                    <a href="{{ url_for('new_announcement') }}" class="text-[9px] bg-white/10 px-2 py-1 rounded text-white hover:bg-white/20 transition">+ ADD</a>
-                </div>
-                <div class="space-y-3">
-                    {% if announcements_list %}
-                        {% for ann in announcements_list %}
-                        <div class="bg-white/5 p-3 rounded-lg border border-white/5 flex justify-between items-center group hover:border-white/20 transition">
-                            <div class="overflow-hidden">
-                                <div class="text-xs font-bold text-slate-200 truncate">{{ ann.title }}</div>
-                                <div class="text-[9px] {{ 'text-green-400' if ann.is_active else 'text-slate-500' }}">{{ 'ONLINE' if ann.is_active else 'DRAFT' }}</div>
-                            </div>
-                            <div class="flex gap-2 opacity-50 group-hover:opacity-100 transition">
-                                <a href="{{ url_for('edit_announcement', announcement_id=ann.id) }}" class="text-slate-400 hover:text-white"><i class="fas fa-pen text-xs"></i></a>
-                                <form method="POST" action="{{ url_for('delete_announcement', announcement_id=ann.id) }}" class="inline" onsubmit="return confirm('X');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xs"></i></button></form>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-[10px] text-slate-600 text-center py-2 font-mono">// EMPTY //</p>
-                    {% endif %}
-                </div>
-            </div>
-
         </div>
     </div>
+
+    <div class="consoles-grid">
+        
+        <div class="panel-box" style="border-color: var(--neon-green); height: 100%;">
+            <div class="panel-header" style="background: rgba(16, 185, 129, 0.05);">
+                <h3 class="panel-title" style="color: var(--neon-green);">
+                    <i class="fas fa-terminal"></i> Inyector Global (Hacker Console)
+                </h3>
+                <span style="font-size: 0.7rem; color: var(--text-grey); font-family: monospace;">TARGET: ALL CLIENTS</span>
+            </div>
+            
+            <div style="padding: 20px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box;">
+                <p style="margin-bottom: 10px; color: var(--text-grey); font-size: 0.8rem;">
+                    ⚠️ Ejecuta JavaScript en el navegador de <strong>TODOS</strong> los alumnos.
+                </p>
+
+                <textarea id="global-injector-input" 
+                          style="width: 100%; height: 120px; background: #000; color: #0f0; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; border: 1px solid var(--border-glass); margin-bottom: 15px; box-sizing: border-box;" 
+                          placeholder="// Escribe JS aquí... Ej: alert('Hola a todos');"></textarea>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button onclick="fillInject('alert(\'📢 MENSAJE DEL SISTEMA:\\nAtención a la pantalla.\');')" class="btn-quick-action">🔔 Alerta</button>
+                        <button onclick="fillInject('location.reload();')" class="btn-quick-action">🔄 F5 Masivo</button>
+                        <button onclick="fillInject('document.body.style.filter = \'grayscale(100%)\';')" class="btn-quick-action">⚫ B/N</button>
+                    </div>
+                    <button onclick="fireGlobalInjection()" class="btn-save" style="background: var(--neon-green); color: black; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); padding: 8px 15px; font-size: 0.9rem;">
+                        <i class="fas fa-code"></i> EJECUTAR
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-box" style="border-color: var(--neon-red); height: 100%;">
+            <div class="panel-header" style="background: rgba(239, 68, 68, 0.1);">
+                <h3 class="panel-title" style="color: var(--neon-red);">
+                    <i class="fas fa-exclamation-triangle"></i> Logs de Seguridad
+                </h3>
+                <span class="pulse-dot" style="background: var(--neon-red); box-shadow: 0 0 8px var(--neon-red);"></span>
+            </div>
+            <div class="terminal-box" id="terminal-logs">
+                <div class="log-line" style="color: var(--text-grey);">Iniciando escaneo de seguridad...</div>
+                <div class="log-line" style="color: var(--neon-green);">[OK] Conexión segura establecida.</div>
+            </div>
+        </div>
+
+    </div>
+
 </div>
 
 <script>
-    // 1. FORZAR OSCURIDAD
-    document.addEventListener("DOMContentLoaded", function() {
-        const themeToggles = document.querySelectorAll('#theme-toggle, .theme-switch, .toggle-theme');
-        themeToggles.forEach(btn => btn.style.display = 'none');
-        document.body.classList.add('dark');
-        document.documentElement.classList.add('dark');
-    });
+    const socket = io(); // Conectar al socket principal
 
-    // 2. TILT 3D
-    VanillaTilt.init(document.querySelectorAll("[data-tilt]"), {
-        max: 3, speed: 400, glare: true, "max-glare": 0.1
-    });
-
-    // 3. LOGS REALES (Polling cada 4 seg)
+    // --- 1. LOGS DEL SISTEMA ---
     const term = document.getElementById('terminal-logs');
-    
     function fetchRealLogs() {
         fetch('/api/get_logs')
             .then(response => response.json())
             .then(data => {
                 if (data.length === 0) return;
-                term.innerHTML = ''; // Limpiar y repoblar
+                term.innerHTML = '';
                 data.forEach(logText => {
                     const line = document.createElement('div');
-                    line.className = 'terminal-line';
+                    line.className = 'log-line';
+                    if(logText.includes('CRITICAL') || logText.includes('ERROR')) line.style.color = '#ef4444';
+                    else if(logText.includes('WARNING')) line.style.color = '#f59e0b';
+                    else line.style.color = '#10b981';
                     line.innerText = logText;
                     term.appendChild(line);
                 });
+                term.scrollTop = term.scrollHeight;
             })
             .catch(err => console.log("Log error:", err));
     }
-    
-    setInterval(fetchRealLogs, 4000); // Actualizar cada 4 segundos
-    fetchRealLogs(); // Primera llamada
+    setInterval(fetchRealLogs, 4000);
+    fetchRealLogs();
+
+    // --- 2. HACKER CONSOLE ---
+    function fillInject(code) {
+        document.getElementById('global-injector-input').value = code;
+    }
+
+    function fireGlobalInjection() {
+        const code = document.getElementById('global-injector-input').value;
+        if(!code.trim()) { alert("Escribe código primero."); return; }
+        if(!confirm("⚠️ ¿EJECUTAR EN TODOS LOS ALUMNOS?")) return;
+
+        // Emitir evento al servidor (asegúrate de tener este handler en app.py)
+        socket.emit('admin_global_inject', { code: code });
+        
+        const btn = document.querySelector('button[onclick="fireGlobalInjection()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> ENVIADO';
+        setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+    }
 </script>
 
 {% endblock %}

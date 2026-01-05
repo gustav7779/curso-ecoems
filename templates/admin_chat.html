@@ -1,39 +1,242 @@
 {% extends "base.html" %}
 
-{% block title %}Chat con {{ target_user.username }}{% endblock %}
+{% block title %}Comunicaciones: {{ target_user.username }}{% endblock %}
 
 {% block content %}
-<div class="chat-container-wrapper">
 
-    <div class="chat-header-card">
-        <div class="header-info">
-            <div class="avatar-circle">{{ target_user.username[0] | upper }}</div>
-            <div>
-                <h1>Chat de Soporte</h1>
-                <p>Conversando con: <strong>{{ target_user.username }}</strong> (ID: {{ target_user.id }})</p>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+    /* =========================================
+       🔥 ESTILO CYBER-CHAT 🔥
+       ========================================= */
+    :root {
+        --glass-bg: rgba(30, 41, 59, 0.8);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --chat-bg: #0f172a;
+        --msg-admin-bg: #3b82f6;
+        --msg-student-bg: #1e293b;
+        --neon-green: #10b981;
+        --neon-red: #ef4444;
+        --text-white: #f8fafc;
+        --text-grey: #94a3b8;
+    }
+
+    .font-tech { font-family: 'Space Grotesk', sans-serif; }
+
+    /* LAYOUT PRINCIPAL */
+    .chat-wrapper {
+        max-width: 900px;
+        margin: 40px auto;
+        height: 85vh;
+        display: flex;
+        flex-direction: column;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        background: var(--chat-bg);
+    }
+
+    /* HEADER */
+    .chat-header {
+        padding: 20px;
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(10px);
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .avatar {
+        width: 50px; height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 1.5rem;
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+    }
+
+    .user-details h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0;
+        color: white;
+    }
+    .status-dot {
+        width: 8px; height: 8px; background: var(--neon-green);
+        border-radius: 50%; display: inline-block; margin-right: 5px;
+        box-shadow: 0 0 5px var(--neon-green);
+    }
+    .user-details p {
+        margin: 0; font-size: 0.85rem; color: var(--text-grey);
+    }
+
+    /* ACCIONES */
+    .header-actions { display: flex; gap: 10px; }
+    
+    .btn-action {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+    .btn-end {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--neon-red);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+    .btn-end:hover { background: var(--neon-red); color: white; }
+    
+    .btn-close {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-grey);
+        border-color: var(--glass-border);
+    }
+    .btn-close:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+
+    /* ÁREA DE MENSAJES */
+    .chat-window {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* BURBUJAS */
+    .msg-bubble {
+        max-width: 70%;
+        padding: 12px 18px;
+        border-radius: 16px;
+        position: relative;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .msg-admin {
+        align-self: flex-end;
+        background: linear-gradient(135deg, var(--msg-admin-bg), #2563eb);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .msg-student {
+        align-self: flex-start;
+        background: var(--msg-student-bg);
+        color: var(--text-white);
+        border: 1px solid var(--glass-border);
+        border-bottom-left-radius: 4px;
+    }
+
+    .msg-system {
+        align-self: center;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-grey);
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 50px;
+        border: 1px solid var(--glass-border);
+    }
+
+    .msg-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-top: 4px;
+        text-align: right;
+        display: block;
+    }
+
+    /* INPUT AREA */
+    .chat-input-area {
+        padding: 20px;
+        background: rgba(15, 23, 42, 0.95);
+        border-top: 1px solid var(--glass-border);
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .modern-input {
+        flex-grow: 1;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 12px 15px;
+        color: white;
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.3s;
+    }
+    .modern-input:focus {
+        border-color: var(--msg-admin-bg);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-send {
+        background: var(--msg-admin-bg);
+        color: white;
+        border: none;
+        width: 45px; height: 45px;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s;
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+    }
+    .btn-send:hover { transform: scale(1.05); background: #2563eb; }
+
+</style>
+
+<div class="chat-wrapper">
+
+    <div class="chat-header">
+        <div class="user-info">
+            <div class="avatar">{{ target_user.username[0] | upper }}</div>
+            <div class="user-details">
+                <h1>{{ target_user.username }}</h1>
+                <p><span class="status-dot"></span>En línea • ID: {{ target_user.id }}</p>
             </div>
         </div>
         <div class="header-actions">
-            <button id="end-chat-btn" class="btn-danger-sm">Finalizar Soporte</button>
-            <a href="javascript:window.close();" class="btn-close-sm">Cerrar Ventana</a>
-        </div>
-    </div>
-
-    <div class="chat-interface">
-        <div id="chat-window" class="chat-messages-area">
-            <div class="system-message">
-                <small>Has iniciado una sesión de soporte privado.</small>
-            </div>
-        </div>
-
-        <form id="admin-chat-form" class="chat-input-area">
-            <input type="text" id="message-input" placeholder="Escribe un mensaje al alumno..." required
-                autocomplete="off">
-            <button type="submit" class="btn-send">
-                <i class="fas fa-paper-plane"></i>
+            <button id="end-chat-btn" class="btn-action btn-end">
+                <i class="fas fa-ban mr-1"></i> Terminar
             </button>
-        </form>
+            <a href="javascript:window.close();" class="btn-action btn-close">
+                <i class="fas fa-times"></i>
+            </a>
+        </div>
     </div>
+
+    <div id="chat-window" class="chat-window">
+        </div>
+
+    <form id="admin-chat-form" class="chat-input-area">
+        <input type="text" id="message-input" class="modern-input" placeholder="Escribe tu mensaje..." autocomplete="off" required>
+        <button type="submit" class="btn-send">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </form>
 
 </div>
 
@@ -41,8 +244,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const socket = io.connect(window.location.origin);
-
-        // Datos del usuario objetivo (Alumno)
+        
+        // DATOS
         const TARGET_USER_ID = "{{ target_user.id }}";
         const ADMIN_USERNAME = "{{ current_user.username }}";
 
@@ -51,293 +254,90 @@
         const messageInput = document.getElementById('message-input');
         const endChatBtn = document.getElementById('end-chat-btn');
 
-        // --- 1. CARGAR HISTORIAL AL INICIAR (NUEVO) ---
+        // 1. CARGAR HISTORIAL
         loadChatHistory();
 
         function loadChatHistory() {
-            // Mostrar mensaje de carga
-            chatWindow.innerHTML = '<div class="system-message"><small>Cargando historial...</small></div>';
+            chatWindow.innerHTML = '<div class="msg-bubble msg-system">Cargando historial encriptado...</div>';
 
             fetch(`/api/chat/history/${TARGET_USER_ID}`)
                 .then(response => response.json())
                 .then(data => {
-                    chatWindow.innerHTML = ''; // Limpiar mensaje de carga
-                    
-                    // Agregar mensaje de sistema inicial
-                    const sysMsg = document.createElement('div');
-                    sysMsg.className = 'system-message';
-                    sysMsg.innerHTML = '<small>Has iniciado una sesión de soporte privado.</small>';
-                    chatWindow.appendChild(sysMsg);
+                    chatWindow.innerHTML = ''; // Limpiar
+                    appendMessage("Conexión segura establecida.", 'system');
 
-                    if (data.length === 0) {
-                        return; // No hay mensajes previos
+                    if (data.length > 0) {
+                        data.forEach(msg => {
+                            const type = msg.is_me ? 'admin' : 'student';
+                            appendMessage(msg.message, type, msg.timestamp);
+                        });
                     }
-
-                    // Pintar cada mensaje del historial
-                    data.forEach(msg => {
-                        // Determinar quién envió el mensaje
-                        // Si msg.is_me es true, fui yo (Admin). Si no, fue el alumno.
-                        const type = msg.is_me ? 'admin' : 'student';
-                        appendMessage(msg.message, type, msg.timestamp);
-                    });
                 })
                 .catch(err => {
-                    console.error("Error cargando historial:", err);
-                    chatWindow.innerHTML += '<div class="system-message"><small style="color:red">Error al cargar historial.</small></div>';
+                    chatWindow.innerHTML += '<div class="msg-bubble msg-system" style="color:#ef4444">Error de conexión.</div>';
                 });
         }
 
-        // --- 2. CONEXIÓN SOCKET ---
-        socket.on('connect', function () {
-            console.log("Admin conectado al chat.");
+        // 2. SOCKETS
+        socket.on('connect', () => {
+            console.log("Admin conectado.");
             socket.emit('join_room', { user_id: TARGET_USER_ID });
         });
 
-        // --- 3. RECIBIR MENSAJES EN VIVO ---
-        socket.on('chat_notification', function (data) {
-            console.log("Mensaje recibido:", data);
-
-            // Solo mostramos si pertenece a esta conversación
-            // (O sea, si el sender o el recipient es el alumno que estamos viendo)
-            
-            // Caso A: El alumno me escribe
+        socket.on('chat_notification', (data) => {
+            // Validar si el mensaje es para este chat
             if (String(data.user_id) === String(TARGET_USER_ID) && data.is_student) {
                 appendMessage(data.message, 'student', data.timestamp);
             }
-            
-            // Caso B: Yo le escribí (desde otra pestaña o se rebotó el evento)
-            // Esto evita duplicados si ya lo agregamos manualmente al enviar
-            // Pero es útil si tienes 2 pestañas de admin abiertas.
         });
 
-        // --- 4. ENVIAR MENSAJE ---
-        chatForm.addEventListener('submit', function (e) {
+        // 3. ENVIAR
+        chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const msg = messageInput.value.trim();
-
             if (msg) {
-                // Enviar al servidor (que lo guardará en BD y lo retransmitirá)
                 socket.emit('send_message_to_student', {
                     target_user_id: TARGET_USER_ID,
                     message: msg
                 });
-
-                // Pintar localmente de inmediato (feedback instantáneo)
-                appendMessage(msg, 'admin', new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+                
+                // Feedback inmediato
+                const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                appendMessage(msg, 'admin', now);
                 messageInput.value = '';
             }
         });
 
-        // --- 5. FINALIZAR CHAT ---
-        endChatBtn.addEventListener('click', function () {
-            if (confirm("¿Seguro que quieres finalizar la sesión?")) {
+        // 4. FINALIZAR
+        endChatBtn.addEventListener('click', () => {
+            if (confirm("¿Cerrar canal de comunicación?")) {
                 socket.emit('close_student_chat_remote', {
                     target_user_id: TARGET_USER_ID,
                     admin_username: ADMIN_USERNAME
                 });
-                appendMessage("Sesión finalizada.", 'system');
+                appendMessage("Canal cerrado por el administrador.", 'system');
                 messageInput.disabled = true;
                 endChatBtn.disabled = true;
+                messageInput.placeholder = "Sesión finalizada";
             }
         });
 
-        // --- FUNCIONES AUXILIARES ---
+        // AUXILIAR: PINTAR MENSAJE
         function appendMessage(text, type, time = '') {
             const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message-bubble', type);
             
-            let content = '';
             if (type === 'system') {
-                content = `<small>${text}</small>`;
+                msgDiv.className = 'msg-bubble msg-system';
+                msgDiv.innerHTML = text;
             } else {
-                content = `<div class="msg-content">${text}</div><div class="msg-meta">${time}</div>`;
+                msgDiv.className = `msg-bubble msg-${type}`;
+                msgDiv.innerHTML = `${text} <span class="msg-time">${time}</span>`;
             }
             
-            msgDiv.innerHTML = content;
             chatWindow.appendChild(msgDiv);
-            
-            // Auto-scroll al final
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
     });
 </script>
 
-<style>
-    body {
-        background-color: #f0f2f5;
-    }
-
-    /* Fondo gris claro tipo WhatsApp Web */
-
-    .chat-container-wrapper {
-        max-width: 800px;
-        margin: 20px auto;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        height: 85vh;
-        /* Ocupa casi toda la altura */
-    }
-
-    /* Header */
-    .chat-header-card {
-        background: #34495e;
-        color: white;
-        padding: 15px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .header-info {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-
-    .header-info h1 {
-        margin: 0;
-        font-size: 1.2em;
-    }
-
-    .header-info p {
-        margin: 0;
-        font-size: 0.9em;
-        opacity: 0.8;
-    }
-
-    .avatar-circle {
-        width: 40px;
-        height: 40px;
-        background: #e67e22;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 1.2em;
-    }
-
-    .header-actions .btn-danger-sm {
-        background: #e74c3c;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 0.85em;
-        margin-right: 10px;
-    }
-
-    .header-actions .btn-close-sm {
-        color: #ecf0f1;
-        text-decoration: none;
-        font-size: 0.9em;
-    }
-
-    /* Ventana de Mensajes */
-    .chat-interface {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-    }
-
-    .chat-messages-area {
-        flex-grow: 1;
-        padding: 20px;
-        overflow-y: auto;
-        background-color: #e5ddd5;
-        /* Color fondo tipo WhatsApp */
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    /* Burbujas de Chat */
-    .message-bubble {
-        max-width: 70%;
-        padding: 10px 15px;
-        border-radius: 10px;
-        position: relative;
-        font-size: 0.95em;
-        line-height: 1.4;
-    }
-
-    .message-bubble.admin {
-        align-self: flex-end;
-        background-color: #dcf8c6;
-        /* Verde claro (Mensaje propio) */
-        color: var(--color-texto);
-        border-bottom-right-radius: 0;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    .message-bubble.student {
-        align-self: flex-start;
-        background-color: #ffffff;
-        /* Blanco (Mensaje recibido) */
-        color: var(--color-texto);
-        border-bottom-left-radius: 0;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    .message-bubble.system {
-        align-self: center;
-        background-color: rgba(255, 255, 255, 0.8);
-        color: #555;
-        font-style: italic;
-        border-radius: 20px;
-        padding: 5px 15px;
-        font-size: 0.8em;
-        margin: 10px 0;
-    }
-
-    .msg-meta {
-        text-align: right;
-        font-size: 0.7em;
-        color: #999;
-        margin-top: 4px;
-    }
-
-    /* Input Area */
-    .chat-input-area {
-        padding: 15px;
-        background: #f0f0f0;
-        border-top: 1px solid #ddd;
-        display: flex;
-        gap: 10px;
-    }
-
-    .chat-input-area input {
-        flex-grow: 1;
-        padding: 12px;
-        border: 1px solid #ccc;
-        border-radius: 25px;
-        outline: none;
-    }
-
-    .btn-send {
-        background: #3498db;
-        color: white;
-        border: none;
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1em;
-        transition: background 0.2s;
-    }
-
-    .btn-send:hover {
-        background: #2980b9;
-    }
-</style>
 {% endblock %}
