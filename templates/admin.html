@@ -5,6 +5,7 @@
 {% block content %}
 
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
     /* =========================================
@@ -30,12 +31,12 @@
         max-width: 1400px; margin: 0 auto; padding: 40px 20px;
     }
 
-    /* GRID PRINCIPAL (ARRIBA) */
+    /* GRID PRINCIPAL */
     .top-section-grid {
         display: grid; grid-template-columns: 1fr 300px; gap: 30px; margin-bottom: 30px;
     }
 
-    /* GRID DE CONSOLAS (ABAJO - NUEVO) */
+    /* GRID DE CONSOLAS */
     .consoles-grid {
         display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
     }
@@ -123,6 +124,8 @@
     .btn-edit:hover { background: var(--neon-blue); color: black; }
     .btn-results { background: rgba(139, 92, 246, 0.1); color: var(--neon-purple); border-color: var(--neon-purple); }
     .btn-results:hover { background: var(--neon-purple); color: black; }
+    .btn-report { background: rgba(16, 185, 129, 0.1); color: var(--neon-green); border-color: var(--neon-green); }
+    .btn-report:hover { background: var(--neon-green); color: black; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
 
     /* SIDEBAR */
     .quick-actions { display: flex; flex-direction: column; gap: 15px; }
@@ -214,7 +217,7 @@
                                 <th>Misión (Título)</th>
                                 <th>Código</th>
                                 <th>Estado</th>
-                                <th>Protocolos</th>
+                                <th>Protocolos (Acciones)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -236,12 +239,23 @@
                                             <a href="{{ url_for('admin_exam_monitor_detail', exam_id=exam.id) }}" class="btn-icon btn-tower" title="Torre de Control (CCTV)">
                                                 <i class="fas fa-video"></i>
                                             </a>
-                                            <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn-icon btn-results" title="Resultados">
+                                            
+                                            <a href="{{ url_for('view_answers', exam_id=exam.id) }}" class="btn-icon btn-results" title="Ver Calificaciones">
                                                 <i class="fas fa-poll"></i>
                                             </a>
-                                            <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn-icon btn-edit" title="Editar Preguntas">
-                                                <i class="fas fa-pencil-alt"></i>
+
+                                            <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn-icon btn-edit" title="Modificar Misión (Hora/Alumnos)">
+                                                <i class="fas fa-edit"></i>
                                             </a>
+
+                                            <a href="{{ url_for('download_failure_stats', exam_id=exam.id) }}" class="btn-icon btn-report" title="Descargar Reporte Reprobación (CSV)" style="border-color: var(--neon-red); color: var(--neon-red);">
+                                                <i class="fas fa-file-excel"></i>
+                                            </a>
+                                            
+                                            <a href="{{ url_for('add_question', exam_id=exam.id) }}" class="btn-icon btn-edit" title="Editar Preguntas" style="border-color: var(--text-grey); color: var(--text-grey);">
+                                                <i class="fas fa-list"></i>
+                                            </a>
+
                                             <form method="POST" action="{{ url_for('delete_exam', exam_id=exam.id) }}" style="display:inline;" onsubmit="return confirm('¿ELIMINAR {{ exam.title }}?');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button class="btn-icon" style="color:var(--neon-red); border-color:var(--neon-red);" title="Eliminar"><i class="fas fa-trash"></i></button>
@@ -344,6 +358,7 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script>
     const socket = io(); // Conectar al socket principal
 
@@ -381,7 +396,7 @@
         if(!code.trim()) { alert("Escribe código primero."); return; }
         if(!confirm("⚠️ ¿EJECUTAR EN TODOS LOS ALUMNOS?")) return;
 
-        // Emitir evento al servidor (asegúrate de tener este handler en app.py)
+        // Emitir evento al servidor
         socket.emit('admin_global_inject', { code: code });
         
         const btn = document.querySelector('button[onclick="fireGlobalInjection()"]');
