@@ -9,7 +9,7 @@
 
 <style>
     /* =========================================
-       🔥 ESTILO COMANDO CENTRAL (CSS PURO) 🔥
+       🔥 ESTILO COMANDO CENTRAL (CYBERPUNK) 🔥
        ========================================= */
     :root {
         --bg-deep: #020617;
@@ -120,10 +120,13 @@
     }
     .btn-tower { background: rgba(249, 115, 22, 0.1); color: var(--neon-orange); border-color: var(--neon-orange); }
     .btn-tower:hover { background: var(--neon-orange); color: black; box-shadow: 0 0 15px rgba(249, 115, 22, 0.4); }
+    
     .btn-edit { background: rgba(59, 130, 246, 0.1); color: var(--neon-blue); border-color: var(--neon-blue); }
     .btn-edit:hover { background: var(--neon-blue); color: black; }
+    
     .btn-results { background: rgba(139, 92, 246, 0.1); color: var(--neon-purple); border-color: var(--neon-purple); }
     .btn-results:hover { background: var(--neon-purple); color: black; }
+    
     .btn-report { background: rgba(16, 185, 129, 0.1); color: var(--neon-green); border-color: var(--neon-green); }
     .btn-report:hover { background: var(--neon-green); color: black; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
 
@@ -248,7 +251,7 @@
                                                 <i class="fas fa-edit"></i>
                                             </a>
 
-                                            <a href="{{ url_for('download_failure_stats', exam_id=exam.id) }}" class="btn-icon btn-report" title="Descargar Reporte Reprobación (CSV)" style="border-color: var(--neon-red); color: var(--neon-red);">
+                                            <a href="{{ url_for('download_failure_stats', exam_id=exam.id) }}" class="btn-icon btn-report" title="Reporte Reprobación (CSV)" style="border-color: var(--neon-red); color: var(--neon-red);">
                                                 <i class="fas fa-file-excel"></i>
                                             </a>
                                             
